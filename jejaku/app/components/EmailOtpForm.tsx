@@ -15,7 +15,9 @@ export default function EmailOtpForm({
   const router = useRouter();
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
 
   const gap = size === "compact" ? "gap-[15px]" : "gap-5";
   const buttonPad =
@@ -30,19 +32,43 @@ export default function EmailOtpForm({
         <p className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}>
           Enter the 6-digit code sent to <strong className="text-ink">{email}</strong>.
         </p>
-        <OtpInput />
+        <OtpInput value={code} onChange={setCode} />
+        {error && <p className="text-[12px] text-error">{error}</p>}
         <button
           type="button"
-          onClick={() =>
-            router.push(`/onboarding?email=${encodeURIComponent(email)}`)
-          }
-          className={`${topMargin} flex items-center justify-center rounded-pill bg-primary font-medium text-on-primary transition-transform active:scale-[0.98] ${buttonPad}`}
+          disabled={code.length !== 6 || submitting}
+          onClick={async () => {
+            setSubmitting(true);
+            setError(undefined);
+            try {
+              const res = await fetch("/api/otp/verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, code }),
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                setError(data.error ?? "Verification failed.");
+                return;
+              }
+              router.push(`/onboarding?email=${encodeURIComponent(email)}`);
+            } catch {
+              setError("Something went wrong. Try again.");
+            } finally {
+              setSubmitting(false);
+            }
+          }}
+          className={`${topMargin} flex items-center justify-center rounded-pill bg-primary font-medium text-on-primary transition-transform active:scale-[0.98] disabled:opacity-50 ${buttonPad}`}
         >
-          Continue
+          {submitting ? "Verifying…" : "Continue"}
         </button>
         <button
           type="button"
-          onClick={() => setStep("email")}
+          onClick={() => {
+            setStep("email");
+            setCode("");
+            setError(undefined);
+          }}
           className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}
         >
           Use a different email
@@ -55,14 +81,32 @@ export default function EmailOtpForm({
     <form
       noValidate
       className={`flex flex-col ${gap}`}
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (!EMAIL_PATTERN.test(email)) {
           setError("Enter a valid email address.");
           return;
         }
         setError(undefined);
-        setStep("otp");
+        setSubmitting(true);
+        try {
+          const res = await fetch("/api/otp/request", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            setError(data.error ?? "Couldn't send a code. Try again.");
+            return;
+          }
+          setCode("");
+          setStep("otp");
+        } catch {
+          setError("Something went wrong. Try again.");
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
       <FormField
@@ -80,9 +124,10 @@ export default function EmailOtpForm({
       />
       <button
         type="submit"
-        className={`${topMargin} rounded-pill bg-primary font-medium text-on-primary transition-transform active:scale-[0.98] ${buttonPad}`}
+        disabled={submitting}
+        className={`${topMargin} rounded-pill bg-primary font-medium text-on-primary transition-transform active:scale-[0.98] disabled:opacity-50 ${buttonPad}`}
       >
-        Continue with email
+        {submitting ? "Sending…" : "Continue with email"}
       </button>
     </form>
   );

@@ -1,16 +1,22 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef } from "react";
 
-export default function OtpInput() {
-  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+export default function OtpInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
 
-  const handleChange = (index: number, value: string) => {
-    const digit = value.replace(/\D/g, "").slice(-1);
+  const handleChange = (index: number, rawValue: string) => {
+    const digit = rawValue.replace(/\D/g, "").slice(-1);
     const next = [...digits];
     next[index] = digit;
-    setDigits(next);
+    onChange(next.join(""));
     if (digit && index < 5) {
       inputsRef.current[index + 1]?.focus();
     }
@@ -28,7 +34,7 @@ export default function OtpInput() {
     e.preventDefault();
     const next = Array(6).fill("");
     for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
-    setDigits(next);
+    onChange(next.join(""));
     inputsRef.current[Math.min(pasted.length, 5)]?.focus();
   };
 

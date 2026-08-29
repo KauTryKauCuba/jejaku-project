@@ -6,6 +6,8 @@ services:
       - "4000:4000"
     environment:
       DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      OTP_FROM_EMAIL: ${OTP_FROM_EMAIL}
     depends_on:
       jejaku-db:
         condition: service_healthy
