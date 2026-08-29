@@ -27,6 +27,32 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  jejaku-migrate:
+    build:
+      context: ./jejaku
+      target: builder
+    environment:
+      DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
+    depends_on:
+      jejaku-db:
+        condition: service_healthy
+    entrypoint: ["npx", "drizzle-kit", "migrate"]
+    profiles: ["tools"]
+
+  jejaku-receipt-migrate:
+    build:
+      context: ./jejaku-receipt
+      target: builder
+      args:
+        NEXT_PUBLIC_JEJAKU_URL: ${NEXT_PUBLIC_JEJAKU_URL}
+    environment:
+      DATABASE_URL: postgres://${RECEIPT_DB_USER}:${RECEIPT_DB_PASSWORD}@jejaku-receipt-db:5432/${RECEIPT_DB_NAME}
+    depends_on:
+      jejaku-receipt-db:
+        condition: service_healthy
+    entrypoint: ["npx", "drizzle-kit", "migrate"]
+    profiles: ["tools"]
+
   jejaku-db:
     image: postgres:16-alpine
     environment:
