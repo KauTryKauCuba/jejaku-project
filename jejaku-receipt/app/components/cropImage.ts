@@ -1,0 +1,45 @@
+export type CropPixels = { x: number; y: number; width: number; height: number };
+
+function createImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", (error) => reject(error));
+    image.src = url;
+  });
+}
+
+export async function getCroppedImageUrl(
+  imageSrc: string,
+  crop: CropPixels,
+  outputSize = 256,
+): Promise<string> {
+  const image = await createImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas not supported");
+
+  ctx.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    outputSize,
+    outputSize,
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Failed to crop image"));
+        return;
+      }
+      resolve(URL.createObjectURL(blob));
+    }, "image/jpeg", 0.92);
+  });
+}

@@ -1,0 +1,14 @@
+services:
+  jejaku:
+    build:
+      context: ./jejaku
+    ports:
+      - "4000:4000"
+    restart: unless-stopped
+
+  jejaku-receipt:
+    build:
+      context: ./jejaku-receipt
+    ports:
+      - "4001:4001"
+    restart: unless-stopped
