@@ -16,6 +16,8 @@ services:
   jejaku-receipt:
     build:
       context: ./jejaku-receipt
+      args:
+        NEXT_PUBLIC_JEJAKU_URL: ${NEXT_PUBLIC_JEJAKU_URL}
     ports:
       - "4001:4001"
     environment:

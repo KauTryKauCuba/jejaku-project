@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const NAV_LINKS = [
-  { label: "Roadmap", href: "http://localhost:3000/roadmap" },
+  { label: "Roadmap", href: `${process.env.NEXT_PUBLIC_JEJAKU_URL}/roadmap` },
 ];
 
 export function NavLinks({ className }: { className: string }) {

@@ -10,7 +10,7 @@ export default function LogoLink() {
 
   return (
     <Link
-      href={onDashboard ? "http://localhost:3000/dashboard" : "/"}
+      href={onDashboard ? `${process.env.NEXT_PUBLIC_JEJAKU_URL}/dashboard` : "/"}
       className="flex items-center gap-[8px]"
     >
       <Image src="/jk-logo.svg" alt="" width={28} height={28} priority />

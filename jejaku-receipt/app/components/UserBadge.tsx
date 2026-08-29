@@ -53,7 +53,7 @@ export default function UserBadge() {
             type="button"
             onClick={() => {
               clearStoredProfile();
-              window.location.href = "http://localhost:3000/?signout=1";
+              window.location.href = `${process.env.NEXT_PUBLIC_JEJAKU_URL}/?signout=1`;
             }}
             className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
           >
