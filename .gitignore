@@ -2,3 +2,5 @@
 node_modules
 .codex/
 .vscode/
+.env
+certbot/

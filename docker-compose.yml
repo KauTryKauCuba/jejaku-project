@@ -4,6 +4,11 @@ services:
       context: ./jejaku
     ports:
       - "4000:4000"
+    environment:
+      DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
+    depends_on:
+      jejaku-db:
+        condition: service_healthy
     restart: unless-stopped
 
   jejaku-receipt:
@@ -11,4 +16,68 @@ services:
       context: ./jejaku-receipt
     ports:
       - "4001:4001"
+    environment:
+      DATABASE_URL: postgres://${RECEIPT_DB_USER}:${RECEIPT_DB_PASSWORD}@jejaku-receipt-db:5432/${RECEIPT_DB_NAME}
+    depends_on:
+      jejaku-receipt-db:
+        condition: service_healthy
     restart: unless-stopped
+
+  jejaku-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${JEJAKU_DB_NAME}
+      POSTGRES_USER: ${JEJAKU_DB_USER}
+      POSTGRES_PASSWORD: ${JEJAKU_DB_PASSWORD}
+    ports:
+      - "6432:5432"
+    volumes:
+      - jejaku-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${JEJAKU_DB_USER} -d ${JEJAKU_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  jejaku-receipt-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${RECEIPT_DB_NAME}
+      POSTGRES_USER: ${RECEIPT_DB_USER}
+      POSTGRES_PASSWORD: ${RECEIPT_DB_PASSWORD}
+    ports:
+      - "6433:5432"
+    volumes:
+      - jejaku-receipt-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RECEIPT_DB_USER} -d ${RECEIPT_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - jejaku
+      - jejaku-receipt
+    restart: unless-stopped
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;"
+
+volumes:
+  jejaku-db-data:
+  jejaku-receipt-db-data:
