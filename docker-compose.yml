@@ -33,6 +33,7 @@ services:
       AUTH_URL: ${NEXT_PUBLIC_RECEIPT_URL}
       AUTH_SECRET: ${AUTH_SECRET}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
     volumes:
       - jejaku-receipt-uploads:/app/public/uploads
     depends_on:
