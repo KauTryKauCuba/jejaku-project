@@ -13,30 +13,39 @@ export default function RemoteSignOut({
   const [csrfToken, setCsrfToken] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("[RemoteSignOut] effect1", { shouldSignOut, alreadyFetched: fetchedRef.current });
     if (!shouldSignOut || fetchedRef.current) return;
     fetchedRef.current = true;
     getCsrfToken().then((token) => {
+      console.log("[RemoteSignOut] csrf token resolved:", token);
       if (token) {
         setCsrfToken(token);
       } else {
-        // Fall back to next-auth's own signOut(), which has its own CSRF handling
-        // and will still navigate away even if something above failed.
+        console.log("[RemoteSignOut] no token, falling back to signOut()");
         signOut({ redirect: true, callbackUrl: "/" });
       }
     });
   }, [shouldSignOut]);
 
   useEffect(() => {
+    console.log("[RemoteSignOut] effect2", { csrfToken, formPresent: !!formRef.current });
     if (!csrfToken) return;
-    // next-auth's signOut() normally broadcasts this so other open tabs clear
-    // their session immediately; replicate it since we bypass signOut() here.
     if (typeof BroadcastChannel !== "undefined") {
       new BroadcastChannel("next-auth").postMessage({
         event: "session",
         data: { trigger: "signout" },
       });
     }
-    formRef.current?.submit();
+    if (formRef.current) {
+      console.log("[RemoteSignOut] submitting form now");
+      if (typeof formRef.current.requestSubmit === "function") {
+        formRef.current.requestSubmit();
+      } else {
+        formRef.current.submit();
+      }
+    } else {
+      console.log("[RemoteSignOut] formRef.current is null, cannot submit!");
+    }
   }, [csrfToken]);
 
   if (!shouldSignOut) return null;
