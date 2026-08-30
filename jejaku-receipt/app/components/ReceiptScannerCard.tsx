@@ -10,6 +10,21 @@ import { useAddExpense } from "./ExpensesProvider";
 
 type Mode = "idle" | "camera" | "details";
 type PreviewKind = "image" | "pdf" | null;
+type Extracted = {
+  merchant: string | null;
+  amount: number | null;
+  date: string | null;
+  category: ExpenseCategory | null;
+};
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }) {
   const addExpense = useAddExpense();
@@ -22,6 +37,8 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [extracting, setExtracting] = useState(false);
+  const [extracted, setExtracted] = useState<Extracted | null>(null);
 
   const revokePreview = () => {
     setPreviewUrl((prev) => {
@@ -42,13 +59,38 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     revokePreview();
     setPhoto(null);
     setPreviewKind(null);
+    setExtracted(null);
     setMode("details");
+  };
+
+  const handleCameraCapture = async (file: File) => {
+    applyFile(file, "image");
+    setExtracted(null);
+    setExtracting(true);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const res = await fetch("/api/receipt-extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: dataUrl }),
+      });
+      if (res.ok) {
+        setExtracted((await res.json()) as Extracted);
+      }
+    } catch {
+      // Extraction is a convenience — leave the form blank on failure
+      // rather than blocking the user from entering the receipt manually.
+    } finally {
+      setExtracting(false);
+    }
   };
 
   const reset = () => {
     revokePreview();
     setPhoto(null);
     setPreviewKind(null);
+    setExtracted(null);
+    setExtracting(false);
     setMode("idle");
     if (photoInputRef.current) photoInputRef.current.value = "";
     if (pdfInputRef.current) pdfInputRef.current.value = "";
@@ -155,10 +197,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
       )}
 
       {mode === "camera" && (
-        <CameraCapture
-          onCapture={(file) => applyFile(file, "image")}
-          onCancel={() => setMode("idle")}
-        />
+        <CameraCapture onCapture={handleCameraCapture} onCancel={() => setMode("idle")} />
       )}
 
       {mode === "details" && (
@@ -202,13 +241,32 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
           )}
 
           <p className="mt-[15px] text-[12px] text-ink-mute">
-            {previewKind
-              ? "Fill in the details below — automatic extraction isn't wired up yet."
-              : "Enter the expense details below."}
+            {extracting
+              ? "Reading the receipt…"
+              : extracted
+                ? "Details auto-filled from the receipt — check them before saving."
+                : previewKind
+                  ? "Fill in the details below."
+                  : "Enter the expense details below."}
           </p>
           <div className="mt-[8px]">
             {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
-            <ExpenseForm onSubmit={handleSave} onCancel={reset} disabled={saving} />
+            {extracting ? (
+              <div className="flex h-[141px] items-center justify-center rounded-lg border border-hairline bg-canvas-soft">
+                <div className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-ink-mute border-t-transparent" />
+              </div>
+            ) : (
+              <ExpenseForm
+                key={extracted ? "extracted" : "blank"}
+                onSubmit={handleSave}
+                onCancel={reset}
+                disabled={saving}
+                initialMerchant={extracted?.merchant ?? undefined}
+                initialAmount={extracted?.amount ?? undefined}
+                initialDate={extracted?.date ?? undefined}
+                initialCategory={extracted?.category ?? undefined}
+              />
+            )}
           </div>
         </div>
       )}

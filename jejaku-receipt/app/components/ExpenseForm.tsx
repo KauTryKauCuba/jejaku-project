@@ -13,6 +13,9 @@ export default function ExpenseForm({
   onSubmit,
   onCancel,
   initialDate,
+  initialMerchant,
+  initialAmount,
+  initialCategory,
   disabled = false,
 }: {
   onSubmit: (data: {
@@ -24,13 +27,18 @@ export default function ExpenseForm({
   }) => void;
   onCancel: () => void;
   initialDate?: string;
+  initialMerchant?: string;
+  initialAmount?: number;
+  initialCategory?: ExpenseCategory;
   disabled?: boolean;
 }) {
-  const [merchant, setMerchant] = useState("");
-  const [amount, setAmount] = useState("");
+  const [merchant, setMerchant] = useState(initialMerchant ?? "");
+  const [amount, setAmount] = useState(
+    initialAmount !== undefined ? String(initialAmount) : ""
+  );
   const [date, setDate] = useState(initialDate ?? today());
   const [category, setCategory] = useState<ExpenseCategory>(
-    EXPENSE_CATEGORIES[0]
+    initialCategory ?? EXPENSE_CATEGORIES[0]
   );
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);

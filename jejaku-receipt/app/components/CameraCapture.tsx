@@ -1,7 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, X } from "@phosphor-icons/react";
+import { Camera, Flashlight, X } from "@phosphor-icons/react";
+
+// Torch control isn't part of the standard TS DOM types — it's a real but
+// non-standard capability (Chrome/Android only; no iOS Safari, no desktop).
+type TorchCapabilities = MediaTrackCapabilities & { torch?: boolean };
+type TorchConstraints = MediaTrackConstraints & { advanced?: { torch?: boolean }[] };
+
+// Gap between the end of one readiness check and the start of the next —
+// small on purpose. The real floor on speed is DeepSeek's own response
+// time (~0.6-0.7s per call), so back-to-back checks beat a fixed interval,
+// which was leaving up to a second of dead time between reads.
+const READY_CHECK_GAP_MS = 100;
+// Require back-to-back "ready" reads before auto-capturing, so a single
+// lucky frame (or the model being wrong once) doesn't fire the shutter
+// on a half-framed or motion-blurred shot.
+const READY_STREAK_TO_CAPTURE = 2;
 
 export default function CameraCapture({
   onCapture,
@@ -12,8 +27,13 @@ export default function CameraCapture({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const readyStreakRef = useRef(0);
+  const capturedRef = useRef(false);
   const [error, setError] = useState<string | undefined>(undefined);
   const [ready, setReady] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [autoStatus, setAutoStatus] = useState<"scanning" | "found">("scanning");
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -38,10 +58,13 @@ export default function CameraCapture({
       ?.getUserMedia({
         video: {
           facingMode: "environment",
-          // No hard cap — ask for as much as the device's camera can give,
-          // and the browser negotiates down to whatever it actually supports.
-          width: { ideal: 8192 },
-          height: { ideal: 8192 },
+          // Full HD is plenty sharp for a receipt photo — asking for the
+          // device's max resolution made the live preview laggy on phones,
+          // since decoding/rendering a near-4K+ video feed continuously is
+          // heavy. This still lets the browser pick lower if the device
+          // can't do 1080p.
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         },
         audio: false,
       })
@@ -55,6 +78,10 @@ export default function CameraCapture({
           videoRef.current.srcObject = stream;
         }
         setReady(true);
+
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track?.getCapabilities?.() as TorchCapabilities | undefined;
+        setTorchSupported(capabilities?.torch === true);
       })
       .catch(() => {
         if (!cancelled) {
@@ -71,6 +98,7 @@ export default function CameraCapture({
   const capture = () => {
     const video = videoRef.current;
     if (!video) return;
+    capturedRef.current = true;
 
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
@@ -89,18 +117,102 @@ export default function CameraCapture({
     );
   };
 
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const checkReady = async () => {
+      const video = videoRef.current;
+      if (!video || capturedRef.current) return;
+
+      try {
+        const scale = Math.min(1, 800 / video.videoWidth);
+        const small = document.createElement("canvas");
+        small.width = Math.round(video.videoWidth * scale);
+        small.height = Math.round(video.videoHeight * scale);
+        const ctx = small.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, small.width, small.height);
+        const dataUrl = small.toDataURL("image/jpeg", 0.85);
+
+        const res = await fetch("/api/receipt-ready", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: dataUrl }),
+        });
+        const data = res.ok ? ((await res.json()) as { ready?: boolean }) : { ready: false };
+
+        if (data.ready) {
+          readyStreakRef.current += 1;
+          setAutoStatus(readyStreakRef.current >= READY_STREAK_TO_CAPTURE ? "found" : "scanning");
+          if (readyStreakRef.current >= READY_STREAK_TO_CAPTURE && !capturedRef.current) {
+            capture();
+            return;
+          }
+        } else {
+          readyStreakRef.current = 0;
+          setAutoStatus("scanning");
+        }
+      } catch {
+        readyStreakRef.current = 0;
+      }
+
+      if (!cancelled) {
+        timeoutId = setTimeout(checkReady, READY_CHECK_GAP_MS);
+      }
+    };
+
+    checkReady();
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  const toggleTorch = async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] } as TorchConstraints);
+      setTorchOn(next);
+    } catch {
+      // Some devices report torch as a capability but reject applying it —
+      // fail quietly, the button just won't toggle.
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink">
       <div className="flex items-center justify-between p-[19px]">
         <p className="text-[14px] font-medium text-canvas">Scan a receipt</p>
-        <button
-          type="button"
-          onClick={onCancel}
-          aria-label="Close camera"
-          className="flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
-        >
-          <X size={16} weight="light" />
-        </button>
+        <div className="flex items-center gap-[8px]">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              aria-label={torchOn ? "Turn off torch" : "Turn on torch"}
+              aria-pressed={torchOn}
+              className={
+                torchOn
+                  ? "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas text-ink transition-colors"
+                  : "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
+              }
+            >
+              <Flashlight size={16} weight={torchOn ? "fill" : "light"} />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onCancel}
+            aria-label="Close camera"
+            className="flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
+          >
+            <X size={16} weight="light" />
+          </button>
+        </div>
       </div>
 
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
@@ -109,13 +221,26 @@ export default function CameraCapture({
             {error}
           </p>
         ) : (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="h-full w-full object-cover"
-          />
+          <>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="h-full w-full object-cover"
+            />
+            <div className="pointer-events-none absolute inset-x-0 top-[15px] flex justify-center">
+              <span
+                className={
+                  autoStatus === "found"
+                    ? "rounded-pill bg-canvas px-[13px] py-[6px] text-[12px] font-medium text-ink"
+                    : "rounded-pill bg-ink/60 px-[13px] py-[6px] text-[12px] font-medium text-canvas"
+                }
+              >
+                {autoStatus === "found" ? "Got it — capturing…" : "Looking for a receipt…"}
+              </span>
+            </div>
+          </>
         )}
       </div>
 
@@ -133,7 +258,7 @@ export default function CameraCapture({
             type="button"
             onClick={capture}
             disabled={!ready}
-            aria-label="Capture photo"
+            aria-label="Capture photo now instead of waiting for auto-detect"
             className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-4 border-canvas bg-canvas/20 transition-transform active:scale-95 disabled:opacity-50"
           >
             <Camera size={22} weight="fill" className="text-canvas" />
