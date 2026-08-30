@@ -22,6 +22,13 @@
       "when": 1788066635772,
       "tag": "0002_ordinary_midnight",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788081210851,
+      "tag": "0003_whole_grandmaster",
+      "breakpoints": true
     }
   ]
 }

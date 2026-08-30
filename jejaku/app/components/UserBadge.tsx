@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { clearStoredProfile, useStoredProfile } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 import { getInitials } from "../lib/initials";
 import MemberCard from "./MemberCard";
 
 export default function UserBadge() {
-  const profile = useStoredProfile();
+  const { profile } = useProfile();
   const [hovered, setHovered] = useState(false);
   const router = useRouter();
 
@@ -55,7 +55,6 @@ export default function UserBadge() {
           <button
             type="button"
             onClick={async () => {
-              clearStoredProfile();
               await signOut({ redirect: false });
               router.push("/");
             }}

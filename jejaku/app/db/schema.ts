@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   avatarUrl: text("avatar_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastSignInAt: timestamp("last_sign_in_at"),
 });
 
 export const otpCodes = pgTable("otp_codes", {

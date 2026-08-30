@@ -2,12 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn, getSession } from "next-auth/react";
 import FormField from "./FormField";
 import OtpInput from "./OtpInput";
-import { setStoredProfile } from "../lib/session";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_COOLDOWN_SECONDS = 120;
+
+const OTP_ERROR_MESSAGES: Record<string, string> = {
+  otp_expired: "That code has expired. Request a new one.",
+  otp_invalid: "That code isn't right. Try again.",
+  otp_too_many_attempts: "Too many attempts. Request a new code.",
+};
 
 class OtpRequestError extends Error {
   cooldown: boolean;
@@ -143,26 +149,21 @@ export default function EmailOtpForm({
             setSubmitting(true);
             setError(undefined);
             try {
-              const res = await fetch("/api/otp/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, code }),
-              });
-              const data = await res.json();
-              if (!res.ok) {
-                setError(data.error ?? "Verification failed.");
+              const result = await signIn("otp", { email, code, redirect: false });
+              if (!result || result.error) {
+                setError(
+                  (result?.error && OTP_ERROR_MESSAGES[result.error]) ?? "Verification failed."
+                );
                 return;
               }
-              const profile: VerifiedProfile | null = data.profile ?? null;
+              const session = await getSession();
+              const profile: VerifiedProfile | null =
+                session?.otpConfirmed && session.dbProfile
+                  ? { fullName: session.dbProfile.fullName, avatarUrl: session.dbProfile.avatarUrl }
+                  : null;
               if (onVerified) {
                 onVerified(email, profile);
               } else if (profile) {
-                setStoredProfile({
-                  fullName: profile.fullName,
-                  avatarUrl: profile.avatarUrl,
-                  email,
-                  registeredAt: new Date().toISOString(),
-                });
                 router.push("/dashboard");
               } else {
                 router.push(`/onboarding?email=${encodeURIComponent(email)}`);

@@ -2,23 +2,33 @@
 
 import { useRef, useState } from "react";
 import { User } from "@phosphor-icons/react";
+import { useSession } from "next-auth/react";
 import FormField from "./FormField";
 import AvatarCropModal from "./AvatarCropModal";
 import { getInitials } from "../lib/initials";
-import type { StoredProfile } from "../lib/session";
 
-export type OnboardingProfile = StoredProfile;
+export type OnboardingProfile = {
+  fullName: string;
+  avatarUrl?: string;
+  email?: string;
+  registeredAt: string;
+};
 
 export default function OnboardingForm({
   email,
+  initialFullName,
+  initialAvatarUrl,
   onComplete,
 }: {
   email?: string;
+  initialFullName?: string;
+  initialAvatarUrl?: string;
   onComplete: (profile: OnboardingProfile) => void;
 }) {
+  const { update } = useSession();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [fullName, setFullName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
+  const [fullName, setFullName] = useState(initialFullName ?? "");
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(initialAvatarUrl);
   const [pendingImage, setPendingImage] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
@@ -49,6 +59,7 @@ export default function OnboardingForm({
         setError(undefined);
         setSubmitting(true);
         try {
+          let registeredAt = new Date().toISOString();
           if (email) {
             const res = await fetch("/api/users/register", {
               method: "POST",
@@ -60,12 +71,14 @@ export default function OnboardingForm({
               setError(data.error ?? "Couldn't save your profile. Try again.");
               return;
             }
+            const updatedSession = await update();
+            registeredAt = updatedSession?.dbProfile?.registeredAt ?? registeredAt;
           }
           onComplete({
             fullName: trimmedName,
             avatarUrl,
             email,
-            registeredAt: new Date().toISOString(),
+            registeredAt,
           });
         } catch {
           setError("Couldn't save your profile. Try again.");

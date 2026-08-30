@@ -5,12 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Fingerprint } from "@phosphor-icons/react";
 import OnboardingForm, { type OnboardingProfile } from "./OnboardingForm";
 import MemberCard from "./MemberCard";
-import { setStoredProfile, logAuditEvent } from "../lib/session";
 
 export default function OnboardingCard() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? undefined;
+  const initialFullName = searchParams.get("name") ?? undefined;
+  const initialAvatarUrl = searchParams.get("avatar") ?? undefined;
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
 
   if (profile) {
@@ -48,9 +49,9 @@ export default function OnboardingCard() {
       <div className="mt-[23px]">
         <OnboardingForm
           email={email}
+          initialFullName={initialFullName}
+          initialAvatarUrl={initialAvatarUrl}
           onComplete={(completedProfile) => {
-            setStoredProfile(completedProfile);
-            logAuditEvent("account_created");
             setProfile(completedProfile);
           }}
         />

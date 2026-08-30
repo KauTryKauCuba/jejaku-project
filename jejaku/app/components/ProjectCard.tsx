@@ -3,7 +3,7 @@
 import { useState, type ComponentType } from "react";
 import { Lock, Hourglass } from "@phosphor-icons/react";
 import ReceiptIllustration from "./ReceiptIllustration";
-import { useStoredProfile } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 
 export default function ProjectCard({
   project,
@@ -19,8 +19,7 @@ export default function ProjectCard({
   };
   collapsible?: boolean;
 }) {
-  const profile = useStoredProfile();
-  const loggedIn = profile !== null;
+  const { profile, loggedIn } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [syncing, setSyncing] = useState(false);
 

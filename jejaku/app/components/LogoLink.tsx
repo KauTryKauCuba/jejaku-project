@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useStoredProfile } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 
 export default function LogoLink() {
-  const profile = useStoredProfile();
+  const { profile } = useProfile();
 
   return (
     <Link

@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { clearStoredProfile } from "../lib/session";
 
 export default function RemoteSignOut({
   shouldSignOut,
@@ -11,10 +10,6 @@ export default function RemoteSignOut({
   shouldSignOut: boolean;
 }) {
   const router = useRouter();
-
-  if (shouldSignOut && typeof window !== "undefined") {
-    clearStoredProfile();
-  }
 
   useEffect(() => {
     if (!shouldSignOut) return;

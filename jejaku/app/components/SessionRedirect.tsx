@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getStoredProfile } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 
 export default function SessionRedirect({
   to,
@@ -12,14 +12,15 @@ export default function SessionRedirect({
   when: "signed-in" | "signed-out";
 }) {
   const router = useRouter();
+  const { status, loggedIn } = useProfile();
 
   useEffect(() => {
-    const signedIn = getStoredProfile() !== null;
-    const shouldRedirect = when === "signed-in" ? signedIn : !signedIn;
+    if (status === "loading") return;
+    const shouldRedirect = when === "signed-in" ? loggedIn : !loggedIn;
     if (shouldRedirect) {
       router.replace(to);
     }
-  }, [when, to, router]);
+  }, [status, loggedIn, when, to, router]);
 
   return null;
 }

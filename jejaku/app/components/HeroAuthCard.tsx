@@ -5,16 +5,13 @@ import { useSession, signOut } from "next-auth/react";
 import { Fingerprint } from "@phosphor-icons/react";
 import GoogleButton from "./GoogleButton";
 import EmailOtpForm from "./EmailOtpForm";
-import { setStoredProfile, useStoredProfile } from "../lib/session";
 
 export default function HeroAuthCard() {
   const { data: session, status } = useSession();
-  const profile = useStoredProfile();
   const router = useRouter();
 
   const email = session?.user?.email;
-  const needsVerification =
-    status === "authenticated" && !!email && profile?.email !== email;
+  const needsVerification = status === "authenticated" && !!email && !session?.otpConfirmed;
 
   if (needsVerification) {
     return (
@@ -32,13 +29,14 @@ export default function HeroAuthCard() {
             size="compact"
             initialEmail={email}
             onVerified={(verifiedEmail, profile) => {
-              setStoredProfile({
-                fullName: profile?.fullName ?? session!.user!.name ?? verifiedEmail,
-                avatarUrl: profile?.avatarUrl ?? session!.user!.image ?? undefined,
-                email: verifiedEmail,
-                registeredAt: new Date().toISOString(),
-              });
-              router.push("/dashboard");
+              if (profile) {
+                router.push("/dashboard");
+                return;
+              }
+              const params = new URLSearchParams({ email: verifiedEmail });
+              if (session!.user!.name) params.set("name", session!.user!.name);
+              if (session!.user!.image) params.set("avatar", session!.user!.image);
+              router.push(`/onboarding?${params.toString()}`);
             }}
             onCancel={() => {
               signOut({ redirect: false });
