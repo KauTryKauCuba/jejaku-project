@@ -1,7 +1,8 @@
 "use client";
 
 import { Tray, Camera } from "@phosphor-icons/react";
-import { useExpenses, formatCurrency } from "../lib/expenses";
+import { formatCurrency } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 
 function formatDate(dateStr: string) {
   return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
@@ -40,8 +41,13 @@ export default function RecentReceipts() {
               className="flex items-center justify-between gap-[11px] py-[11px] first:pt-0 last:pb-0"
             >
               <div className="flex min-w-0 items-center gap-[11px]">
-                <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-md bg-canvas-soft text-ink-mute">
-                  <Camera size={14} weight="light" />
+                <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas-soft text-ink-mute">
+                  {e.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={e.photoUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <Camera size={14} weight="light" />
+                  )}
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-medium text-ink">

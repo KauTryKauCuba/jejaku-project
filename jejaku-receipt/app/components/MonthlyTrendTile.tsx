@@ -2,7 +2,8 @@
 
 import { ChartLineUp, TrendUp, TrendDown } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
-import { useExpenses, formatCurrency } from "../lib/expenses";
+import { formatCurrency } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;

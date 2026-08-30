@@ -4,7 +4,8 @@ import { useRef, useState } from "react";
 import { Camera, PencilSimple, ArrowClockwise, X } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import ExpenseForm from "./ExpenseForm";
-import { addExpense, type ExpenseCategory } from "../lib/expenses";
+import type { ExpenseCategory } from "../lib/expenses";
+import { useAddExpense } from "./ExpensesProvider";
 
 type Mode = "choose" | "scan" | "manual";
 
@@ -17,9 +18,12 @@ export default function AddExpenseCard({
   showHeader?: boolean;
   onSaved?: () => void;
 }) {
+  const addExpense = useAddExpense();
   const inputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<Mode>("choose");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   const revokePreview = () => {
     setPreviewUrl((prev) => {
@@ -40,16 +44,25 @@ export default function AddExpenseCard({
     if (inputRef.current) inputRef.current.value = "";
   };
 
-  const handleSave = (data: {
+  const handleSave = async (data: {
     merchant: string;
     amount: number;
     date: string;
     category: ExpenseCategory;
     note?: string;
   }) => {
-    addExpense({ ...data, hasPhoto: mode === "scan" && !!previewUrl });
-    reset();
-    onSaved?.();
+    setSaving(true);
+    setError(undefined);
+    try {
+      const photo = mode === "scan" ? inputRef.current?.files?.[0] : undefined;
+      await addExpense(data, photo);
+      reset();
+      onSaved?.();
+    } catch {
+      setError("Couldn't save expense. Try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -137,14 +150,16 @@ export default function AddExpenseCard({
             up yet.
           </p>
           <div className="mt-[8px]">
-            <ExpenseForm onSubmit={handleSave} onCancel={reset} initialDate={initialDate} />
+            {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
+            <ExpenseForm onSubmit={handleSave} onCancel={reset} initialDate={initialDate} disabled={saving} />
           </div>
         </div>
       )}
 
       {mode === "manual" && (
         <div className={showHeader ? "mt-[19px]" : ""}>
-          <ExpenseForm onSubmit={handleSave} onCancel={reset} initialDate={initialDate} />
+          {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
+          <ExpenseForm onSubmit={handleSave} onCancel={reset} initialDate={initialDate} disabled={saving} />
         </div>
       )}
     </div>

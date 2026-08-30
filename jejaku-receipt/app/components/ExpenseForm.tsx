@@ -13,6 +13,7 @@ export default function ExpenseForm({
   onSubmit,
   onCancel,
   initialDate,
+  disabled = false,
 }: {
   onSubmit: (data: {
     merchant: string;
@@ -23,6 +24,7 @@ export default function ExpenseForm({
   }) => void;
   onCancel: () => void;
   initialDate?: string;
+  disabled?: boolean;
 }) {
   const [merchant, setMerchant] = useState("");
   const [amount, setAmount] = useState("");
@@ -135,9 +137,10 @@ export default function ExpenseForm({
       <div className="mt-[4px] flex items-center gap-[8px]">
         <button
           type="submit"
-          className="flex h-[37px] flex-1 items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+          disabled={disabled}
+          className="flex h-[37px] flex-1 items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98] disabled:opacity-50"
         >
-          Save expense
+          {disabled ? "Saving…" : "Save expense"}
         </button>
         <button
           type="button"

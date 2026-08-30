@@ -2,7 +2,7 @@
 
 import { Receipt } from "@phosphor-icons/react";
 import StatTile from "./StatTile";
-import { useExpenses } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 
 export default function ReceiptsScannedTile() {
   const expenses = useExpenses();

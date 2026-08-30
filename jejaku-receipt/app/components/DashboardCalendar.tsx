@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { CalendarBlank, CaretLeft, CaretRight, Plus } from "@phosphor-icons/react";
-import { useExpenses, formatCurrency } from "../lib/expenses";
+import { formatCurrency } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 import AddExpenseCard from "./AddExpenseCard";
 import IconFlowBadge from "./IconFlowBadge";
 

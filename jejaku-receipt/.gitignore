@@ -20,6 +20,9 @@
 # production
 /build
 
+# user-uploaded files (runtime data, not source)
+/public/uploads/
+
 # misc
 .DS_Store
 *.pem

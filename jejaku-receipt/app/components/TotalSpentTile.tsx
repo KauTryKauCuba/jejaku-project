@@ -2,7 +2,8 @@
 
 import { CurrencyDollar } from "@phosphor-icons/react";
 import StatTile from "./StatTile";
-import { useExpenses, formatCurrency } from "../lib/expenses";
+import { formatCurrency } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 
 export default function TotalSpentTile() {
   const expenses = useExpenses();

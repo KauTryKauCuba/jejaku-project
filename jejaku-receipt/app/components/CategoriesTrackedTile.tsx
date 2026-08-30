@@ -2,7 +2,7 @@
 
 import { Tag } from "@phosphor-icons/react";
 import StatTile from "./StatTile";
-import { useExpenses } from "../lib/expenses";
+import { useExpenses } from "./ExpensesProvider";
 
 export default function CategoriesTrackedTile() {
   const expenses = useExpenses();
