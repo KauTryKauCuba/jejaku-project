@@ -87,6 +87,13 @@ const TIMELINE = [
     date: "Sunday, August 30, 2026",
   },
   {
+    status: "Jejaku Beta v0.0.1",
+    title: "Your name and photo actually stick around",
+    body: "First sign-in saves your name and avatar for real. Come back later — by email or Google, doesn't matter which — and it's already there, no re-entering anything.",
+    dateLabel: "Shipped",
+    date: "Sunday, August 30, 2026",
+  },
+  {
     status: "Up next",
     title: "Jejaku Receipt",
     body: "Once Jejaku itself is settled, this moves from experiment to a real project on the site — auth-gated, and open for anyone to try.",
