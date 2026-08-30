@@ -76,10 +76,12 @@ const STACK = [
   { logo: "cloudflare", label: "Networking", value: "Cloudflare Tunnel", detail: "No open ports, no exposed IP" },
   { logo: "nginx", label: "Reverse proxy", value: "nginx", detail: "Sits in front of the app" },
   { logo: "drizzle", label: "ORM", value: "Drizzle Kit", detail: "Migrations and schema, typed" },
+  { logo: "resend", label: "Email", value: "Resend", detail: "Delivers the sign-in codes" },
   { logo: "tailwindcss", label: "Styling", value: "Tailwind CSS", detail: "Utility-first, design tokens on top" },
   { logo: "typescript", label: "Language", value: "TypeScript", detail: "Everywhere, no exceptions" },
   { logo: "git", label: "Source control", value: "Git", detail: "Self-hosted + GitHub mirrors" },
   { logo: "claude", label: "Pair programmer", value: "Claude Code", detail: "Most of this site, written with it" },
+  { logo: "deepseek", label: "Pair programmer", value: "DeepSeek", detail: "Same role as Claude Code, a second opinion" },
 ];
 
 const PROJECTS = [
@@ -315,7 +317,7 @@ export default function HomeContent({
               <div className="grid gap-[23px] md:grid-cols-3">
                 {STACK.map(({ logo, label, value, detail }, i) => (
                   <div
-                    key={label}
+                    key={value}
                     className="rounded-lg border border-hairline bg-canvas p-[30px]"
                   >
                     <IconFlowBadge size={57} seed={i + 1}>

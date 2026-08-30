@@ -119,20 +119,18 @@ export default function DashboardCalendar() {
               onClick={() => selectDay(day)}
               className={
                 isSelected
-                  ? "flex aspect-square flex-col items-center justify-center gap-[2px] rounded-md bg-primary text-[12px] font-medium text-on-primary"
+                  ? "relative flex aspect-square items-center justify-center rounded-md bg-primary text-[12px] font-medium text-on-primary"
                   : isToday
-                    ? "flex aspect-square flex-col items-center justify-center gap-[2px] rounded-md border border-primary text-[12px] font-medium text-primary"
-                    : "flex aspect-square flex-col items-center justify-center gap-[2px] rounded-md text-[12px] text-ink transition-colors hover:bg-canvas-soft"
+                    ? "relative flex aspect-square items-center justify-center rounded-md border border-primary text-[12px] font-medium text-primary"
+                    : "relative flex aspect-square items-center justify-center rounded-md text-[12px] text-ink transition-colors hover:bg-canvas-soft"
               }
             >
               {day}
-              <span
-                className={
-                  count > 0
-                    ? `h-[3px] w-[3px] rounded-full ${isSelected ? "bg-on-primary" : "bg-primary"}`
-                    : "h-[3px] w-[3px]"
-                }
-              />
+              {count > 0 && (
+                <span
+                  className={`absolute bottom-[4px] left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full ${isSelected ? "bg-on-primary" : "bg-primary"}`}
+                />
+              )}
             </button>
           );
         })}

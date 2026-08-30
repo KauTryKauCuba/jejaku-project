@@ -1,14 +1,12 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 export default function GoogleButton({ label }: { label: string }) {
-  const router = useRouter();
-
   return (
     <button
       type="button"
-      onClick={() => router.push("/onboarding")}
+      onClick={() => signIn("google", { callbackUrl: "/" })}
       className="flex h-[37px] w-full items-center justify-center gap-[10px] rounded-pill border border-hairline-input bg-canvas px-[15px] text-[14px] font-medium text-ink transition-colors hover:bg-canvas-soft active:scale-[0.98]"
     >
       <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">

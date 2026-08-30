@@ -1,23 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import FormField from "./FormField";
 import OtpInput from "./OtpInput";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESEND_COOLDOWN_SECONDS = 120;
+
+class OtpRequestError extends Error {
+  cooldown: boolean;
+  constructor(message: string, cooldown = false) {
+    super(message);
+    this.cooldown = cooldown;
+  }
+}
 
 export default function EmailOtpForm({
   size = "default",
+  initialEmail,
+  onVerified,
+  onCancel,
 }: {
   size?: "default" | "compact";
+  /** Skips the email step and auto-sends a code to this address (e.g. after Google sign-in). */
+  initialEmail?: string;
+  /** Called instead of the default onboarding redirect once the code is verified. */
+  onVerified?: (email: string) => void;
+  /** Replaces "Use a different email" with "Cancel" when set (verification mode). */
+  onCancel?: () => void;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<"email" | "otp">("email");
-  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<"email" | "otp">(initialEmail ? "otp" : "email");
+  const [email, setEmail] = useState(initialEmail ?? "");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [cooldownActive, setCooldownActive] = useState(false);
+  const autoSentRef = useRef(false);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [secondsLeft]);
+
+  const requestOtp = async () => {
+    const res = await fetch("/api/otp/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (typeof data.retryAfterSeconds === "number") {
+        setSecondsLeft(data.retryAfterSeconds);
+        throw new OtpRequestError(data.error ?? "Couldn't send a code. Try again.", true);
+      }
+      throw new OtpRequestError(data.error ?? "Couldn't send a code. Try again.");
+    }
+  };
+
+  useEffect(() => {
+    if (!initialEmail || autoSentRef.current) return;
+    autoSentRef.current = true;
+    requestOtp()
+      .then(() => setSecondsLeft(RESEND_COOLDOWN_SECONDS))
+      .catch((err) => {
+        if (err instanceof OtpRequestError && err.cooldown) {
+          setCooldownActive(true);
+        } else {
+          setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+        }
+      });
+    // Only fires once on mount for the auto-sent code; requestOtp reads the latest `email` via closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEmail]);
+
+  const cooldownMessage =
+    cooldownActive && secondsLeft > 0
+      ? `Please wait ${secondsLeft}s before requesting another code.`
+      : undefined;
 
   const gap = size === "compact" ? "gap-[15px]" : "gap-5";
   const buttonPad =
@@ -34,6 +101,38 @@ export default function EmailOtpForm({
         </p>
         <OtpInput value={code} onChange={setCode} />
         {error && <p className="text-[12px] text-error">{error}</p>}
+        <div className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}>
+          {secondsLeft > 0 ? (
+            <span>Resend code in {secondsLeft}s</span>
+          ) : (
+            <button
+              type="button"
+              disabled={resending}
+              onClick={async () => {
+                setResending(true);
+                setError(undefined);
+                try {
+                  await requestOtp();
+                  setCode("");
+                  setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+                  setCooldownActive(false);
+                } catch (err) {
+                  if (err instanceof OtpRequestError && err.cooldown) {
+                    setCooldownActive(true);
+                  } else {
+                    setCooldownActive(false);
+                    setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+                  }
+                } finally {
+                  setResending(false);
+                }
+              }}
+              className="text-primary disabled:opacity-50"
+            >
+              {resending ? "Sending…" : "Resend code"}
+            </button>
+          )}
+        </div>
         <button
           type="button"
           disabled={code.length !== 6 || submitting}
@@ -51,7 +150,11 @@ export default function EmailOtpForm({
                 setError(data.error ?? "Verification failed.");
                 return;
               }
-              router.push(`/onboarding?email=${encodeURIComponent(email)}`);
+              if (onVerified) {
+                onVerified(email);
+              } else {
+                router.push(`/onboarding?email=${encodeURIComponent(email)}`);
+              }
             } catch {
               setError("Something went wrong. Try again.");
             } finally {
@@ -65,13 +168,19 @@ export default function EmailOtpForm({
         <button
           type="button"
           onClick={() => {
+            if (onCancel) {
+              onCancel();
+              return;
+            }
             setStep("email");
             setCode("");
             setError(undefined);
+            setCooldownActive(false);
+            setSecondsLeft(0);
           }}
           className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}
         >
-          Use a different email
+          {onCancel ? "Cancel" : "Use a different email"}
         </button>
       </div>
     );
@@ -90,20 +199,18 @@ export default function EmailOtpForm({
         setError(undefined);
         setSubmitting(true);
         try {
-          const res = await fetch("/api/otp/request", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-          });
-          const data = await res.json();
-          if (!res.ok) {
-            setError(data.error ?? "Couldn't send a code. Try again.");
-            return;
-          }
+          await requestOtp();
           setCode("");
+          setSecondsLeft(RESEND_COOLDOWN_SECONDS);
+          setCooldownActive(false);
           setStep("otp");
-        } catch {
-          setError("Something went wrong. Try again.");
+        } catch (err) {
+          if (err instanceof OtpRequestError && err.cooldown) {
+            setCooldownActive(true);
+          } else {
+            setCooldownActive(false);
+            setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+          }
         } finally {
           setSubmitting(false);
         }
@@ -119,12 +226,13 @@ export default function EmailOtpForm({
         onChange={(value) => {
           setEmail(value);
           if (error) setError(undefined);
+          if (cooldownActive) setCooldownActive(false);
         }}
-        error={error}
+        error={cooldownMessage ?? error}
       />
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || (cooldownActive && secondsLeft > 0)}
         className={`${topMargin} rounded-pill bg-primary font-medium text-on-primary transition-transform active:scale-[0.98] disabled:opacity-50 ${buttonPad}`}
       >
         {submitting ? "Sending…" : "Continue with email"}

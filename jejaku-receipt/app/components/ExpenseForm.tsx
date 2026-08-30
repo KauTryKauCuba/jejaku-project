@@ -2,6 +2,8 @@
 
 import { useState, type FormEvent } from "react";
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from "../lib/expenses";
+import Select from "./Select";
+import DatePicker from "./DatePicker";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -29,10 +31,16 @@ export default function ExpenseForm({
     EXPENSE_CATEGORIES[0]
   );
   const [note, setNote] = useState("");
+  const [dateError, setDateError] = useState<string | undefined>(undefined);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
+    if (!date) {
+      setDateError("Pick a date.");
+      return;
+    }
+    setDateError(undefined);
     if (!merchant.trim() || Number.isNaN(parsedAmount)) return;
     onSubmit({
       merchant: merchant.trim(),
@@ -86,14 +94,15 @@ export default function ExpenseForm({
           <label className={labelClass} htmlFor="expense-date">
             Date
           </label>
-          <input
+          <DatePicker
             id="expense-date"
-            type="date"
-            required
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className={inputClass}
+            onChange={(value) => {
+              setDate(value);
+              if (dateError) setDateError(undefined);
+            }}
           />
+          {dateError && <p className="text-[12px] text-error">{dateError}</p>}
         </div>
       </div>
 
@@ -101,18 +110,12 @@ export default function ExpenseForm({
         <label className={labelClass} htmlFor="expense-category">
           Category
         </label>
-        <select
+        <Select
           id="expense-category"
           value={category}
-          onChange={(e) => setCategory(e.target.value as ExpenseCategory)}
-          className={inputClass}
-        >
-          {EXPENSE_CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          options={EXPENSE_CATEGORIES}
+          onChange={setCategory}
+        />
       </div>
 
       <div className="flex flex-col gap-[4px]">

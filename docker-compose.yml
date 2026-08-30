@@ -10,6 +10,10 @@ services:
       DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
       RESEND_API_KEY: ${RESEND_API_KEY}
       OTP_FROM_EMAIL: ${OTP_FROM_EMAIL}
+      NEXT_PUBLIC_JEJAKU_URL: ${NEXT_PUBLIC_JEJAKU_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     depends_on:
       jejaku-db:
         condition: service_healthy

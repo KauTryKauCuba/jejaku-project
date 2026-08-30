@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { clearStoredProfile, useStoredProfile } from "../lib/session";
 import { getInitials } from "../lib/initials";
 import MemberCard from "./MemberCard";
@@ -55,6 +56,7 @@ export default function UserBadge() {
             type="button"
             onClick={() => {
               clearStoredProfile();
+              signOut({ redirect: false });
               router.push("/");
             }}
             className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"

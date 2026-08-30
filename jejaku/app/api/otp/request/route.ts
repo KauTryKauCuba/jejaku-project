@@ -15,7 +15,10 @@ export async function POST(request: Request) {
 
   if (!result.ok) {
     return NextResponse.json(
-      { error: "Please wait before requesting another code." },
+      {
+        error: `Please wait ${result.retryAfterSeconds}s before requesting another code.`,
+        retryAfterSeconds: result.retryAfterSeconds,
+      },
       { status: 429 }
     );
   }
