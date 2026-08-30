@@ -14,21 +14,21 @@ const TIMELINE = [
     title: "Building Jejaku",
     body: "This site itself — still shaping the pages, the auth flow, and everything else here.",
     dateLabel: "Started",
-    date: "Wednesday, August 26, 2026, 10:54 PM",
+    date: "Saturday, August 29, 2026",
   },
   {
     status: "Jejaku Beta v0.0.1",
     title: "Polishing Jejaku",
     body: "Ongoing tweaks to the design system, the onboarding flow, and the landing page content — refining what's already here before starting on anything new. Jejaku Receipt waits until this feels right, not perfect.",
     dateLabel: "Started",
-    date: "Thursday, August 27, 2026, 6:32 PM",
+    date: "Saturday, August 29, 2026",
   },
   {
     status: "Jejaku Beta v0.0.1",
     title: "Accounts, onboarding & dashboard",
     body: "Email sign-in, a profile setup step with an avatar and a holographic member card, and a signed-in dashboard at its own URL that swaps in automatically once you're set up.",
     dateLabel: "Shipped",
-    date: "Friday, August 28, 2026",
+    date: "Saturday, August 29, 2026",
   },
   {
     status: "Jejaku Receipt Beta v0.0.1",
@@ -94,9 +94,16 @@ const TIMELINE = [
     date: "Sunday, August 30, 2026",
   },
   {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Expenses and receipt photos, saved for real",
+    body: "Expenses and scanned receipt photos used to live only in your browser and disappeared the moment you cleared it. Both now save to the server against your account — add one on your phone, see it on your laptop.",
+    dateLabel: "Shipped",
+    date: "Sunday, August 30, 2026",
+  },
+  {
     status: "Up next",
-    title: "Jejaku Receipt",
-    body: "Once Jejaku itself is settled, this moves from experiment to a real project on the site — auth-gated, and open for anyone to try.",
+    title: "Automatic receipt extraction",
+    body: "Scanning a receipt currently still means typing in the merchant, amount, and date yourself. Next up is pulling those straight from the photo.",
   },
 ];
 
