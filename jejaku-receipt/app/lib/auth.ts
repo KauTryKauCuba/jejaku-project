@@ -50,6 +50,13 @@ export const { handlers, auth } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      const jejakuOrigin = process.env.NEXT_PUBLIC_JEJAKU_URL;
+      if (jejakuOrigin && url.startsWith(jejakuOrigin)) return url;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      if (new URL(url).origin === baseUrl) return url;
+      return baseUrl;
+    },
     async jwt({ token }) {
       // token already carries whatever jejaku's own jwt callback wrote
       // (otpConfirmed, dbProfile, email, ...) — decoded from the shared cookie.
