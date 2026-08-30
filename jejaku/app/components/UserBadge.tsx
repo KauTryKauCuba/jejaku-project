@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useProfile } from "../lib/useProfile";
 import { getInitials } from "../lib/initials";
@@ -10,7 +9,6 @@ import MemberCard from "./MemberCard";
 export default function UserBadge() {
   const { profile } = useProfile();
   const [hovered, setHovered] = useState(false);
-  const router = useRouter();
 
   if (!profile) return null;
 
@@ -54,9 +52,8 @@ export default function UserBadge() {
           </div>
           <button
             type="button"
-            onClick={async () => {
-              await signOut({ redirect: false });
-              router.push("/");
+            onClick={() => {
+              signOut({ redirect: true, callbackUrl: "/" });
             }}
             className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
           >

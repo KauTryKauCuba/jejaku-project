@@ -71,7 +71,7 @@ export default function OnboardingForm({
               setError(data.error ?? "Couldn't save your profile. Try again.");
               return;
             }
-            const updatedSession = await update();
+            const updatedSession = await update({});
             registeredAt = updatedSession?.dbProfile?.registeredAt ?? registeredAt;
           }
           onComplete({

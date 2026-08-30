@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
+import { auth } from "./lib/auth";
+import { isSignedIn } from "./lib/authState";
 import HomeContent from "./components/HomeContent";
-import SessionRedirect from "./components/SessionRedirect";
 import RemoteSignOut from "./components/RemoteSignOut";
 
 export default async function Home({
@@ -8,11 +10,18 @@ export default async function Home({
   searchParams: Promise<{ signout?: string }>;
 }) {
   const params = await searchParams;
+  const shouldSignOut = params.signout === "1";
+
+  if (!shouldSignOut) {
+    const session = await auth();
+    if (isSignedIn(session)) {
+      redirect("/dashboard");
+    }
+  }
 
   return (
     <>
-      <RemoteSignOut shouldSignOut={params.signout === "1"} />
-      <SessionRedirect to="/dashboard" when="signed-in" />
+      <RemoteSignOut shouldSignOut={shouldSignOut} />
       <HomeContent />
     </>
   );

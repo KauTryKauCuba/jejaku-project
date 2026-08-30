@@ -10,6 +10,7 @@ export default function LogoLink() {
   return (
     <Link
       href={profile ? "/dashboard" : "/"}
+      prefetch={false}
       className="flex items-center gap-[8px]"
     >
       <Image src="/jk-logo.svg" alt="" width={28} height={28} priority />
