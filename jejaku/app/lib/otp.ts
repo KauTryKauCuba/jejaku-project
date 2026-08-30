@@ -1,11 +1,12 @@
 import { createHash, randomInt } from "crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { otpCodes } from "../db/schema";
 
 const CODE_TTL_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 120 * 1000;
 const MAX_ATTEMPTS = 5;
+const VERIFIED_WINDOW_MS = 10 * 60 * 1000;
 
 function hashCode(email: string, code: string) {
   return createHash("sha256").update(`${email}:${code}`).digest("hex");
@@ -64,4 +65,13 @@ export async function verifyOtp(email: string, code: string) {
     .where(eq(otpCodes.id, pending.id));
 
   return { ok: true as const };
+}
+
+export async function wasRecentlyVerified(email: string) {
+  const lastConsumed = await db.query.otpCodes.findFirst({
+    where: and(eq(otpCodes.email, email), isNotNull(otpCodes.consumedAt)),
+    orderBy: (t) => desc(t.consumedAt),
+  });
+  if (!lastConsumed?.consumedAt) return false;
+  return Date.now() - lastConsumed.consumedAt.getTime() < VERIFIED_WINDOW_MS;
 }

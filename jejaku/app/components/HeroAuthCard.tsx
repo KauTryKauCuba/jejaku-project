@@ -31,11 +31,11 @@ export default function HeroAuthCard() {
           <EmailOtpForm
             size="compact"
             initialEmail={email}
-            onVerified={() => {
+            onVerified={(verifiedEmail, profile) => {
               setStoredProfile({
-                fullName: session!.user!.name ?? email,
-                avatarUrl: session!.user!.image ?? undefined,
-                email,
+                fullName: profile?.fullName ?? session!.user!.name ?? verifiedEmail,
+                avatarUrl: profile?.avatarUrl ?? session!.user!.image ?? undefined,
+                email: verifiedEmail,
                 registeredAt: new Date().toISOString(),
               });
               router.push("/dashboard");

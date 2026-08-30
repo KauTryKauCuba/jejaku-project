@@ -16,7 +16,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!user.email) return false;
       await db
         .insert(users)
-        .values({ email: user.email, fullName: user.name ?? user.email })
+        .values({
+          email: user.email,
+          fullName: user.name ?? user.email,
+          avatarUrl: user.image ?? null,
+        })
         .onConflictDoNothing({ target: users.email });
       return true;
     },

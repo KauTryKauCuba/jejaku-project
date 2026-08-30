@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import { verifyOtp } from "../../../lib/otp";
+import { db } from "../../../db";
+import { users } from "../../../db/schema";
 
 const REASON_MESSAGES: Record<string, string> = {
   expired: "That code has expired. Request a new one.",
@@ -23,5 +26,14 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ ok: true });
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
+
+  return NextResponse.json({
+    ok: true,
+    profile: existing
+      ? { fullName: existing.fullName, avatarUrl: existing.avatarUrl ?? undefined }
+      : null,
+  });
 }

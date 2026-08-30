@@ -21,6 +21,7 @@ export default function OnboardingForm({
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(undefined);
   const [pendingImage, setPendingImage] = useState<string | undefined>(undefined);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
 
   if (pendingImage) {
     return (
@@ -38,19 +39,39 @@ export default function OnboardingForm({
   return (
     <form
       className="flex flex-col gap-5"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
         if (!fullName.trim()) {
           setError("Enter your full name.");
           return;
         }
+        const trimmedName = fullName.trim();
         setError(undefined);
-        onComplete({
-          fullName: fullName.trim(),
-          avatarUrl,
-          email,
-          registeredAt: new Date().toISOString(),
-        });
+        setSubmitting(true);
+        try {
+          if (email) {
+            const res = await fetch("/api/users/register", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, fullName: trimmedName, avatarUrl }),
+            });
+            if (!res.ok) {
+              const data = await res.json().catch(() => ({}));
+              setError(data.error ?? "Couldn't save your profile. Try again.");
+              return;
+            }
+          }
+          onComplete({
+            fullName: trimmedName,
+            avatarUrl,
+            email,
+            registeredAt: new Date().toISOString(),
+          });
+        } catch {
+          setError("Couldn't save your profile. Try again.");
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
       <div className="flex items-center gap-4">
@@ -116,9 +137,10 @@ export default function OnboardingForm({
 
       <button
         type="submit"
-        className="mt-2 flex h-[37px] items-center justify-center rounded-pill bg-primary px-4 text-[16px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+        disabled={submitting}
+        className="mt-2 flex h-[37px] items-center justify-center rounded-pill bg-primary px-4 text-[16px] font-medium text-on-primary transition-transform active:scale-[0.98] disabled:opacity-50"
       >
-        Continue
+        {submitting ? "Saving…" : "Continue"}
       </button>
     </form>
   );

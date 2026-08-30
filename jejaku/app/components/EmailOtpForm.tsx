@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import FormField from "./FormField";
 import OtpInput from "./OtpInput";
+import { setStoredProfile } from "../lib/session";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_COOLDOWN_SECONDS = 120;
@@ -16,6 +17,8 @@ class OtpRequestError extends Error {
   }
 }
 
+export type VerifiedProfile = { fullName: string; avatarUrl?: string };
+
 export default function EmailOtpForm({
   size = "default",
   initialEmail,
@@ -25,8 +28,8 @@ export default function EmailOtpForm({
   size?: "default" | "compact";
   /** Skips the email step and auto-sends a code to this address (e.g. after Google sign-in). */
   initialEmail?: string;
-  /** Called instead of the default onboarding redirect once the code is verified. */
-  onVerified?: (email: string) => void;
+  /** Called instead of the default onboarding/dashboard redirect once the code is verified. `profile` is the existing account for this email, if any. */
+  onVerified?: (email: string, profile: VerifiedProfile | null) => void;
   /** Replaces "Use a different email" with "Cancel" when set (verification mode). */
   onCancel?: () => void;
 }) {
@@ -150,8 +153,17 @@ export default function EmailOtpForm({
                 setError(data.error ?? "Verification failed.");
                 return;
               }
+              const profile: VerifiedProfile | null = data.profile ?? null;
               if (onVerified) {
-                onVerified(email);
+                onVerified(email, profile);
+              } else if (profile) {
+                setStoredProfile({
+                  fullName: profile.fullName,
+                  avatarUrl: profile.avatarUrl,
+                  email,
+                  registeredAt: new Date().toISOString(),
+                });
+                router.push("/dashboard");
               } else {
                 router.push(`/onboarding?email=${encodeURIComponent(email)}`);
               }
