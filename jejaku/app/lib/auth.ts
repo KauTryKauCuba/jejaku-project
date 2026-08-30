@@ -17,7 +17,45 @@ class OtpTooManyAttemptsError extends CredentialsSignin {
   code = "otp_too_many_attempts";
 }
 
+const cookieDomain = process.env.COOKIE_DOMAIN;
+
+const sharedCookies = cookieDomain
+  ? {
+      sessionToken: {
+        name: "authjs.session-token",
+        options: {
+          httpOnly: true,
+          sameSite: "lax" as const,
+          path: "/",
+          secure: true,
+          domain: cookieDomain,
+        },
+      },
+      csrfToken: {
+        name: "authjs.csrf-token",
+        options: {
+          httpOnly: true,
+          sameSite: "lax" as const,
+          path: "/",
+          secure: true,
+          domain: cookieDomain,
+        },
+      },
+      callbackUrl: {
+        name: "authjs.callback-url",
+        options: {
+          httpOnly: true,
+          sameSite: "lax" as const,
+          path: "/",
+          secure: true,
+          domain: cookieDomain,
+        },
+      },
+    }
+  : undefined;
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  cookies: sharedCookies,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,

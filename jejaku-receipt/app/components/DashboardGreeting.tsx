@@ -1,9 +1,9 @@
 "use client";
 
-import { useStoredProfile } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 
 export default function DashboardGreeting() {
-  const profile = useStoredProfile();
+  const { profile } = useProfile();
   const firstName = profile?.fullName?.split(" ")[0];
 
   if (!firstName) return null;

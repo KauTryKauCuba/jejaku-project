@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
   Brain,
   Compass,
@@ -25,7 +24,7 @@ import TechLogo from "./TechLogo";
 import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
 import ValuesSpecsTabs from "./ValuesSpecsTabs";
-import { useStoredProfile, logAuditEvent, getAuditLog, type AuditEvent } from "../lib/session";
+import { useProfile } from "../lib/useProfile";
 
 const VALUES = [
   {
@@ -96,32 +95,18 @@ export default function HomeContent({
   variant?: "public" | "dashboard";
 }) {
   const isDashboard = variant === "dashboard";
-  const profile = useStoredProfile();
+  const { profile } = useProfile();
   const firstName = profile?.fullName?.split(" ")[0];
-  const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
 
-  useEffect(() => {
-    if (!isDashboard || !profile) return;
-    logAuditEvent("signed_in");
-    setAuditLog(getAuditLog());
-  }, [isDashboard, profile?.email]);
-
-  const eventLabels: Record<AuditEvent["type"], string> = {
-    account_created: "Account created",
-    signed_in: "Signed in",
-  };
-
-  const latestEvent = auditLog[0];
-  const auditValue = latestEvent
-    ? `${eventLabels[latestEvent.type]} ${new Date(latestEvent.at).toLocaleString(
-        undefined,
-        { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }
-      )}`
+  const auditValue = profile
+    ? `Account created ${new Date(profile.registeredAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })}`
     : "No activity yet";
-  const auditDetail =
-    auditLog.length > 1
-      ? `${auditLog.length} events logged`
-      : "A log of sign-ins and account changes.";
+  const auditDetail = "A log of sign-ins and account changes.";
 
   const DASHBOARD_CARDS = [
     {

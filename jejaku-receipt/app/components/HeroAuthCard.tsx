@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { Fingerprint } from "@phosphor-icons/react/dist/ssr";
-import GoogleButton from "./GoogleButton";
-import EmailOtpForm from "./EmailOtpForm";
+import { jejakuUrl } from "../lib/jejakuUrl";
 
 export default function HeroAuthCard() {
   return (
@@ -10,21 +10,16 @@ export default function HeroAuthCard() {
         One account, every project
       </p>
       <p className="mt-[8px] text-[13px] leading-relaxed text-ink-mute">
-        No password — just a quick code by email.
+        Sign in once on jejaku — it works here too.
       </p>
 
       <div className="mt-[15px]">
-        <GoogleButton label="Continue with Google" />
-      </div>
-
-      <div className="mt-[15px] flex items-center gap-[11px]">
-        <div className="h-px flex-1 bg-hairline" />
-        <span className="text-[12px] text-ink-mute">or</span>
-        <div className="h-px flex-1 bg-hairline" />
-      </div>
-
-      <div className="mt-[15px]">
-        <EmailOtpForm size="compact" />
+        <Link
+          href={jejakuUrl("/login")}
+          className="flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+        >
+          Sign in on jejaku
+        </Link>
       </div>
     </div>
   );

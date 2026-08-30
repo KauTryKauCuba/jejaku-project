@@ -1,11 +1,11 @@
 import Image from "next/image";
 import { getInitials } from "../lib/initials";
-import type { OnboardingProfile } from "./OnboardingForm";
+import type { SessionProfile } from "../types/next-auth";
 
 export default function MemberCard({
   profile,
 }: {
-  profile: OnboardingProfile;
+  profile: SessionProfile;
 }) {
   const registeredAt = new Date(profile.registeredAt);
   const registeredFullDate = registeredAt.toLocaleDateString(undefined, {

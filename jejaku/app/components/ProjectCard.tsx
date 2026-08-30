@@ -19,7 +19,7 @@ export default function ProjectCard({
   };
   collapsible?: boolean;
 }) {
-  const { profile, loggedIn } = useProfile();
+  const { loggedIn } = useProfile();
   const [expanded, setExpanded] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
@@ -27,13 +27,7 @@ export default function ProjectCard({
     if (!project.url || syncing) return;
     setSyncing(true);
     setTimeout(() => {
-      let target = project.url!;
-      if (profile) {
-        const encoded = encodeURIComponent(btoa(JSON.stringify(profile)));
-        const separator = target.includes("?") ? "&" : "?";
-        target = `${target}${separator}profile=${encoded}`;
-      }
-      window.location.href = target;
+      window.location.href = project.url!;
     }, 1600);
   };
 

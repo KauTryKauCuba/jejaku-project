@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { clearStoredProfile, useStoredProfile } from "../lib/session";
+import { signOut } from "next-auth/react";
+import { useProfile } from "../lib/useProfile";
 import { getInitials } from "../lib/initials";
 import { jejakuUrl } from "../lib/jejakuUrl";
 import MemberCard from "./MemberCard";
 
 export default function UserBadge() {
-  const profile = useStoredProfile();
+  const { profile } = useProfile();
   const [hovered, setHovered] = useState(false);
 
   if (!profile) return null;
@@ -53,8 +54,7 @@ export default function UserBadge() {
           <button
             type="button"
             onClick={() => {
-              clearStoredProfile();
-              window.location.href = jejakuUrl("/?signout=1");
+              signOut({ redirect: true, callbackUrl: jejakuUrl("/") });
             }}
             className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
           >

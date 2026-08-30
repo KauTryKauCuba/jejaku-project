@@ -1,11 +1,12 @@
+import { redirect } from "next/navigation";
+import { auth } from "./lib/auth";
 import HomeContent from "./components/HomeContent";
-import SessionRedirect from "./components/SessionRedirect";
 
-export default function Home() {
-  return (
-    <>
-      <SessionRedirect to="/dashboard" when="signed-in" />
-      <HomeContent />
-    </>
-  );
+export default async function Home() {
+  const session = await auth();
+  if (session?.otpConfirmed && session.dbProfile) {
+    redirect("/dashboard");
+  }
+
+  return <HomeContent />;
 }

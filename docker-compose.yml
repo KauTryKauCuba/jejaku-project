@@ -13,6 +13,7 @@ services:
       NEXT_PUBLIC_JEJAKU_URL: ${NEXT_PUBLIC_JEJAKU_URL}
       AUTH_URL: ${NEXT_PUBLIC_JEJAKU_URL}
       AUTH_SECRET: ${AUTH_SECRET}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
     depends_on:
@@ -29,6 +30,9 @@ services:
       - "4001:4001"
     environment:
       DATABASE_URL: postgres://${RECEIPT_DB_USER}:${RECEIPT_DB_PASSWORD}@jejaku-receipt-db:5432/${RECEIPT_DB_NAME}
+      AUTH_URL: ${NEXT_PUBLIC_RECEIPT_URL}
+      AUTH_SECRET: ${AUTH_SECRET}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
     depends_on:
       jejaku-receipt-db:
         condition: service_healthy
