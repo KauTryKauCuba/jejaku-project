@@ -10,6 +10,7 @@ import { ExpensesProvider } from "../components/ExpensesProvider";
 import DashboardGreeting from "../components/DashboardGreeting";
 import DashboardShell from "../components/DashboardShell";
 import AddExpenseCard from "../components/AddExpenseCard";
+import ReceiptScannerCard from "../components/ReceiptScannerCard";
 import DashboardCalendar from "../components/DashboardCalendar";
 import TotalSpentTile from "../components/TotalSpentTile";
 import ReceiptsScannedTile from "../components/ReceiptsScannedTile";
@@ -53,17 +54,23 @@ export default async function DashboardPage() {
           Scan a receipt or log an expense manually.
         </p>
 
-        <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-5">
-          <DashboardCalendar />
-          <AddExpenseCard />
-          <TotalSpentTile />
-          <ReceiptsScannedTile />
-          <MonthlyTrendTile />
-        </div>
+        <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-6">
+          <div className="lg:col-span-5">
+            <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-5">
+              <ReceiptScannerCard />
+              <AddExpenseCard />
+              <TotalSpentTile />
+              <ReceiptsScannedTile />
+              <MonthlyTrendTile />
+            </div>
 
-        <div className="mt-[19px] grid gap-[19px] lg:grid-cols-2">
-          <CategoriesTrackedTile />
-          <RecentReceipts />
+            <div className="mt-[19px] grid gap-[19px] lg:grid-cols-2">
+              <CategoriesTrackedTile />
+              <RecentReceipts />
+            </div>
+          </div>
+
+          <DashboardCalendar />
         </div>
       </DashboardShell>
     </ExpensesProvider>

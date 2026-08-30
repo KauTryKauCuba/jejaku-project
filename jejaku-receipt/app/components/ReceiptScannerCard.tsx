@@ -1,0 +1,217 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Camera, FilePdf, Image as ImageIcon, PencilSimple, X } from "@phosphor-icons/react";
+import IconFlowBadge from "./IconFlowBadge";
+import ExpenseForm from "./ExpenseForm";
+import CameraCapture from "./CameraCapture";
+import type { ExpenseCategory } from "../lib/expenses";
+import { useAddExpense } from "./ExpensesProvider";
+
+type Mode = "idle" | "camera" | "details";
+type PreviewKind = "image" | "pdf" | null;
+
+export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }) {
+  const addExpense = useAddExpense();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
+
+  const [mode, setMode] = useState<Mode>("idle");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewKind, setPreviewKind] = useState<PreviewKind>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+
+  const revokePreview = () => {
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  };
+
+  const applyFile = (file: File, kind: PreviewKind) => {
+    revokePreview();
+    setPhoto(file);
+    setPreviewKind(kind);
+    setPreviewUrl(kind === "image" ? URL.createObjectURL(file) : null);
+    setMode("details");
+  };
+
+  const enterManually = () => {
+    revokePreview();
+    setPhoto(null);
+    setPreviewKind(null);
+    setMode("details");
+  };
+
+  const reset = () => {
+    revokePreview();
+    setPhoto(null);
+    setPreviewKind(null);
+    setMode("idle");
+    if (photoInputRef.current) photoInputRef.current.value = "";
+    if (pdfInputRef.current) pdfInputRef.current.value = "";
+  };
+
+  const handleSave = async (data: {
+    merchant: string;
+    amount: number;
+    date: string;
+    category: ExpenseCategory;
+    note?: string;
+  }) => {
+    setSaving(true);
+    setError(undefined);
+    try {
+      await addExpense(data, photo);
+      reset();
+      onSaved?.();
+    } catch {
+      setError("Couldn't save expense. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-hairline bg-canvas p-[24px]">
+      <IconFlowBadge size={40} seed={7}>
+        <Camera size={16} weight="light" />
+      </IconFlowBadge>
+
+      <h3 className="mt-[15px] text-[15px] font-light tracking-[-0.19px] text-ink">
+        Receipt Scanner
+      </h3>
+      <p className="mt-[4px] max-w-md text-[12px] leading-relaxed text-ink-mute">
+        Snap a receipt, import a file, or enter it yourself.
+      </p>
+
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) applyFile(file, "image");
+        }}
+      />
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) applyFile(file, "pdf");
+        }}
+      />
+
+      {mode === "idle" && (
+        <>
+          <button
+            type="button"
+            onClick={() => setMode("camera")}
+            className="mt-[19px] flex h-[37px] w-full items-center justify-center gap-[8px] rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+          >
+            <Camera size={16} weight="light" />
+            Quick Scan
+          </button>
+
+          <div className="mt-[15px] flex items-center gap-[11px]">
+            <div className="h-px flex-1 bg-hairline" />
+            <span className="text-[12px] text-ink-mute">or add a receipt</span>
+            <div className="h-px flex-1 bg-hairline" />
+          </div>
+
+          <div className="mt-[11px] flex flex-wrap items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() => pdfInputRef.current?.click()}
+              className="flex h-[33px] items-center justify-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+            >
+              <FilePdf size={14} weight="light" />
+              Import PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="flex h-[33px] items-center justify-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+            >
+              <ImageIcon size={14} weight="light" />
+              Import photo
+            </button>
+            <button
+              type="button"
+              onClick={enterManually}
+              className="flex h-[33px] items-center justify-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+            >
+              <PencilSimple size={14} weight="light" />
+              Enter manually
+            </button>
+          </div>
+        </>
+      )}
+
+      {mode === "camera" && (
+        <CameraCapture
+          onCapture={(file) => applyFile(file, "image")}
+          onCancel={() => setMode("idle")}
+        />
+      )}
+
+      {mode === "details" && (
+        <div className="mt-[19px]">
+          {previewKind === "image" && previewUrl && (
+            <div className="w-full overflow-hidden rounded-lg border border-hairline">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={previewUrl}
+                alt="Captured receipt"
+                className="max-h-[240px] w-full object-cover"
+              />
+              <div className="flex items-center justify-end border-t border-hairline p-[11px]">
+                <button
+                  type="button"
+                  onClick={reset}
+                  aria-label="Discard photo"
+                  className="flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+                >
+                  <X size={14} weight="light" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {previewKind === "pdf" && photo && (
+            <div className="flex items-center gap-[11px] rounded-lg border border-hairline bg-canvas-soft p-[11px]">
+              <span className="flex h-[37px] w-[37px] shrink-0 items-center justify-center rounded-md bg-canvas text-ink-mute">
+                <FilePdf size={18} weight="light" />
+              </span>
+              <p className="min-w-0 flex-1 truncate text-[13px] text-ink">{photo.name}</p>
+              <button
+                type="button"
+                onClick={reset}
+                aria-label="Discard file"
+                className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+              >
+                <X size={13} weight="light" />
+              </button>
+            </div>
+          )}
+
+          <p className="mt-[15px] text-[12px] text-ink-mute">
+            {previewKind
+              ? "Fill in the details below — automatic extraction isn't wired up yet."
+              : "Enter the expense details below."}
+          </p>
+          <div className="mt-[8px]">
+            {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
+            <ExpenseForm onSubmit={handleSave} onCancel={reset} disabled={saving} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

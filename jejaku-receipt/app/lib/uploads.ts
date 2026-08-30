@@ -8,15 +8,16 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "application/pdf": "pdf",
 };
 
 export async function saveExpensePhoto(file: File): Promise<string> {
   const extension = ALLOWED_TYPES[file.type];
   if (!extension) {
-    throw new Error("Unsupported image type.");
+    throw new Error("Unsupported file type.");
   }
   if (file.size > MAX_SIZE_BYTES) {
-    throw new Error("Image is too large.");
+    throw new Error("File is too large.");
   }
 
   await mkdir(UPLOADS_DIR, { recursive: true });
