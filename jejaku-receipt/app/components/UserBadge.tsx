@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { clearStoredProfile, useStoredProfile } from "../lib/session";
 import { getInitials } from "../lib/initials";
+import { jejakuUrl } from "../lib/jejakuUrl";
 import MemberCard from "./MemberCard";
 
 export default function UserBadge() {
@@ -53,7 +54,7 @@ export default function UserBadge() {
             type="button"
             onClick={() => {
               clearStoredProfile();
-              window.location.href = `${process.env.NEXT_PUBLIC_JEJAKU_URL}/?signout=1`;
+              window.location.href = jejakuUrl("/?signout=1");
             }}
             className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
           >

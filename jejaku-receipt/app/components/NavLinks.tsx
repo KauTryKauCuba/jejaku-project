@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { jejakuUrl } from "../lib/jejakuUrl";
 
 export const NAV_LINKS = [
-  { label: "Roadmap", href: `${process.env.NEXT_PUBLIC_JEJAKU_URL}/roadmap` },
+  { label: "Roadmap", href: jejakuUrl("/roadmap") },
 ];
 
 export function NavLinks({ className }: { className: string }) {

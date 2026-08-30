@@ -8,6 +8,7 @@ import UserBadge from "./UserBadge";
 import DashboardSidebar from "./DashboardSidebar";
 import { NavLinks } from "./NavLinks";
 import FlowLines from "./FlowLines";
+import { jejakuUrl } from "../lib/jejakuUrl";
 
 export default function DashboardShell({ children }: { children: ReactNode }) {
   return (
@@ -24,7 +25,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
 
         <header className="relative flex items-center justify-between px-[23px] py-[19px]">
           <Link
-            href={`${process.env.NEXT_PUBLIC_JEJAKU_URL}/dashboard`}
+            href={jejakuUrl("/dashboard")}
             className="flex items-center gap-[8px]"
           >
             <Image src="/jk-logo.svg" alt="" width={28} height={28} priority />
