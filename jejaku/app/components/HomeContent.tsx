@@ -89,7 +89,7 @@ const PROJECTS = [
     shortBody:
       "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5.",
     body: "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5. Built after evaluating a range of OCR approaches — including Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek via Ollama, PaddleOCR, Moondream, and Tesseract — before settling on this one. Free to try.",
-    url: "http://localhost:3001/dashboard",
+    url: `${process.env.NEXT_PUBLIC_RECEIPT_URL}/dashboard`,
     illustration: ReceiptIllustration,
   },
   {
