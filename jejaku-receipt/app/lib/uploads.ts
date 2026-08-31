@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { randomUUID } from "crypto";
 
-const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads", "expenses");
+export const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads", "expenses");
 const MAX_SIZE_BYTES = 8 * 1024 * 1024;
 const ALLOWED_TYPES: Record<string, string> = {
   "image/jpeg": "jpg",
