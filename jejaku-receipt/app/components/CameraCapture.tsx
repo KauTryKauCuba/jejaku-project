@@ -18,6 +18,21 @@ const READY_CHECK_GAP_MS = 100;
 // on a half-framed or motion-blurred shot.
 const READY_STREAK_TO_CAPTURE = 2;
 
+// Cheap local motion check so we only spend a DeepSeek call once the phone
+// has actually stopped moving — most polling during "still positioning the
+// shot" was pure waste otherwise. Runs on a tiny downscaled canvas; this is
+// a rounding error next to the cost of decoding the camera feed itself.
+const MOTION_SAMPLE_SIZE = 24;
+const MOTION_CHECK_INTERVAL_MS = 120;
+const MOTION_DIFF_THRESHOLD = 8;
+const STILL_HOLD_MS = 300;
+
+// Hard ceiling on DeepSeek calls per camera session. If auto-detect hasn't
+// locked on by then (bad lighting, awkward angle, whatever), stop spending
+// money on it and let the user fall back to the manual shutter — a user who
+// leaves the camera open and walks away should not run up an unbounded bill.
+const MAX_READY_ATTEMPTS = 10;
+
 export default function CameraCapture({
   onCapture,
   onCancel,
@@ -29,11 +44,13 @@ export default function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const readyStreakRef = useRef(0);
   const capturedRef = useRef(false);
+  const isStillRef = useRef(false);
+  const attemptsRef = useRef(0);
   const [error, setError] = useState<string | undefined>(undefined);
   const [ready, setReady] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const [autoStatus, setAutoStatus] = useState<"scanning" | "found">("scanning");
+  const [autoStatus, setAutoStatus] = useState<"scanning" | "found" | "stopped">("scanning");
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -117,6 +134,50 @@ export default function CameraCapture({
     );
   };
 
+  // Local-only: watches for the camera to hold still, no network involved.
+  useEffect(() => {
+    if (!ready) return;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = MOTION_SAMPLE_SIZE;
+    canvas.height = MOTION_SAMPLE_SIZE;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    let previousFrame: Uint8ClampedArray | null = null;
+    let stillSince: number | null = null;
+
+    const interval = setInterval(() => {
+      const video = videoRef.current;
+      if (!ctx || !video || !video.videoWidth || capturedRef.current) return;
+
+      ctx.drawImage(video, 0, 0, MOTION_SAMPLE_SIZE, MOTION_SAMPLE_SIZE);
+      const frame = ctx.getImageData(0, 0, MOTION_SAMPLE_SIZE, MOTION_SAMPLE_SIZE).data;
+
+      if (previousFrame) {
+        let diffSum = 0;
+        for (let i = 0; i < frame.length; i += 4) {
+          diffSum +=
+            Math.abs(frame[i] - previousFrame[i]) +
+            Math.abs(frame[i + 1] - previousFrame[i + 1]) +
+            Math.abs(frame[i + 2] - previousFrame[i + 2]);
+        }
+        const avgDiff = diffSum / (frame.length / 4) / 3;
+        const now = Date.now();
+
+        if (avgDiff < MOTION_DIFF_THRESHOLD) {
+          if (stillSince === null) stillSince = now;
+          isStillRef.current = now - stillSince >= STILL_HOLD_MS;
+        } else {
+          stillSince = null;
+          isStillRef.current = false;
+        }
+      }
+
+      previousFrame = frame;
+    }, MOTION_CHECK_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [ready]);
+
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
@@ -125,6 +186,20 @@ export default function CameraCapture({
     const checkReady = async () => {
       const video = videoRef.current;
       if (!video || capturedRef.current) return;
+
+      // Skip the DeepSeek call entirely while the phone is still moving —
+      // that frame is stale by the time a response would come back anyway,
+      // so it's a call spent for nothing.
+      if (!isStillRef.current) {
+        if (!cancelled) timeoutId = setTimeout(checkReady, MOTION_CHECK_INTERVAL_MS);
+        return;
+      }
+
+      if (attemptsRef.current >= MAX_READY_ATTEMPTS) {
+        setAutoStatus("stopped");
+        return;
+      }
+      attemptsRef.current += 1;
 
       try {
         const scale = Math.min(1, 800 / video.videoWidth);
@@ -229,17 +304,27 @@ export default function CameraCapture({
               muted
               className="h-full w-full object-cover"
             />
-            <div className="pointer-events-none absolute inset-x-0 top-[15px] flex justify-center">
+            <div className="pointer-events-none absolute inset-x-0 top-[15px] flex justify-center px-[23px]">
               <span
                 className={
                   autoStatus === "found"
-                    ? "rounded-pill bg-canvas px-[13px] py-[6px] text-[12px] font-medium text-ink"
-                    : "rounded-pill bg-ink/60 px-[13px] py-[6px] text-[12px] font-medium text-canvas"
+                    ? "rounded-pill bg-canvas px-[13px] py-[6px] text-center text-[12px] font-medium text-ink"
+                    : "rounded-pill bg-ink/60 px-[13px] py-[6px] text-center text-[12px] font-medium text-canvas"
                 }
               >
-                {autoStatus === "found" ? "Got it — capturing…" : "Looking for a receipt…"}
+                {autoStatus === "found"
+                  ? "Got it — capturing…"
+                  : autoStatus === "stopped"
+                    ? "Auto-detect paused — tap the shutter to capture"
+                    : "Looking for a receipt…"}
               </span>
             </div>
+            {autoStatus !== "stopped" && (
+              <div
+                className="scan-line pointer-events-none absolute inset-x-0 h-[3px] bg-canvas/80 shadow-[0_0_12px_2px_rgba(255,255,255,0.5)]"
+                aria-hidden="true"
+              />
+            )}
           </>
         )}
       </div>
