@@ -40,11 +40,16 @@ export default async function DashboardPage() {
     category: row.category as Expense["category"],
     note: row.note ?? undefined,
     photoUrl: row.photoUrl ?? undefined,
+    location: row.location ?? undefined,
+    currency: row.currency ?? undefined,
+    homeCurrencyAmount: row.homeCurrencyAmount ?? undefined,
+    homeCurrencyCode: row.homeCurrencyCode ?? undefined,
+    items: row.items ?? undefined,
     createdAt: row.createdAt.toISOString(),
   }));
 
   return (
-    <ExpensesProvider initialExpenses={initialExpenses}>
+    <ExpensesProvider initialExpenses={initialExpenses} defaultCurrency={user.defaultCurrency}>
       <DashboardShell>
         <DashboardGreeting />
         <h2 className="text-[20px] font-light leading-[1.1] tracking-[-0.25px] text-ink">
@@ -56,15 +61,15 @@ export default async function DashboardPage() {
 
         <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-6">
           <div className="lg:col-span-5">
-            <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-4">
               <ReceiptScannerCard />
-              <AddExpenseCard />
               <TotalSpentTile />
               <ReceiptsScannedTile />
               <MonthlyTrendTile />
             </div>
 
-            <div className="mt-[19px] grid gap-[19px] lg:grid-cols-2">
+            <div className="mt-[19px] grid gap-[19px] lg:grid-cols-3">
+              <AddExpenseCard />
               <CategoriesTrackedTile />
               <RecentReceipts />
             </div>

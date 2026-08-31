@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { EXPENSE_CATEGORIES, type ExpenseCategory } from "../lib/expenses";
+import { Plus, X } from "@phosphor-icons/react";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem } from "../lib/expenses";
 import Select from "./Select";
 import DatePicker from "./DatePicker";
 
@@ -16,6 +17,9 @@ export default function ExpenseForm({
   initialMerchant,
   initialAmount,
   initialCategory,
+  initialLocation,
+  initialItems,
+  initialCurrency,
   disabled = false,
 }: {
   onSubmit: (data: {
@@ -24,12 +28,18 @@ export default function ExpenseForm({
     date: string;
     category: ExpenseCategory;
     note?: string;
+    location?: string;
+    items?: ExpenseItem[];
+    currency?: string;
   }) => void;
   onCancel: () => void;
   initialDate?: string;
   initialMerchant?: string;
   initialAmount?: number;
   initialCategory?: ExpenseCategory;
+  initialLocation?: string;
+  initialItems?: ExpenseItem[];
+  initialCurrency?: string;
   disabled?: boolean;
 }) {
   const [merchant, setMerchant] = useState(initialMerchant ?? "");
@@ -40,8 +50,30 @@ export default function ExpenseForm({
   const [category, setCategory] = useState<ExpenseCategory>(
     initialCategory ?? EXPENSE_CATEGORIES[0]
   );
+  const [location, setLocation] = useState(initialLocation ?? "");
+  const [currency, setCurrency] = useState(initialCurrency ?? DEFAULT_CURRENCY);
+  const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
+
+  const updateItemName = (index: number, name: string) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, name } : item)));
+  };
+
+  const updateItemPrice = (index: number, priceText: string) => {
+    const price = Number(priceText);
+    setItems((prev) =>
+      prev.map((item, i) => (i === index ? { ...item, price: Number.isFinite(price) ? price : 0 } : item))
+    );
+  };
+
+  const removeItem = (index: number) => {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const addItem = () => {
+    setItems((prev) => [...prev, { name: "", price: 0 }]);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -58,6 +90,9 @@ export default function ExpenseForm({
       date,
       category,
       note: note.trim() || undefined,
+      location: location.trim() || undefined,
+      items: items.length > 0 ? items : undefined,
+      currency: currency.trim().toUpperCase() || undefined,
     });
   };
 
@@ -82,23 +117,105 @@ export default function ExpenseForm({
         />
       </div>
 
+      <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-location">
+          Location <span className="font-normal text-ink-mute">(optional)</span>
+        </label>
+        <input
+          id="expense-location"
+          type="text"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. 123 Main St, Springfield"
+          className={inputClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-[4px]">
+        <label className={labelClass}>
+          Items <span className="font-normal text-ink-mute">(optional)</span>
+        </label>
+        {items.length > 0 && (
+          <div className="flex flex-col gap-[8px]">
+            {items.map((item, i) => (
+              <div key={i} className="flex items-center gap-[8px]">
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    value={item.name}
+                    onChange={(e) => updateItemName(i, e.target.value)}
+                    placeholder="Item name"
+                    aria-label={`Item ${i + 1} name`}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="w-[88px] shrink-0">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={item.price}
+                    onChange={(e) => updateItemPrice(i, e.target.value)}
+                    placeholder="0.00"
+                    aria-label={`Item ${i + 1} price`}
+                    className={inputClass}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeItem(i)}
+                  aria-label={`Remove item ${i + 1}`}
+                  className="flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+                >
+                  <X size={14} weight="light" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={addItem}
+          className="mt-[4px] flex h-[33px] w-fit items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+        >
+          <Plus size={14} weight="light" />
+          Add item
+        </button>
+      </div>
+
       <div className="grid grid-cols-2 gap-[11px]">
         <div className="flex flex-col gap-[4px]">
           <label className={labelClass} htmlFor="expense-amount">
             Amount
           </label>
-          <input
-            id="expense-amount"
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min="0"
-            required
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className={inputClass}
-          />
+          <div className="flex items-center gap-[6px]">
+            <div className="w-[62px] shrink-0">
+              <input
+                type="text"
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                maxLength={3}
+                aria-label="Currency code"
+                placeholder={DEFAULT_CURRENCY}
+                className={`${inputClass} text-center uppercase`}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <input
+                id="expense-amount"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0"
+                required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                className={inputClass}
+              />
+            </div>
+          </div>
         </div>
         <div className="flex flex-col gap-[4px]">
           <label className={labelClass} htmlFor="expense-date">

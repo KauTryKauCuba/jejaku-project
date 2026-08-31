@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { desc, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../lib/currentUser";
 import { saveExpensePhoto } from "../../lib/uploads";
+import { convertCurrency } from "../../lib/exchangeRates";
 import { db } from "../../db";
 import { expenses } from "../../db/schema";
-import { EXPENSE_CATEGORIES, type Expense } from "../../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type Expense, type ExpenseItem } from "../../lib/expenses";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
 function toExpense(row: typeof expenses.$inferSelect): Expense {
   return {
@@ -17,6 +19,11 @@ function toExpense(row: typeof expenses.$inferSelect): Expense {
     category: row.category as Expense["category"],
     note: row.note ?? undefined,
     photoUrl: row.photoUrl ?? undefined,
+    location: row.location ?? undefined,
+    currency: row.currency ?? undefined,
+    homeCurrencyAmount: row.homeCurrencyAmount ?? undefined,
+    homeCurrencyCode: row.homeCurrencyCode ?? undefined,
+    items: row.items ?? undefined,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -52,7 +59,36 @@ export async function POST(request: Request) {
   const category = typeof form.get("category") === "string" ? (form.get("category") as string) : "";
   const noteRaw = form.get("note");
   const note = typeof noteRaw === "string" ? noteRaw.trim() : "";
+  const locationRaw = form.get("location");
+  const location = typeof locationRaw === "string" ? locationRaw.trim() : "";
+  const currencyRaw = form.get("currency");
+  const currency =
+    typeof currencyRaw === "string" && CURRENCY_CODE_PATTERN.test(currencyRaw.toUpperCase())
+      ? currencyRaw.toUpperCase()
+      : "";
   const photo = form.get("photo");
+
+  const itemsRaw = form.get("items");
+  let items: ExpenseItem[] | null = null;
+  if (typeof itemsRaw === "string" && itemsRaw) {
+    try {
+      const parsed = JSON.parse(itemsRaw);
+      if (Array.isArray(parsed)) {
+        items = parsed.filter(
+          (item): item is ExpenseItem =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof item.name === "string" &&
+            typeof item.price === "number" &&
+            Number.isFinite(item.price)
+        );
+      }
+    } catch {
+      // Malformed items payload — save the expense without them rather
+      // than rejecting the whole submission over a non-essential field.
+      items = null;
+    }
+  }
 
   if (
     !merchant ||
@@ -74,6 +110,20 @@ export async function POST(request: Request) {
     }
   }
 
+  // Snapshot into the user's home currency now, at save time, rather than
+  // converting live on every dashboard read — see the comment on the
+  // schema columns for why. A failed/unreachable FX lookup shouldn't block
+  // saving the expense itself, so this degrades to null (excluded from
+  // aggregate totals) rather than erroring the whole request.
+  const expenseCurrency = currency || DEFAULT_CURRENCY;
+  const homeCurrencyAmount = await convertCurrency(amount, expenseCurrency, user.defaultCurrency);
+  if (homeCurrencyAmount === null) {
+    console.error(
+      "[expenses] currency conversion failed",
+      expenseCurrency, "->", user.defaultCurrency
+    );
+  }
+
   const [row] = await db
     .insert(expenses)
     .values({
@@ -84,6 +134,11 @@ export async function POST(request: Request) {
       category,
       note: note || null,
       photoUrl,
+      location: location || null,
+      currency: currency || null,
+      homeCurrencyAmount,
+      homeCurrencyCode: homeCurrencyAmount === null ? null : user.defaultCurrency,
+      items: items && items.length > 0 ? items : null,
     })
     .returning();
 

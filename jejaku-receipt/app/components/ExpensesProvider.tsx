@@ -1,22 +1,25 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import type { Expense } from "../lib/expenses";
+import { DEFAULT_CURRENCY, type Expense } from "../lib/expenses";
 
 type NewExpense = Omit<Expense, "id" | "createdAt" | "photoUrl">;
 
 type ExpensesContextValue = {
   expenses: Expense[];
   addExpense: (input: NewExpense, photo?: File | null) => Promise<void>;
+  defaultCurrency: string;
 };
 
 const ExpensesContext = createContext<ExpensesContextValue | null>(null);
 
 export function ExpensesProvider({
   initialExpenses,
+  defaultCurrency = DEFAULT_CURRENCY,
   children,
 }: {
   initialExpenses: Expense[];
+  defaultCurrency?: string;
   children: ReactNode;
 }) {
   const [expenses, setExpenses] = useState(initialExpenses);
@@ -28,6 +31,9 @@ export function ExpensesProvider({
     form.set("date", input.date);
     form.set("category", input.category);
     if (input.note) form.set("note", input.note);
+    if (input.location) form.set("location", input.location);
+    if (input.currency) form.set("currency", input.currency);
+    if (input.items && input.items.length > 0) form.set("items", JSON.stringify(input.items));
     if (photo) form.set("photo", photo);
 
     const res = await fetch("/api/expenses", { method: "POST", body: form });
@@ -37,7 +43,7 @@ export function ExpensesProvider({
   }, []);
 
   return (
-    <ExpensesContext.Provider value={{ expenses, addExpense }}>
+    <ExpensesContext.Provider value={{ expenses, addExpense, defaultCurrency }}>
       {children}
     </ExpensesContext.Provider>
   );
@@ -55,4 +61,8 @@ export function useExpenses(): Expense[] {
 
 export function useAddExpense() {
   return useExpensesContext().addExpense;
+}
+
+export function useDefaultCurrency(): string {
+  return useExpensesContext().defaultCurrency;
 }

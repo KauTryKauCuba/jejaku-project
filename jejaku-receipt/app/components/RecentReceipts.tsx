@@ -59,7 +59,7 @@ export default function RecentReceipts() {
                 </div>
               </div>
               <p className="tabular shrink-0 text-[13px] font-medium text-ink">
-                ${formatCurrency(e.amount)}
+                {formatCurrency(e.amount, e.currency)}
               </p>
             </li>
           ))}

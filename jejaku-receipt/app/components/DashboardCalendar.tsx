@@ -183,7 +183,7 @@ export default function DashboardCalendar() {
                   <p className="text-[11px] text-ink-mute">{e.category}</p>
                 </div>
                 <p className="tabular shrink-0 text-[13px] font-medium text-ink">
-                  ${formatCurrency(e.amount)}
+                  {formatCurrency(e.amount, e.currency)}
                 </p>
               </li>
             ))}

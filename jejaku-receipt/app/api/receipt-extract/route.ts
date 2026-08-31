@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EXPENSE_CATEGORIES } from "../../lib/expenses";
 
+type ExtractedItem = { name: string; price: number };
+
 type Extracted = {
   merchant: string | null;
   amount: number | null;
   date: string | null;
   category: (typeof EXPENSE_CATEGORIES)[number] | null;
+  location: string | null;
+  currency: string | null;
+  items: ExtractedItem[];
 };
+
+const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
 export async function POST(req: NextRequest) {
   const { image } = (await req.json()) as { image?: string };
@@ -35,7 +42,10 @@ export async function POST(req: NextRequest) {
       // budget on reasoning_content before it ever writes the answer —
       // disable it, we just want a direct structured-extraction answer.
       thinking: { type: "disabled" },
-      max_tokens: 500,
+      // Bumped from 500: an itemized list is real extra output tokens on
+      // top of the four scalar fields, and a truncated response comes back
+      // as invalid JSON — see the earlier max_tokens bug on this route.
+      max_tokens: 900,
       messages: [
         {
           role: "user",
@@ -45,12 +55,20 @@ export async function POST(req: NextRequest) {
               text:
                 "Read this photo of a receipt and extract its details. " +
                 "Respond with ONLY a JSON object, no other text, in exactly this shape: " +
-                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"..."} ' +
+                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","location":"...","currency":"...","items":[{"name":"...","price":0}]} ' +
                 "merchant: the store/business name as printed. " +
                 "amount: the final total paid, as a plain number (no currency symbol). " +
                 `date: the transaction date in YYYY-MM-DD format. If no date is printed, use today's date, ${today}. ` +
                 `category: pick the single best fit from exactly this list: ${categoryList}. ` +
-                "If a field genuinely cannot be determined, use null for it.",
+                "location: the store's printed address or branch (street address, city, or branch name/number) " +
+                "— whatever identifies which specific location this is, as printed. Not the merchant's name again. " +
+                "currency: the 3-letter ISO 4217 currency code for whatever currency this receipt is priced in " +
+                "(e.g. USD, MYR, EUR, GBP, JPY, SGD) — infer it from the printed symbol/code, or from the store's " +
+                "address/language if no symbol is legible. " +
+                "items: every line item printed on the receipt, each with its own name and price as a plain " +
+                "number. Skip subtotal/tax/tip/total lines — those aren't items. If no individual items can be " +
+                "read, use an empty array. " +
+                "If a field genuinely cannot be determined, use null for it (items is always an array, never null).",
             },
             {
               type: "image_url",
@@ -62,6 +80,16 @@ export async function POST(req: NextRequest) {
     }),
   });
 
+  const empty: Extracted = {
+    merchant: null,
+    amount: null,
+    date: null,
+    category: null,
+    location: null,
+    currency: null,
+    items: [],
+  };
+
   if (!res.ok) {
     console.error("[receipt-extract] DeepSeek request failed", res.status, await res.text());
     return NextResponse.json({ error: "Extraction request failed" }, { status: 502 });
@@ -71,7 +99,7 @@ export async function POST(req: NextRequest) {
   const text: string = data?.choices?.[0]?.message?.content ?? "";
   const match = text.match(/\{[\s\S]*\}/);
   if (!match) {
-    return NextResponse.json({ merchant: null, amount: null, date: null, category: null } satisfies Extracted);
+    return NextResponse.json(empty);
   }
 
   try {
@@ -80,8 +108,23 @@ export async function POST(req: NextRequest) {
     const amount = typeof parsed.amount === "number" && Number.isFinite(parsed.amount) ? parsed.amount : null;
     const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : null;
     const category = EXPENSE_CATEGORIES.includes(parsed.category) ? parsed.category : null;
-    return NextResponse.json({ merchant, amount, date, category } satisfies Extracted);
+    const location = typeof parsed.location === "string" ? parsed.location : null;
+    const currency =
+      typeof parsed.currency === "string" && CURRENCY_CODE_PATTERN.test(parsed.currency.toUpperCase())
+        ? parsed.currency.toUpperCase()
+        : null;
+    const items: ExtractedItem[] = Array.isArray(parsed.items)
+      ? parsed.items.filter(
+          (item: unknown): item is ExtractedItem =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof (item as ExtractedItem).name === "string" &&
+            typeof (item as ExtractedItem).price === "number" &&
+            Number.isFinite((item as ExtractedItem).price)
+        )
+      : [];
+    return NextResponse.json({ merchant, amount, date, category, location, currency, items } satisfies Extracted);
   } catch {
-    return NextResponse.json({ merchant: null, amount: null, date: null, category: null } satisfies Extracted);
+    return NextResponse.json(empty);
   }
 }

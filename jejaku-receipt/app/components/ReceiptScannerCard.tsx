@@ -5,7 +5,7 @@ import { Camera, FilePdf, Image as ImageIcon, PencilSimple, X } from "@phosphor-
 import IconFlowBadge from "./IconFlowBadge";
 import ExpenseForm from "./ExpenseForm";
 import CameraCapture from "./CameraCapture";
-import type { ExpenseCategory } from "../lib/expenses";
+import type { ExpenseCategory, ExpenseItem } from "../lib/expenses";
 import { useAddExpense } from "./ExpensesProvider";
 
 type Mode = "idle" | "camera" | "details";
@@ -15,6 +15,9 @@ type Extracted = {
   amount: number | null;
   date: string | null;
   category: ExpenseCategory | null;
+  location: string | null;
+  currency: string | null;
+  items: ExpenseItem[];
 };
 
 function fileToDataUrl(file: File): Promise<string> {
@@ -102,6 +105,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     date: string;
     category: ExpenseCategory;
     note?: string;
+    location?: string;
+    items?: ExpenseItem[];
+    currency?: string;
   }) => {
     setSaving(true);
     setError(undefined);
@@ -265,6 +271,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
                 initialAmount={extracted?.amount ?? undefined}
                 initialDate={extracted?.date ?? undefined}
                 initialCategory={extracted?.category ?? undefined}
+                initialLocation={extracted?.location ?? undefined}
+                initialCurrency={extracted?.currency ?? undefined}
+                initialItems={extracted?.items}
               />
             )}
           </div>
