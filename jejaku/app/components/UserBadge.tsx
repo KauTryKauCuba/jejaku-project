@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { signOut } from "next-auth/react";
+import { useRef, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import { useProfile } from "../lib/useProfile";
 import { getInitials } from "../lib/initials";
 import MemberCard from "./MemberCard";
+import AvatarCropModal from "./AvatarCropModal";
 
 export default function UserBadge() {
   const { profile } = useProfile();
+  const { update } = useSession();
   const [hovered, setHovered] = useState(false);
+  const [pendingImage, setPendingImage] = useState<string | undefined>(undefined);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!profile) return null;
 
@@ -52,13 +56,46 @@ export default function UserBadge() {
           </div>
           <button
             type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="mt-[8px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
+          >
+            Change photo
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/png,image/jpeg"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) setPendingImage(URL.createObjectURL(file));
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
             onClick={() => {
               signOut({ redirect: true, callbackUrl: "/" });
             }}
-            className="mt-[10px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
+            className="mt-[8px] flex h-[33px] w-full items-center justify-center rounded-pill border border-hairline-input bg-canvas text-[13px] font-medium text-ink-mute transition-colors hover:bg-hairline"
           >
             Log out
           </button>
+        </div>
+      )}
+
+      {pendingImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-[19px]">
+          <div className="w-full max-w-[358px] rounded-lg border border-hairline bg-canvas p-[24px]">
+            <AvatarCropModal
+              imageSrc={pendingImage}
+              onCancel={() => setPendingImage(undefined)}
+              onSave={async () => {
+                setPendingImage(undefined);
+                await update({});
+              }}
+            />
+          </div>
         </div>
       )}
     </div>

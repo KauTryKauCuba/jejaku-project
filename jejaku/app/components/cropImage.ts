@@ -9,11 +9,11 @@ function createImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function getCroppedImageUrl(
+export async function getCroppedImageBlob(
   imageSrc: string,
   crop: CropPixels,
   outputSize = 256,
-): Promise<string> {
+): Promise<Blob> {
   const image = await createImage(imageSrc);
   const canvas = document.createElement("canvas");
   canvas.width = outputSize;
@@ -39,7 +39,7 @@ export async function getCroppedImageUrl(
         reject(new Error("Failed to crop image"));
         return;
       }
-      resolve(URL.createObjectURL(blob));
+      resolve(blob);
     }, "image/jpeg", 0.92);
   });
 }

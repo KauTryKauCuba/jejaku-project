@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
-import { getCroppedImageUrl, type CropPixels } from "./cropImage";
+import { getCroppedImageBlob, type CropPixels } from "./cropImage";
 
 export default function AvatarCropModal({
   imageSrc,
@@ -17,6 +17,7 @@ export default function AvatarCropModal({
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<CropPixels | null>(null);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
 
   const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
     setCroppedAreaPixels(areaPixels);
@@ -25,9 +26,21 @@ export default function AvatarCropModal({
   const handleSave = async () => {
     if (!croppedAreaPixels) return;
     setSaving(true);
+    setError(undefined);
     try {
-      const croppedUrl = await getCroppedImageUrl(imageSrc, croppedAreaPixels);
-      onSave(croppedUrl);
+      const blob = await getCroppedImageBlob(imageSrc, croppedAreaPixels);
+      const formData = new FormData();
+      formData.append("file", blob, "avatar.jpg");
+      const res = await fetch("/api/users/avatar", { method: "POST", body: formData });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Couldn't upload photo. Try again.");
+        return;
+      }
+      const data = (await res.json()) as { avatarUrl: string };
+      onSave(data.avatarUrl);
+    } catch {
+      setError("Couldn't upload photo. Try again.");
     } finally {
       setSaving(false);
     }
@@ -62,6 +75,8 @@ export default function AvatarCropModal({
         className="mt-[15px] w-full accent-primary"
         aria-label="Zoom"
       />
+
+      {error && <p className="mt-[11px] text-[12px] text-error">{error}</p>}
 
       <div className="mt-[19px] flex justify-end gap-[8px]">
         <button

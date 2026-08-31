@@ -16,6 +16,8 @@ services:
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+    volumes:
+      - jejaku-avatars:/app/public/uploads/avatars
     depends_on:
       jejaku-db:
         condition: service_healthy
@@ -126,3 +128,4 @@ volumes:
   jejaku-db-data:
   jejaku-receipt-db-data:
   jejaku-receipt-uploads:
+  jejaku-avatars:
