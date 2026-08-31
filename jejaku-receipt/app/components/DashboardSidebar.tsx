@@ -18,7 +18,7 @@ const NAV_ITEMS: {
   { label: "Dashboard", icon: SquaresFour, href: "/dashboard" },
   { label: "Receipts", icon: Receipt },
   { label: "Upload", icon: UploadSimple },
-  { label: "Settings", icon: Gear },
+  { label: "Settings", icon: Gear, href: "/settings" },
 ];
 
 export default function DashboardSidebar() {

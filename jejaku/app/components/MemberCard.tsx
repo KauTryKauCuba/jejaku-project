@@ -8,15 +8,15 @@ export default function MemberCard({
   profile: OnboardingProfile;
 }) {
   const registeredAt = new Date(profile.registeredAt);
-  const registeredFullDate = registeredAt.toLocaleDateString(undefined, {
+  const registeredFullDate = registeredAt.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-  const registeredDay = registeredAt.toLocaleDateString(undefined, {
+  const registeredDay = registeredAt.toLocaleDateString("en-US", {
     weekday: "long",
   });
-  const registeredTime = registeredAt.toLocaleTimeString(undefined, {
+  const registeredTime = registeredAt.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
