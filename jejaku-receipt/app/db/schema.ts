@@ -1,10 +1,16 @@
-import { pgTable, uuid, text, timestamp, doublePrecision, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   fullName: text("full_name").notNull(),
   defaultCurrency: text("default_currency").notNull().default("USD"),
+  customCategories: jsonb("custom_categories").$type<string[]>().notNull().default([]),
+  // Set the first (and only the first) time this account's demo data is
+  // seeded — see app/lib/demoData.ts. Gates the one-time auto-seed on
+  // account creation so it never re-fires after the user deletes their
+  // demo receipts.
+  demoSeededAt: timestamp("demo_seeded_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -17,6 +23,12 @@ export const expenses = pgTable("expenses", {
   amount: doublePrecision("amount").notNull(),
   date: text("date").notNull(),
   category: text("category").notNull(),
+  tax: doublePrecision("tax"),
+  // True for rows inserted by the demo-data seed (auto, on account
+  // creation, or manually re-triggered from Settings) — lets "Remove demo
+  // data" delete exactly those rows and nothing the user entered
+  // themselves, unlike the Danger Zone's full wipe.
+  isDemo: boolean("is_demo").notNull().default(false),
   note: text("note"),
   photoUrl: text("photo_url"),
   location: text("location"),

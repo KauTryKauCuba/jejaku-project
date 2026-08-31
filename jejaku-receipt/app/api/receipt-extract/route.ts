@@ -10,6 +10,7 @@ type Extracted = {
   category: (typeof EXPENSE_CATEGORIES)[number] | null;
   location: string | null;
   currency: string | null;
+  tax: number | null;
   items: ExtractedItem[];
 };
 
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
               text:
                 "Read this photo of a receipt and extract its details. " +
                 "Respond with ONLY a JSON object, no other text, in exactly this shape: " +
-                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","location":"...","currency":"...","items":[{"name":"...","price":0}]} ' +
+                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","location":"...","currency":"...","tax":0,"items":[{"name":"...","price":0}]} ' +
                 "merchant: the store/business name as printed. " +
                 "amount: the final total paid, as a plain number (no currency symbol). " +
                 `date: the transaction date in YYYY-MM-DD format. If no date is printed, use today's date, ${today}. ` +
@@ -65,6 +66,8 @@ export async function POST(req: NextRequest) {
                 "currency: the 3-letter ISO 4217 currency code for whatever currency this receipt is priced in " +
                 "(e.g. USD, MYR, EUR, GBP, JPY, SGD) — infer it from the printed symbol/code, or from the store's " +
                 "address/language if no symbol is legible. " +
+                "tax: the printed tax amount (sales tax, GST, VAT, etc.) as a plain number, if the receipt " +
+                "shows one broken out from the total. Use null if no tax line is printed. " +
                 "items: every line item printed on the receipt, each with its own name and price as a plain " +
                 "number. Skip subtotal/tax/tip/total lines — those aren't items. If no individual items can be " +
                 "read, use an empty array. " +
@@ -87,6 +90,7 @@ export async function POST(req: NextRequest) {
     category: null,
     location: null,
     currency: null,
+    tax: null,
     items: [],
   };
 
@@ -109,6 +113,7 @@ export async function POST(req: NextRequest) {
     const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : null;
     const category = EXPENSE_CATEGORIES.includes(parsed.category) ? parsed.category : null;
     const location = typeof parsed.location === "string" ? parsed.location : null;
+    const tax = typeof parsed.tax === "number" && Number.isFinite(parsed.tax) ? parsed.tax : null;
     const currency =
       typeof parsed.currency === "string" && CURRENCY_CODE_PATTERN.test(parsed.currency.toUpperCase())
         ? parsed.currency.toUpperCase()
@@ -123,7 +128,7 @@ export async function POST(req: NextRequest) {
             Number.isFinite((item as ExtractedItem).price)
         )
       : [];
-    return NextResponse.json({ merchant, amount, date, category, location, currency, items } satisfies Extracted);
+    return NextResponse.json({ merchant, amount, date, category, location, currency, tax, items } satisfies Extracted);
   } catch {
     return NextResponse.json(empty);
   }

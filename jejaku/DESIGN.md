@@ -138,6 +138,9 @@ There is no photography or product-UI mockup pattern in this site — it's a tex
 
 **`tab-pill`** — segmented control button (see `ValuesSpecsTabs`).
 - Active: `{colors.primary}` fill, `{colors.on-primary}` text. Inactive: transparent, `{colors.ink-mute}` text. Sits inside a `{colors.canvas-soft}` pill-shaped track with 4px padding.
+- Height `37px` (explicit, content vertically centered via flex) — not derived from padding.
+
+All interactive pill/rectangular buttons are explicit `height: 37px` (`h-[37px]`), never padding-derived — padding-only sizing drifts a pixel or two with line-height/font differences, which is exactly the "39px vs 37px" mismatch to avoid. Center content with `flex items-center [justify-center]` instead of relying on vertical padding for balance.
 
 ### Cards & Containers
 
@@ -150,7 +153,8 @@ There is no photography or product-UI mockup pattern in this site — it's a tex
 ### Inputs & Forms
 
 **`text-input`**
-- Background `{colors.canvas}`, text `{colors.ink}`, `14px`, padding `8px 11px`, rounded `{rounded.sm}` 6px, 1px `{colors.hairline-input}` border, `focus:border-primary`.
+- Background `{colors.canvas}`, text `{colors.ink}`, `14px`, height `37px` (explicit, not padding-derived), horizontal padding `11px`, rounded `{rounded.sm}` 6px, 1px `{colors.hairline-input}` border, `focus:border-primary`.
+- Any trigger styled to sit in a form row alongside a text input (dropdown `Select`, date picker) shares this same explicit `37px` height so the row lines up exactly.
 - Error state swaps the border (and adds a `12px` `{colors.error}` message below) to `{colors.error}` — no red background fill.
 - Label sits above the field: `13px` `font-medium` `{colors.ink}`.
 
@@ -218,8 +222,7 @@ A vertical `{colors.ink-mute}` connector line with a dot per entry: filled `{col
 | Desktop | ≥ 1024px (`lg`) | Hero becomes 2-col (copy + auth card side-by-side); projects 3-col; header padding increases to 30px |
 
 ### Touch Targets
-- Pill buttons are `37px` tall — slightly under the 44px AAA target; acceptable here given generous horizontal padding and the low-stakes, non-transactional nature of the actions (nav, auth, form submit).
-- Form inputs use `8px 11px` padding, giving roughly 34–36px height.
+- All buttons and text inputs are a fixed `37px` tall — slightly under the 44px AAA target; acceptable here given generous horizontal padding and the low-stakes, non-transactional nature of the actions (nav, auth, form submit).
 
 ### Collapsing Strategy
 - Hero headline steps 38px → 53px at `md`.

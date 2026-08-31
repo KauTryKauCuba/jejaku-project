@@ -17,6 +17,7 @@ type Extracted = {
   category: ExpenseCategory | null;
   location: string | null;
   currency: string | null;
+  tax: number | null;
   items: ExpenseItem[];
 };
 
@@ -104,6 +105,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     amount: number;
     date: string;
     category: ExpenseCategory;
+    tax?: number;
     note?: string;
     location?: string;
     items?: ExpenseItem[];
@@ -123,7 +125,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   };
 
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[24px]">
+    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
       <IconFlowBadge size={40} seed={7}>
         <Camera size={16} weight="light" />
       </IconFlowBadge>
@@ -273,7 +275,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
                 initialCategory={extracted?.category ?? undefined}
                 initialLocation={extracted?.location ?? undefined}
                 initialCurrency={extracted?.currency ?? undefined}
+                initialTax={extracted?.tax ?? undefined}
                 initialItems={extracted?.items}
+                categorySource={extracted ? (extracted.category ? "ai" : "fallback") : undefined}
               />
             )}
           </div>

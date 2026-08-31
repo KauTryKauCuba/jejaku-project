@@ -24,14 +24,23 @@ export default async function SettingsPage() {
         <FlowLines />
         <SiteHeader />
 
-        <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]">
+        <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[46px] lg:pt-[61px]">
           <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[46px]">
             Settings
           </h1>
           <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
             Your name and photo here are shared across Jejaku and Jejaku Receipt.
           </p>
+        </section>
+      </div>
 
+      {/* Cards live outside .gradient-mesh, not just below its content —
+          the mesh box clips overflow, so a popover deep inside it (the
+          currency dropdown) got cut off at the mesh box's bottom edge
+          instead of overlaying the page. Same rule as the Dashboard Shell
+          navbar popover, documented in DESIGN.md. */}
+      <section className="bg-canvas pb-[91px]">
+        <div className="mx-auto max-w-4xl px-[23px]">
           <div className="mt-[38px]">
             <SettingsForm profile={session.dbProfile} />
           </div>
@@ -39,8 +48,9 @@ export default async function SettingsPage() {
           <div className="mt-[19px] rounded-lg border border-hairline bg-canvas p-[24px]">
             <DefaultCurrencyForm />
           </div>
-        </section>
-      </div>
+        </div>
+      </section>
+
       <SiteFooter />
     </>
   );

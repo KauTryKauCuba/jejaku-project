@@ -5,6 +5,7 @@ import { Plus, X } from "@phosphor-icons/react";
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem } from "../lib/expenses";
 import Select from "./Select";
 import DatePicker from "./DatePicker";
+import { useAddCategory, useCategories } from "./ExpensesProvider";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -20,6 +21,8 @@ export default function ExpenseForm({
   initialLocation,
   initialItems,
   initialCurrency,
+  initialTax,
+  categorySource,
   disabled = false,
 }: {
   onSubmit: (data: {
@@ -27,6 +30,7 @@ export default function ExpenseForm({
     amount: number;
     date: string;
     category: ExpenseCategory;
+    tax?: number;
     note?: string;
     location?: string;
     items?: ExpenseItem[];
@@ -40,6 +44,10 @@ export default function ExpenseForm({
   initialLocation?: string;
   initialItems?: ExpenseItem[];
   initialCurrency?: string;
+  initialTax?: number;
+  /** Where initialCategory came from — shows a hint next to the Category field so the
+   * user knows to double-check an AI guess, or that detection failed and it defaulted. */
+  categorySource?: "ai" | "fallback";
   disabled?: boolean;
 }) {
   const [merchant, setMerchant] = useState(initialMerchant ?? "");
@@ -53,8 +61,12 @@ export default function ExpenseForm({
   const [location, setLocation] = useState(initialLocation ?? "");
   const [currency, setCurrency] = useState(initialCurrency ?? DEFAULT_CURRENCY);
   const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
+  const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
+  const [categoryTouched, setCategoryTouched] = useState(false);
+  const categories = useCategories();
+  const addCategory = useAddCategory();
 
   const updateItemName = (index: number, name: string) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, name } : item)));
@@ -78,17 +90,20 @@ export default function ExpenseForm({
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
+    const parsedTax = tax.trim() ? parseFloat(tax) : undefined;
     if (!date) {
       setDateError("Pick a date.");
       return;
     }
     setDateError(undefined);
     if (!merchant.trim() || Number.isNaN(parsedAmount)) return;
+    if (parsedTax !== undefined && Number.isNaN(parsedTax)) return;
     onSubmit({
       merchant: merchant.trim(),
       amount: parsedAmount,
       date,
       category,
+      tax: parsedTax,
       note: note.trim() || undefined,
       location: location.trim() || undefined,
       items: items.length > 0 ? items : undefined,
@@ -97,7 +112,7 @@ export default function ExpenseForm({
   };
 
   const inputClass =
-    "w-full rounded-sm border border-hairline-input bg-canvas px-[11px] py-[8px] text-[14px] text-ink focus:border-primary focus:outline-none";
+    "h-[37px] w-full rounded-sm border border-hairline-input bg-canvas px-[11px] text-[14px] text-ink focus:border-primary focus:outline-none";
   const labelClass = "text-[13px] font-medium text-ink";
 
   return (
@@ -132,9 +147,16 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <label className={labelClass}>
-          Items <span className="font-normal text-ink-mute">(optional)</span>
-        </label>
+        <div className="flex items-center justify-between gap-[8px]">
+          <label className={labelClass}>
+            Items <span className="font-normal text-ink-mute">(optional)</span>
+          </label>
+          {items.length > 0 && (
+            <span className={`mr-[41px] w-[88px] shrink-0 text-left ${labelClass}`}>
+              Price <span className="font-normal text-ink-mute">({currency.trim() || DEFAULT_CURRENCY})</span>
+            </span>
+          )}
+        </div>
         {items.length > 0 && (
           <div className="flex flex-col gap-[8px]">
             {items.map((item, i) => (
@@ -184,53 +206,69 @@ export default function ExpenseForm({
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-[11px]">
-        <div className="flex flex-col gap-[4px]">
-          <label className={labelClass} htmlFor="expense-amount">
-            Amount
-          </label>
-          <div className="flex items-center gap-[6px]">
-            <div className="w-[62px] shrink-0">
-              <input
-                type="text"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-                maxLength={3}
-                aria-label="Currency code"
-                placeholder={DEFAULT_CURRENCY}
-                className={`${inputClass} text-center uppercase`}
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <input
-                id="expense-amount"
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className={inputClass}
-              />
-            </div>
+      <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-amount">
+          Amount
+        </label>
+        <div className="flex items-center gap-[6px]">
+          <div className="w-[62px] shrink-0">
+            <input
+              type="text"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              aria-label="Currency code"
+              placeholder={DEFAULT_CURRENCY}
+              className={`${inputClass} text-center uppercase`}
+            />
+          </div>
+          <div className="min-w-0 flex-1">
+            <input
+              id="expense-amount"
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min="0"
+              required
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0.00"
+              className={inputClass}
+            />
           </div>
         </div>
-        <div className="flex flex-col gap-[4px]">
-          <label className={labelClass} htmlFor="expense-date">
-            Date
-          </label>
-          <DatePicker
-            id="expense-date"
-            value={date}
-            onChange={(value) => {
-              setDate(value);
-              if (dateError) setDateError(undefined);
-            }}
-          />
-          {dateError && <p className="text-[12px] text-error">{dateError}</p>}
-        </div>
+      </div>
+
+      <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-tax">
+          Tax <span className="font-normal text-ink-mute">(optional)</span>
+        </label>
+        <input
+          id="expense-tax"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          min="0"
+          value={tax}
+          onChange={(e) => setTax(e.target.value)}
+          placeholder="0.00"
+          className={inputClass}
+        />
+      </div>
+
+      <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-date">
+          Date
+        </label>
+        <DatePicker
+          id="expense-date"
+          value={date}
+          onChange={(value) => {
+            setDate(value);
+            if (dateError) setDateError(undefined);
+          }}
+        />
+        {dateError && <p className="text-[12px] text-error">{dateError}</p>}
       </div>
 
       <div className="flex flex-col gap-[4px]">
@@ -240,9 +278,20 @@ export default function ExpenseForm({
         <Select
           id="expense-category"
           value={category}
-          options={EXPENSE_CATEGORIES}
-          onChange={setCategory}
+          options={categories}
+          onChange={(value) => {
+            setCategory(value);
+            setCategoryTouched(true);
+          }}
+          onCreate={addCategory}
+          createLabel="Add new category"
         />
+        {!categoryTouched && categorySource === "ai" && (
+          <p className="text-[12px] text-ink-mute">AI suggested this — check it&apos;s right.</p>
+        )}
+        {!categoryTouched && categorySource === "fallback" && (
+          <p className="text-[12px] text-error">Couldn&apos;t detect a category — this defaulted, please pick one.</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-[4px]">

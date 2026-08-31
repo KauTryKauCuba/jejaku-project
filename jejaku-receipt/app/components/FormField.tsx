@@ -33,8 +33,8 @@ export default function FormField({
         aria-invalid={error ? true : undefined}
         className={
           error
-            ? "rounded-sm border border-error bg-canvas px-[11px] py-[8px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-mute"
-            : "rounded-sm border border-hairline-input bg-canvas px-[11px] py-[8px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-primary"
+            ? "h-[37px] rounded-sm border border-error bg-canvas px-[11px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-mute"
+            : "h-[37px] rounded-sm border border-hairline-input bg-canvas px-[11px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-mute focus:border-primary"
         }
       />
       {error && <p className="text-[12px] text-error">{error}</p>}

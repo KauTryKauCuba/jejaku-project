@@ -1,36 +1,27 @@
 import { NextResponse } from "next/server";
-import { unlink } from "fs/promises";
-import path from "path";
-import { desc, eq } from "drizzle-orm";
-import { getCurrentUser } from "../../lib/currentUser";
-import { saveExpensePhoto, UPLOADS_DIR } from "../../lib/uploads";
-import { convertCurrency } from "../../lib/exchangeRates";
-import { db } from "../../db";
-import { expenses } from "../../db/schema";
-import { toExpense } from "../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseItem } from "../../lib/expenses";
+import { and, eq } from "drizzle-orm";
+import { getCurrentUser } from "../../../lib/currentUser";
+import { convertCurrency } from "../../../lib/exchangeRates";
+import { db } from "../../../db";
+import { expenses } from "../../../db/schema";
+import { toExpense } from "../../../db/toExpense";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseItem } from "../../../lib/expenses";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
-export async function GET() {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { id } = await params;
 
-  const rows = await db.query.expenses.findMany({
-    where: eq(expenses.userId, user.id),
-    orderBy: desc(expenses.createdAt),
+  const existing = await db.query.expenses.findFirst({
+    where: and(eq(expenses.id, id), eq(expenses.userId, user.id)),
   });
-
-  return NextResponse.json(rows.map(toExpense));
-}
-
-export async function POST(request: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!existing) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
   const form = await request.formData().catch(() => null);
@@ -53,7 +44,6 @@ export async function POST(request: Request) {
     typeof currencyRaw === "string" && CURRENCY_CODE_PATTERN.test(currencyRaw.toUpperCase())
       ? currencyRaw.toUpperCase()
       : "";
-  const photo = form.get("photo");
 
   const itemsRaw = form.get("items");
   let items: ExpenseItem[] | null = null;
@@ -71,8 +61,6 @@ export async function POST(request: Request) {
         );
       }
     } catch {
-      // Malformed items payload — save the expense without them rather
-      // than rejecting the whole submission over a non-essential field.
       items = null;
     }
   }
@@ -88,73 +76,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid expense data." }, { status: 400 });
   }
 
-  let photoUrl: string | null = null;
-  if (photo instanceof File && photo.size > 0) {
-    try {
-      photoUrl = await saveExpensePhoto(photo);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Couldn't save photo.";
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-  }
-
-  // Snapshot into the user's home currency now, at save time, rather than
-  // converting live on every dashboard read — see the comment on the
-  // schema columns for why. A failed/unreachable FX lookup shouldn't block
-  // saving the expense itself, so this degrades to null (excluded from
-  // aggregate totals) rather than erroring the whole request.
+  // Re-snapshot the home-currency conversion since amount/currency may have
+  // changed — see the POST route and the schema comment for why this is a
+  // save-time snapshot rather than computed live.
   const expenseCurrency = currency || DEFAULT_CURRENCY;
   const homeCurrencyAmount = await convertCurrency(amount, expenseCurrency, user.defaultCurrency);
   if (homeCurrencyAmount === null) {
-    console.error(
-      "[expenses] currency conversion failed",
-      expenseCurrency, "->", user.defaultCurrency
-    );
+    console.error("[expenses] currency conversion failed on edit", expenseCurrency, "->", user.defaultCurrency);
   }
 
   const [row] = await db
-    .insert(expenses)
-    .values({
-      userId: user.id,
+    .update(expenses)
+    .set({
       merchant,
       amount,
       date,
       category,
       tax,
       note: note || null,
-      photoUrl,
       location: location || null,
       currency: currency || null,
       homeCurrencyAmount,
       homeCurrencyCode: homeCurrencyAmount === null ? null : user.defaultCurrency,
       items: items && items.length > 0 ? items : null,
     })
+    .where(eq(expenses.id, id))
     .returning();
 
   return NextResponse.json(toExpense(row));
 }
 
-export async function DELETE() {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { id } = await params;
 
   const deleted = await db
     .delete(expenses)
-    .where(eq(expenses.userId, user.id))
-    .returning({ photoUrl: expenses.photoUrl });
+    .where(and(eq(expenses.id, id), eq(expenses.userId, user.id)))
+    .returning({ id: expenses.id });
 
-  // Best-effort cleanup of this user's uploaded receipt photos — a failed
-  // unlink (already missing, permissions, etc.) shouldn't block the bulk
-  // delete from completing, since the DB rows are already gone.
-  await Promise.all(
-    deleted
-      .filter((row): row is { photoUrl: string } => typeof row.photoUrl === "string")
-      .map((row) =>
-        unlink(path.join(UPLOADS_DIR, path.basename(row.photoUrl))).catch(() => {})
-      )
-  );
+  if (deleted.length === 0) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
-  return NextResponse.json({ deleted: deleted.length });
+  return NextResponse.json({ ok: true });
 }

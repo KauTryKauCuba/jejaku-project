@@ -83,7 +83,7 @@ export default function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => (open ? setOpen(false) : openPicker())}
-        className="flex w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] py-[8px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
+        className="flex h-[37px] w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
       >
         {value ? formatLabel(value) : "Select date"}
         <CalendarBlank size={14} weight="light" className="shrink-0 text-ink-mute" />

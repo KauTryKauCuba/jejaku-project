@@ -1,10 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CalendarBlank, CaretLeft, CaretRight, Plus } from "@phosphor-icons/react";
+import { CalendarBlank, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { formatCurrency } from "../lib/expenses";
 import { useExpenses } from "./ExpensesProvider";
-import AddExpenseCard from "./AddExpenseCard";
 import IconFlowBadge from "./IconFlowBadge";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
@@ -25,7 +24,6 @@ export default function DashboardCalendar() {
     return { year: t.getFullYear(), month: t.getMonth() };
   });
   const [selected, setSelected] = useState(todayKey());
-  const [adding, setAdding] = useState(false);
 
   const totalsByDate = useMemo(() => {
     const map = new Map<string, number>();
@@ -57,7 +55,6 @@ export default function DashboardCalendar() {
 
   const selectDay = (day: number) => {
     setSelected(toDateKey(year, month, day));
-    setAdding(false);
   };
 
   const selectedExpenses = expenses.filter((e) => e.date === selected);
@@ -67,7 +64,7 @@ export default function DashboardCalendar() {
   );
 
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[24px]">
+    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
       <IconFlowBadge size={40} seed={5}>
         <CalendarBlank size={16} weight="light" />
       </IconFlowBadge>
@@ -138,34 +135,9 @@ export default function DashboardCalendar() {
       </div>
 
       <div className="mt-[19px] border-t border-hairline pt-[19px]">
-        <div className="flex flex-wrap items-center justify-between gap-[8px]">
-          <p className="text-[13px] font-medium text-ink">{selectedLabel}</p>
-          <button
-            type="button"
-            onClick={() => setAdding((v) => !v)}
-            className="flex h-[28px] shrink-0 items-center justify-center gap-[4px] whitespace-nowrap rounded-pill border border-hairline-input bg-canvas px-[11px] text-[12px] font-medium text-ink transition-colors hover:bg-canvas-soft"
-          >
-            {adding ? (
-              "Cancel"
-            ) : (
-              <>
-                <Plus size={12} weight="light" />
-                Add expense
-              </>
-            )}
-          </button>
-        </div>
+        <p className="text-[13px] font-medium text-ink">{selectedLabel}</p>
 
-        {adding ? (
-          <div className="mt-[15px]">
-            <AddExpenseCard
-              key={selected}
-              initialDate={selected}
-              showHeader={false}
-              onSaved={() => setAdding(false)}
-            />
-          </div>
-        ) : selectedExpenses.length === 0 ? (
+        {selectedExpenses.length === 0 ? (
           <p className="mt-[8px] text-[12px] text-ink-mute">
             No expenses logged on this day.
           </p>

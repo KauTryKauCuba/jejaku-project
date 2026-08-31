@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "custom_categories" jsonb DEFAULT '[]'::jsonb NOT NULL;

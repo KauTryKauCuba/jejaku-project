@@ -16,7 +16,7 @@ const NAV_ITEMS: {
   href?: string;
 }[] = [
   { label: "Dashboard", icon: SquaresFour, href: "/dashboard" },
-  { label: "Receipts", icon: Receipt },
+  { label: "Receipts", icon: Receipt, href: "/receipts" },
   { label: "Upload", icon: UploadSimple },
   { label: "Settings", icon: Gear, href: "/settings" },
 ];

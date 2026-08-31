@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { Clock } from "@phosphor-icons/react";
 
 function formatNow(date: Date) {
-  const day = date.toLocaleDateString(undefined, { weekday: "long" });
+  const day = date.toLocaleDateString(undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
   const time = date.toLocaleTimeString(undefined, {
     hour: "numeric",
     minute: "2-digit",

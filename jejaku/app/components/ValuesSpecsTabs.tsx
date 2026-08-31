@@ -37,8 +37,8 @@ export default function ValuesSpecsTabs({
             onClick={() => setTab(t.id)}
             className={
               tab === t.id
-                ? "rounded-pill bg-primary px-[19px] py-[8px] text-[14px] font-medium text-on-primary transition-colors"
-                : "rounded-pill px-[19px] py-[8px] text-[14px] font-medium text-ink-mute transition-colors"
+                ? "flex h-[37px] items-center rounded-pill bg-primary px-[19px] text-[14px] font-medium text-on-primary transition-colors"
+                : "flex h-[37px] items-center rounded-pill px-[19px] text-[14px] font-medium text-ink-mute transition-colors"
             }
           >
             {t.label}

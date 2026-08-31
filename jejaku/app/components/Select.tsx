@@ -32,7 +32,7 @@ export default function Select<T extends string>({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] py-[8px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
+        className="flex h-[37px] w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
       >
         {value}
         <CaretDown size={12} weight="bold" className="shrink-0 text-ink-mute" />

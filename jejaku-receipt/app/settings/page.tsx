@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { eq } from "drizzle-orm";
 import { auth } from "../lib/auth";
 import { jejakuUrl } from "../lib/jejakuUrl";
+import { db } from "../db";
+import { expenses, users } from "../db/schema";
 import DashboardShell from "../components/DashboardShell";
 import MemberCard from "../components/MemberCard";
+import DemoDataCard from "../components/DemoDataCard";
+import DangerZoneCard from "../components/DangerZoneCard";
 
 export const metadata: Metadata = {
   title: "Settings — Jejaku Receipt",
@@ -14,6 +19,15 @@ export default async function SettingsPage() {
   if (!session?.otpConfirmed || !session.dbProfile) {
     redirect(jejakuUrl("/login"));
   }
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, session.dbProfile.email),
+  });
+  const userExpenses = user
+    ? await db.query.expenses.findMany({ where: eq(expenses.userId, user.id) })
+    : [];
+  const expenseCount = userExpenses.length;
+  const demoCount = userExpenses.filter((e) => e.isDemo).length;
 
   return (
     <DashboardShell>
@@ -45,6 +59,11 @@ export default async function SettingsPage() {
             Manage on Jejaku
           </a>
         </div>
+      </div>
+
+      <div className="mt-[19px] grid gap-[19px] md:grid-cols-2">
+        <DemoDataCard demoCount={demoCount} />
+        <DangerZoneCard expenseCount={expenseCount} />
       </div>
     </DashboardShell>
   );
