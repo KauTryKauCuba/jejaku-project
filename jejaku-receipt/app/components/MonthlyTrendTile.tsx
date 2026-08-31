@@ -3,7 +3,7 @@
 import { ChartLineUp, TrendUp, TrendDown } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import { formatCurrency } from "../lib/expenses";
-import { useExpenses } from "./ExpensesProvider";
+import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -11,6 +11,7 @@ function monthKey(date: Date) {
 
 export default function MonthlyTrendTile() {
   const expenses = useExpenses();
+  const currency = useDefaultCurrency();
 
   const now = new Date();
   const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -21,8 +22,9 @@ export default function MonthlyTrendTile() {
   let lastMonthTotal = 0;
   for (const e of expenses) {
     const key = e.date.slice(0, 7);
-    if (key === thisKey) thisMonthTotal += e.amount;
-    else if (key === lastKey) lastMonthTotal += e.amount;
+    const amount = e.homeCurrencyAmount ?? 0;
+    if (key === thisKey) thisMonthTotal += amount;
+    else if (key === lastKey) lastMonthTotal += amount;
   }
 
   const hasComparison = lastMonthTotal > 0;
@@ -34,7 +36,7 @@ export default function MonthlyTrendTile() {
     ? "No spending last month to compare."
     : delta === 0
       ? "Same as last month."
-      : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. last month ($${formatCurrency(lastMonthTotal)}).`;
+      : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. last month (${formatCurrency(lastMonthTotal, currency)}).`;
 
   return (
     <div className="rounded-lg border border-hairline bg-canvas p-[16px]">
@@ -45,7 +47,7 @@ export default function MonthlyTrendTile() {
         Monthly Trend
       </p>
       <p className="mt-[3px] flex items-center gap-[4px] text-[15px] font-light tracking-[-0.16px] text-ink">
-        ${formatCurrency(thisMonthTotal)}
+        {formatCurrency(thisMonthTotal, currency)}
         {hasComparison && delta !== 0 && (
           <span className="text-ink-mute">
             {isUp ? (

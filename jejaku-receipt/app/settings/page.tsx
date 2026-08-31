@@ -21,7 +21,8 @@ export default async function SettingsPage() {
         Settings
       </h2>
       <p className="mt-[6px] max-w-md text-[12px] leading-relaxed text-ink-mute">
-        Your profile is shared with Jejaku — edit your name and photo there.
+        Your profile and preferences are managed on Jejaku — edit your name, photo, and
+        default currency there.
       </p>
 
       <div className="mt-[19px] grid gap-[19px] md:grid-cols-[280px_1fr]">
@@ -31,16 +32,17 @@ export default async function SettingsPage() {
 
         <div className="rounded-lg border border-hairline bg-canvas p-[24px]">
           <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">
-            Edit profile
+            Edit profile & currency
           </h3>
           <p className="mt-[4px] max-w-md text-[12px] leading-relaxed text-ink-mute">
-            Your name and photo are managed on Jejaku and shared here automatically.
+            Your name, photo, and default currency (used for Total Spent and Monthly Trend
+            here) are all managed on Jejaku and shared here automatically.
           </p>
           <a
             href={jejakuUrl("/settings")}
             className="mt-[15px] flex h-[37px] w-fit items-center justify-center rounded-pill bg-primary px-[19px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
           >
-            Manage profile on Jejaku
+            Manage on Jejaku
           </a>
         </div>
       </div>

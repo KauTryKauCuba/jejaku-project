@@ -5,6 +5,7 @@ import FlowLines from "../components/FlowLines";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
 import SettingsForm from "../components/SettingsForm";
+import DefaultCurrencyForm from "../components/DefaultCurrencyForm";
 
 export const metadata: Metadata = {
   title: "Settings — Jejaku",
@@ -33,6 +34,10 @@ export default async function SettingsPage() {
 
           <div className="mt-[38px]">
             <SettingsForm profile={session.dbProfile} />
+          </div>
+
+          <div className="mt-[19px] rounded-lg border border-hairline bg-canvas p-[24px]">
+            <DefaultCurrencyForm />
           </div>
         </section>
       </div>

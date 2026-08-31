@@ -1,7 +1,9 @@
 import NextAuth from "next-auth";
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { db } from "../db";
 import { users } from "../db/schema";
+import { currencyForCountry } from "./countryCurrency";
 import type { SessionProfile } from "../types/next-auth";
 
 const cookieDomain = process.env.COOKIE_DOMAIN;
@@ -61,9 +63,18 @@ export const { handlers, auth } = NextAuth({
       // token already carries whatever jejaku's own jwt callback wrote
       // (otpConfirmed, dbProfile, email, ...) — decoded from the shared cookie.
       if (token.otpConfirmed && token.dbProfile && token.email) {
+        // Cloudflare (this site is proxied through it) sets this header
+        // with the visitor's country on every request — free geolocation,
+        // no external API call. Only matters on first insert: existing
+        // rows are untouched (onConflictDoNothing), and locally (no
+        // Cloudflare) it's just absent, falling back to the schema
+        // default of USD.
+        const countryCode = (await headers()).get("cf-ipcountry");
+        const defaultCurrency = currencyForCountry(countryCode);
+
         await db
           .insert(users)
-          .values({ email: token.email, fullName: token.dbProfile.fullName })
+          .values({ email: token.email, fullName: token.dbProfile.fullName, defaultCurrency })
           .onConflictDoNothing({ target: users.email });
 
         const existing = await db.query.users.findFirst({
