@@ -27,6 +27,11 @@ export async function saveAvatarPhoto(file: File): Promise<string> {
 
   // Must be absolute: jejaku-receipt renders this same avatarUrl (via the
   // shared session) from its own origin, where a relative path would 404.
-  const base = (process.env.NEXT_PUBLIC_JEJAKU_URL ?? "").replace(/\/+$/, "");
+  // Deliberately AUTH_URL, not NEXT_PUBLIC_JEJAKU_URL — NEXT_PUBLIC_ vars get
+  // inlined at build time wherever referenced (including server code), and
+  // this app's Dockerfile never passes that one through as a build arg, so
+  // it would bake in empty. AUTH_URL holds the same value but is a plain
+  // runtime env var, read fresh on every request.
+  const base = (process.env.AUTH_URL ?? "").replace(/\/+$/, "");
   return `${base}/uploads/avatars/${filename}`;
 }
