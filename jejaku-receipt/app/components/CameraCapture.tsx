@@ -260,96 +260,109 @@ export default function CameraCapture({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-ink">
-      <div className="flex items-center justify-between p-[19px]">
-        <p className="text-[14px] font-medium text-canvas">Scan a receipt</p>
-        <div className="flex items-center gap-[8px]">
-          {torchSupported && (
-            <button
-              type="button"
-              onClick={toggleTorch}
-              aria-label={torchOn ? "Turn off torch" : "Turn on torch"}
-              aria-pressed={torchOn}
-              className={
-                torchOn
-                  ? "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas text-ink transition-colors"
-                  : "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
-              }
-            >
-              <Flashlight size={16} weight={torchOn ? "fill" : "light"} />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onCancel}
-            aria-label="Close camera"
-            className="flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
-          >
-            <X size={16} weight="light" />
-          </button>
-        </div>
-      </div>
-
-      <div className="relative flex flex-1 items-center justify-center overflow-hidden">
-        {error ? (
-          <p className="max-w-xs px-[23px] text-center text-[13px] leading-relaxed text-canvas-soft">
+    <div className="fixed inset-0 z-50 overflow-hidden bg-ink">
+      {error ? (
+        <div className="flex h-full flex-col items-center justify-center p-[23px]">
+          <p className="max-w-xs text-center text-[13px] leading-relaxed text-canvas-soft">
             {error}
           </p>
-        ) : (
-          <>
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="h-full w-full object-cover"
-            />
-            <div className="pointer-events-none absolute inset-x-0 top-[15px] flex justify-center px-[23px]">
-              <span
-                className={
-                  autoStatus === "found"
-                    ? "rounded-pill bg-canvas px-[13px] py-[6px] text-center text-[12px] font-medium text-ink"
-                    : "rounded-pill bg-ink/60 px-[13px] py-[6px] text-center text-[12px] font-medium text-canvas"
-                }
-              >
-                {autoStatus === "found"
-                  ? "Got it — capturing…"
-                  : autoStatus === "stopped"
-                    ? "Auto-detect paused — tap the shutter to capture"
-                    : "Looking for a receipt…"}
-              </span>
-            </div>
-            {autoStatus !== "stopped" && (
-              <div
-                className="scan-line pointer-events-none absolute inset-x-0 h-[3px] bg-canvas/80 shadow-[0_0_12px_2px_rgba(255,255,255,0.5)]"
-                aria-hidden="true"
-              />
-            )}
-          </>
-        )}
-      </div>
-
-      <div className="flex items-center justify-center p-[23px] pb-[38px]">
-        {error ? (
           <button
             type="button"
             onClick={onCancel}
-            className="flex h-[41px] items-center justify-center rounded-pill border border-canvas/30 bg-canvas/10 px-[23px] text-[14px] font-medium text-canvas transition-colors hover:bg-canvas/20"
+            className="mt-[19px] flex h-[41px] items-center justify-center rounded-pill border border-canvas/30 bg-canvas/10 px-[23px] text-[14px] font-medium text-canvas transition-colors hover:bg-canvas/20"
           >
             Close
           </button>
-        ) : (
-          <button
-            type="button"
-            onClick={capture}
-            disabled={!ready}
-            aria-label="Capture photo now instead of waiting for auto-detect"
-            className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-4 border-canvas bg-canvas/20 transition-transform active:scale-95 disabled:opacity-50"
-          >
-            <Camera size={22} weight="fill" className="text-canvas" />
-          </button>
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+
+          {autoStatus !== "stopped" && (
+            <div
+              // No box-shadow, per DESIGN.md — the site is shadow-free
+              // throughout. Full opacity instead of a glow to stay visible.
+              className="scan-line pointer-events-none absolute inset-x-0 h-[2px] bg-canvas"
+              aria-hidden="true"
+            />
+          )}
+
+          {/* Scrims behind the floating controls only, not the whole
+              screen — keeps the preview genuinely full-bleed while still
+              keeping the header/footer controls legible over any frame. */}
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-[110px] bg-gradient-to-b from-ink/60 to-transparent"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[130px] bg-gradient-to-t from-ink/60 to-transparent"
+            aria-hidden="true"
+          />
+
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between p-[19px]">
+            <p className="text-[14px] font-medium text-canvas">Scan a receipt</p>
+            <div className="flex items-center gap-[8px]">
+              {torchSupported && (
+                <button
+                  type="button"
+                  onClick={toggleTorch}
+                  aria-label={torchOn ? "Turn off torch" : "Turn on torch"}
+                  aria-pressed={torchOn}
+                  className={
+                    torchOn
+                      ? "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas text-ink transition-colors"
+                      : "flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
+                  }
+                >
+                  <Flashlight size={16} weight={torchOn ? "fill" : "light"} />
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onCancel}
+                aria-label="Close camera"
+                className="flex h-[33px] w-[33px] items-center justify-center rounded-pill bg-canvas/10 text-canvas transition-colors hover:bg-canvas/20"
+              >
+                <X size={16} weight="light" />
+              </button>
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute inset-x-0 top-[70px] flex justify-center px-[23px]">
+            <span
+              className={
+                autoStatus === "found"
+                  ? "rounded-pill bg-canvas px-[13px] py-[6px] text-center text-[12px] font-medium text-ink"
+                  : "rounded-pill bg-ink/60 px-[13px] py-[6px] text-center text-[12px] font-medium text-canvas"
+              }
+            >
+              {autoStatus === "found"
+                ? "Got it — capturing…"
+                : autoStatus === "stopped"
+                  ? "Auto-detect paused — tap the shutter to capture"
+                  : "Looking for a receipt…"}
+            </span>
+          </div>
+
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-center p-[23px] pb-[38px]">
+            <button
+              type="button"
+              onClick={capture}
+              disabled={!ready}
+              aria-label="Capture photo now instead of waiting for auto-detect"
+              className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-4 border-canvas bg-canvas/20 transition-transform active:scale-95 disabled:opacity-50"
+            >
+              <Camera size={22} weight="fill" className="text-canvas" />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
