@@ -7,25 +7,26 @@ export default function MemberCard({
 }: {
   profile: SessionProfile;
 }) {
-  const registeredAt = new Date(profile.registeredAt);
-  const registeredFullDate = registeredAt.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const registeredDay = registeredAt.toLocaleDateString("en-US", {
-    weekday: "long",
-  });
-  const registeredTime = registeredAt.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  });
-  const registeredDate = `${registeredDay}, ${registeredTime}`;
+  // Pinned to en-US (not the visitor's locale) so this always renders the
+  // same on the server and after hydration — see the hydration mismatch
+  // this caused before it was pinned. Two stats now share the row that
+  // used to hold one, inside a fixed-aspect card — every extra character
+  // (year, weekday) either overflowed the row's height or got clipped
+  // width-wise. Month/day/time is the floor that reliably fits both.
+  const formatDateTime = (iso: string) =>
+    new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+
+  const registered = formatDateTime(profile.registeredAt);
+  const lastSignIn = profile.lastSignInAt ? formatDateTime(profile.lastSignInAt) : "First visit";
 
   return (
     <div
-      className="card-reveal relative flex aspect-[1.586/1] w-full flex-col justify-between overflow-hidden rounded-xl border border-hairline p-[23px] text-ink"
+      className="card-reveal relative flex aspect-[1.586/1] w-full flex-col overflow-hidden rounded-xl border border-hairline p-[23px] text-ink"
       style={{
         background:
           "linear-gradient(135deg, #f6f7f7 0%, #ffffff 30%, #dadde0 58%, #f1f2f3 80%, #e4e7e8 100%)",
@@ -75,27 +76,31 @@ export default function MemberCard({
         </div>
       </div>
 
+      <div className="flex-[1]" aria-hidden="true" />
+
       <div className="relative">
-        <p className="text-[19px] font-light tracking-[0.4px] text-ink">
+        <p className="text-[19px] font-light leading-tight tracking-[0.4px] text-ink">
           {profile.fullName}
+        </p>
+        <p className="mt-0 truncate text-[13px] leading-tight text-ink-secondary">
+          {profile.email ?? "—"}
         </p>
       </div>
 
-      <div className="relative flex items-end justify-between gap-4 text-[11px]">
-        <div className="min-w-0">
-          <p className="uppercase tracking-[1px] text-ink-mute">Email</p>
-          <p className="mt-[2px] truncate text-ink-secondary">
-            {profile.email ?? "—"}
-          </p>
-        </div>
-        <div className="shrink-0 text-right">
+      <div className="flex-[3]" aria-hidden="true" />
+
+      <div className="relative flex items-end justify-between gap-[10px] text-[11px]">
+        <div className="min-w-0 text-left">
           <p className="uppercase tracking-[1px] text-ink-mute">
             Member since
           </p>
-          <p className="tabular mt-[2px] text-ink-secondary">
-            {registeredFullDate}
+          <p className="tabular mt-[2px] text-ink-secondary">{registered}</p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="uppercase tracking-[1px] text-ink-mute">
+            Last login
           </p>
-          <p className="tabular text-ink-secondary">{registeredDate}</p>
+          <p className="tabular mt-[2px] text-ink-secondary">{lastSignIn}</p>
         </div>
       </div>
     </div>

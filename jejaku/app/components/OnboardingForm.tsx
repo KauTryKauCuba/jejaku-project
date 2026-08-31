@@ -12,6 +12,7 @@ export type OnboardingProfile = {
   avatarUrl?: string;
   email?: string;
   registeredAt: string;
+  lastSignInAt?: string;
 };
 
 export default function OnboardingForm({

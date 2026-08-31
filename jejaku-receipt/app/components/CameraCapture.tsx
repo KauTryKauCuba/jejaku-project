@@ -31,7 +31,7 @@ const STILL_HOLD_MS = 300;
 // locked on by then (bad lighting, awkward angle, whatever), stop spending
 // money on it and let the user fall back to the manual shutter — a user who
 // leaves the camera open and walks away should not run up an unbounded bill.
-const MAX_READY_ATTEMPTS = 10;
+const MAX_READY_ATTEMPTS = 5;
 
 export default function CameraCapture({
   onCapture,

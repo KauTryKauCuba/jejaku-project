@@ -101,9 +101,39 @@ const TIMELINE = [
     date: "Sunday, August 30, 2026",
   },
   {
-    status: "Up next",
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan finds the receipt for you",
+    body: "Point the camera at a receipt and hold it steady — no need to tap the shutter. A quick check confirms it's actually in frame before the photo is taken automatically.",
+    dateLabel: "Shipped",
+    date: "Monday, August 31, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
     title: "Automatic receipt extraction",
-    body: "Scanning a receipt currently still means typing in the merchant, amount, and date yourself. Next up is pulling those straight from the photo.",
+    body: "Scanning a receipt no longer means typing in the merchant, amount, and date yourself — they're read straight from the photo and pre-filled, ready to check over and save.",
+    dateLabel: "Shipped",
+    date: "Monday, August 31, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Receipt photos that actually show up",
+    body: "Fixed a bug where a scanned receipt's thumbnail could silently fail to load after a server restart — the photo was always saved, it just wasn't being served correctly.",
+    dateLabel: "Shipped",
+    date: "Monday, August 31, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Profile photos that actually persist",
+    body: "Uploading a photo during sign-up looked like it worked, but it never really saved anywhere — it only lived in that one browser tab. Photos now genuinely upload and stick around.",
+    dateLabel: "Shipped",
+    date: "Monday, August 31, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A real Settings page",
+    body: "Added a place to change your name and photo after signing up, on both apps — previously the only chance to set a photo was during onboarding, with no way to update it later.",
+    dateLabel: "Shipped",
+    date: "Monday, August 31, 2026",
   },
 ];
 

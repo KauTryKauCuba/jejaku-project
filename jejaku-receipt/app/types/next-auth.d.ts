@@ -7,6 +7,7 @@ export type SessionProfile = {
   avatarUrl?: string;
   email: string;
   registeredAt: string;
+  lastSignInAt?: string;
 };
 
 export type ReceiptProfile = {

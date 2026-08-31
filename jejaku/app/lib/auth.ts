@@ -105,6 +105,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               avatarUrl: existing.avatarUrl ?? undefined,
               email: existing.email,
               registeredAt: existing.createdAt.toISOString(),
+              lastSignInAt: existing.lastSignInAt?.toISOString(),
             }
           : null;
         token.dbProfile = dbProfile;
