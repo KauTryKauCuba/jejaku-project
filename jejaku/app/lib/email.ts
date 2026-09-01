@@ -4,7 +4,6 @@ const FROM_EMAIL = process.env.OTP_FROM_EMAIL ?? "otp@jejaku.my";
 const SITE_URL = process.env.NEXT_PUBLIC_JEJAKU_URL ?? "https://jejaku.my";
 
 function otpEmailHtml(code: string) {
-  const digits = code.split("");
   return `
 <div style="background-color:#f4faf8;padding:38px 15px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background-color:#ffffff;border:1px solid #dce9e5;border-radius:12px;overflow:hidden;">
@@ -25,9 +24,14 @@ function otpEmailHtml(code: string) {
     </tr>
     <tr>
       <td style="padding:15px 30px 0;text-align:center;">
-        <div style="display:inline-block;background-color:#f4faf8;border:1px solid #dce9e5;border-radius:8px;padding:15px 19px;">
-          <span style="font-size:30px;font-weight:600;letter-spacing:8px;color:#07211c;font-variant-numeric:tabular-nums;">${digits.join(" ")}</span>
+        <div style="display:inline-block;background-color:#f4faf8;border:1px solid #dce9e5;border-radius:8px;padding:19px 26px;">
+          <span style="font-size:34px;font-weight:600;letter-spacing:9px;color:#07211c;font-variant-numeric:tabular-nums;">${code}</span>
         </div>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding:11px 30px 0;text-align:center;">
+        <p style="margin:0;font-size:12px;line-height:1.5;color:#8a9d97;">Tap and hold the code to copy it</p>
       </td>
     </tr>
     <tr>
