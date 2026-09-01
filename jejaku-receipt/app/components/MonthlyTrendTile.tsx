@@ -61,7 +61,7 @@ export default function MonthlyTrendTile() {
   const categoryOrder = [...categoryTotals.entries()].sort((a, b) => a[1] - b[1]).map(([c]) => c);
 
   return (
-    <div className="flex h-full flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
       <div className="flex flex-wrap items-start justify-between gap-[8px]">
         <IconFlowBadge size={40} seed={6}>
           <ChartLineUp size={16} weight="light" />

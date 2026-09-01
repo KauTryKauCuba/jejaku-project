@@ -29,7 +29,7 @@ export default function CategoriesTrackedTile() {
   const maxSpent = Math.max(1, ...ranked.map(([, v]) => v.spent));
 
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
       <div className="flex flex-wrap items-start justify-between gap-[8px]">
         <IconFlowBadge size={40} seed={3}>
           <Tag size={16} weight="light" />

@@ -64,7 +64,7 @@ export default function ReceiptsList({
   const pageExpenses = expenses.slice(currentPage * pageSize, currentPage * pageSize + pageSize);
 
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
       <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">{title}</h3>
       <p className="mt-[4px] text-[12px] text-ink-mute">{description}</p>
 

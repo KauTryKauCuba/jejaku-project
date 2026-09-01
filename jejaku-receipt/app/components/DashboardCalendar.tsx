@@ -64,16 +64,16 @@ export default function DashboardCalendar() {
   );
 
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
       <IconFlowBadge size={40} seed={5}>
         <CalendarBlank size={16} weight="light" />
       </IconFlowBadge>
 
-      <div className="mt-[15px] flex items-center justify-between">
-        <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">
+      <div className="mt-[15px] flex items-center justify-between gap-[8px]">
+        <h3 className="min-w-0 truncate text-[15px] font-light tracking-[-0.19px] text-ink">
           {monthLabel}
         </h3>
-        <div className="flex items-center gap-[4px]">
+        <div className="flex shrink-0 items-center gap-[4px]">
           <button
             type="button"
             aria-label="Previous month"

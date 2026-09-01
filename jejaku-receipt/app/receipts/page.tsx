@@ -49,10 +49,10 @@ export default async function ReceiptsPage() {
           reserving that 6th slice like there is on the dashboard.
         */}
         <div className="mt-[19px] grid gap-[19px] lg:grid-cols-[repeat(24,minmax(0,1fr))]">
-          <div className="lg:[grid-column:span_5/span_5]">
+          <div className="min-w-0 lg:[grid-column:span_5/span_5]">
             <ReceiptScannerCard />
           </div>
-          <div className="lg:[grid-column:span_19/span_19]">
+          <div className="min-w-0 lg:[grid-column:span_19/span_19]">
             <ReceiptsList
               title="All Receipts"
               description="Browse and page through everything you've scanned or entered."

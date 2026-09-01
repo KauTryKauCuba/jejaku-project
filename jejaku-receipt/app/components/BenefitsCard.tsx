@@ -40,7 +40,7 @@ const BENEFITS = [
 
 export default function BenefitsCard() {
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
       <IconFlowBadge size={40} seed={9}>
         <Sparkle size={16} weight="light" />
       </IconFlowBadge>

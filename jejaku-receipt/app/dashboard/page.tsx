@@ -54,10 +54,10 @@ export default async function DashboardPage() {
         </p>
 
         <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-6">
-          <div className="lg:col-span-5">
+          <div className="min-w-0 lg:col-span-5">
             <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-4">
               <ReceiptScannerCard />
-              <div className="flex flex-col gap-[19px]">
+              <div className="flex min-w-0 flex-col gap-[19px]">
                 <div className="flex-1">
                   <TotalSpentTile />
                 </div>

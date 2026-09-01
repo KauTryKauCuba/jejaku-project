@@ -46,7 +46,7 @@ const REASONS = [
 
 export default function WhyScanCard() {
   return (
-    <div className="rounded-lg border border-hairline bg-canvas p-[20px]">
+    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
       <IconFlowBadge size={40} seed={8}>
         <Receipt size={16} weight="light" />
       </IconFlowBadge>
