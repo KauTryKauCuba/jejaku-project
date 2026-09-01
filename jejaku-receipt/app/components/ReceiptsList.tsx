@@ -158,7 +158,7 @@ export default function ReceiptsList({
       )}
 
       {expenses.length > 0 && (
-        <div className="mt-[15px] flex items-center justify-between border-t border-hairline pt-[11px]">
+        <div className="mt-[15px] flex flex-wrap items-center justify-between gap-y-[8px] border-t border-hairline pt-[11px]">
           <div className="flex items-center gap-[8px] text-[12px] text-ink-mute">
             Show
             <div className="w-[68px]">

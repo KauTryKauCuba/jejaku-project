@@ -19,7 +19,7 @@ export default function ReceiptsScannedTile() {
 
   return (
     <div className="flex h-full flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
-      <div className="flex items-start justify-between gap-[8px]">
+      <div className="flex flex-wrap items-start justify-between gap-[8px]">
         <IconFlowBadge size={40} seed={2}>
           <Receipt size={16} weight="light" />
         </IconFlowBadge>
