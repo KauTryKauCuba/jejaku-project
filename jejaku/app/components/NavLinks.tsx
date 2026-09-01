@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const NAV_LINKS = [{ label: "Roadmap", href: "/roadmap" }];
+export const NAV_LINKS = [{ label: "Changelog", href: "/changelog" }];
 
 export function NavLinks({ className }: { className: string }) {
   return (

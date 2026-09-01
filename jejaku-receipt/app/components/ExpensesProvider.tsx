@@ -22,6 +22,7 @@ function buildExpenseForm(input: NewExpense) {
   form.set("date", input.date);
   form.set("category", input.category);
   if (input.tax !== undefined) form.set("tax", String(input.tax));
+  form.set("isWarrantyClaim", String(input.isWarrantyClaim === true));
   if (input.note) form.set("note", input.note);
   if (input.location) form.set("location", input.location);
   if (input.currency) form.set("currency", input.currency);

@@ -39,13 +39,6 @@ export default function UserBadge() {
         </span>
       </div>
 
-      <div
-        className={`pointer-events-none fixed inset-0 z-10 bg-ink/40 transition-opacity duration-300 ${
-          hovered ? "opacity-100" : "opacity-0"
-        }`}
-        aria-hidden="true"
-      />
-
       {hovered && (
         <div className="absolute right-0 top-full z-20 w-[280px] pt-[12px]">
           <div style={{ perspective: 1000 }}>

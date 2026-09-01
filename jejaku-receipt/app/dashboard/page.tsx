@@ -16,6 +16,8 @@ import TotalSpentTile from "../components/TotalSpentTile";
 import ReceiptsScannedTile from "../components/ReceiptsScannedTile";
 import CategoriesTrackedTile from "../components/CategoriesTrackedTile";
 import MonthlyTrendTile from "../components/MonthlyTrendTile";
+import TaxRecordsTile from "../components/TaxRecordsTile";
+import WarrantyClaimsTile from "../components/WarrantyClaimsTile";
 import RecentReceipts from "../components/RecentReceipts";
 import WhyScanCard from "../components/WhyScanCard";
 import BenefitsCard from "../components/BenefitsCard";
@@ -67,6 +69,8 @@ export default async function DashboardPage() {
               </div>
               <CategoriesTrackedTile />
               <MonthlyTrendTile />
+              <TaxRecordsTile />
+              <WarrantyClaimsTile />
             </div>
 
             <div className="mt-[19px]">

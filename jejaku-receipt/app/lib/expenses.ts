@@ -50,6 +50,7 @@ export type Expense = {
   category: ExpenseCategory;
   tax?: number;
   isDemo?: boolean;
+  isWarrantyClaim?: boolean;
   note?: string;
   photoUrl?: string;
   location?: string;

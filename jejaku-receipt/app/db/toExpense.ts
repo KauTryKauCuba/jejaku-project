@@ -10,6 +10,7 @@ export function toExpense(row: typeof expenses.$inferSelect): Expense {
     category: row.category as Expense["category"],
     tax: row.tax ?? undefined,
     isDemo: row.isDemo,
+    isWarrantyClaim: row.isWarrantyClaim,
     note: row.note ?? undefined,
     photoUrl: row.photoUrl ?? undefined,
     location: row.location ?? undefined,

@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import FlowLines from "../components/FlowLines";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
+import ChangelogTimeline from "../components/ChangelogTimeline";
 
 export const metadata: Metadata = {
-  title: "Roadmap — Jejaku",
-  description: "What's shipped, what's in progress, and what's planned next.",
+  title: "Changelog — Jejaku",
+  description: "What's shipped, day by day.",
 };
 
 const TIMELINE = [
@@ -212,65 +213,109 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "Monday, August 31, 2026",
   },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A sign-in code you can actually copy",
+    body: "Email clients block scripts, so a real \"click to copy\" button was never going to work there — instead the code itself is now the tap target: bigger, no gaps breaking up mobile long-press selection, with a hint telling you to tap and hold.",
+    dateLabel: "Shipped",
+    date: "Tuesday, September 1, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Cards that no longer run off the edge of the screen",
+    body: "On some phones, a card's content could force the whole row wider than the screen, cutting off everything sharing that row with it — not just the one card that looked like the culprit. Fixed at the root across the dashboard and Receipts page, and checked by hand against 16 different screen widths, from a small phone to a wide desktop.",
+    dateLabel: "Shipped",
+    date: "Tuesday, September 1, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A lighter, smoother background on mobile",
+    body: "The drifting background gradient behind every page — including the navbar on every Jejaku Receipt screen — was quietly expensive to animate, a common cause of choppy scrolling and extra battery drain on phones. Simplified the animation and lightened it further on small screens, with no real difference in how it looks.",
+    dateLabel: "Shipped",
+    date: "Tuesday, September 1, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "A dashboard card for tax you've actually paid",
+    body: "Tax was captured per receipt but never added up anywhere. There's now a Tax Records card alongside the others — same this month/3/6/12-month range, same running total at the bottom — so it's visible at a glance instead of something you'd have to dig for.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Tag a receipt for a warranty claim, and find it again later",
+    body: "Scanning or entering a receipt now has a \"Tag as Warranty Claim\" toggle. Tagged receipts get a small badge wherever they show up, and a \"Warranty claims\" filter appears to narrow the list down to just those — plus a dashboard card counting how many you've got, on the same time-range pattern as everything else.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan tells you when it couldn't read a receipt",
+    body: "Pointing the scanner at something that isn't a receipt used to quietly hand back an empty form with no explanation. It now says so directly — \"Couldn't read this as a receipt\" — instead of the usual \"details auto-filled\" message, which was misleading when nothing had actually been found.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "An audit trail for your account",
+    body: "Settings now keeps a running log of every expense added, edited, or deleted, categories you've created, and demo data seeded or removed — with a timestamp on each, paged the same way as your receipts list. An edit or delete used to leave no trace once it happened; now there's a record.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "This roadmap, grouped by day and collapsible",
+    body: "Every entry used to sit in one long scroll. Now each day collapses into a single row with a count, and only the most recent day opens automatically — click any day to see what shipped on it.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Fixed the account menu's Log out getting cut off",
+    body: "On pages with the gradient background — Roadmap, Settings, Onboarding, the homepage — hovering your avatar could clip the \"Log out\" button off the bottom of the popover, because the header sat inside a box that clips overflow. Restructured it the same way the Jejaku Receipt dashboard already handles it. Also removed a full-page dimming effect on hover that was actually washing out content further down the page, not just behind the popover.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Roadmap is now Changelog",
+    body: "This page's content was always a record of what shipped, not a forward-looking plan — the name just caught up. Same page, same grouped-by-day layout, new URL: /changelog.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
 ];
 
-export default function RoadmapPage() {
+export default function ChangelogPage() {
   return (
     <>
-      <div className="gradient-mesh">
-        <div className="mesh-blob" aria-hidden="true" />
-        <FlowLines />
-        <SiteHeader />
+      <div className="relative">
+        {/* Background layer is a sibling of the header/hero content below,
+            not their parent — gradient-mesh clips overflow, which would
+            cut off the UserBadge popover (Settings/Log out) if it were a
+            descendant. Same rule as the Dashboard Shell navbar, documented
+            in DESIGN.md. */}
+        <div className="gradient-mesh" style={{ position: "absolute", inset: 0 }} aria-hidden="true">
+          <div className="mesh-blob" aria-hidden="true" />
+          <FlowLines />
+        </div>
 
-        <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]">
-          <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[46px]">
-            Roadmap
-          </h1>
-          <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
-            What I&apos;m working on right now. More will show up here as it
-            happens.
-          </p>
-        </section>
+        <div className="relative">
+          <SiteHeader />
+
+          <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]">
+            <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[46px]">
+              Changelog
+            </h1>
+            <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
+              What&apos;s shipped, day by day.
+            </p>
+          </section>
+        </div>
       </div>
 
       <section className="bg-canvas py-[91px]">
         <div className="mx-auto max-w-4xl px-[23px]">
-          <div className="relative pl-[30px]">
-            <div className="absolute left-[4px] top-[6px] bottom-[6px] w-px bg-ink-mute" />
-
-            {TIMELINE.map((item, i) => (
-              <div
-                key={item.title}
-                className={
-                  i === TIMELINE.length - 1
-                    ? "relative"
-                    : "relative mb-[38px]"
-                }
-              >
-                <span
-                  className={
-                    item.dateLabel === "Shipped" || item.dateLabel === "Started"
-                      ? "absolute -left-[30px] top-[5px] h-[9px] w-[9px] rounded-full bg-primary"
-                      : "absolute -left-[30px] top-[5px] h-[9px] w-[9px] rounded-full border-2 border-hairline-input bg-canvas"
-                  }
-                />
-                <p className="text-[12px] font-medium uppercase tracking-[0.1px] text-ink-mute">
-                  {item.status}
-                </p>
-                <h3 className="mt-[8px] text-[16px] font-medium text-ink">
-                  {item.title}
-                </h3>
-                <p className="mt-[8px] max-w-xl text-[14px] leading-relaxed text-ink-mute">
-                  {item.body}
-                </p>
-                {item.date && (
-                  <p className="tabular mt-[11px] text-[12px] text-ink-mute">
-                    {item.dateLabel} {item.date}
-                  </p>
-                )}
-              </div>
-            ))}
-          </div>
+          <ChangelogTimeline items={TIMELINE} />
         </div>
       </section>
 

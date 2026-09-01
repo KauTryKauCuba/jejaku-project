@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Plus, X } from "@phosphor-icons/react";
+import { Check, Plus, Shield, X } from "@phosphor-icons/react";
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem } from "../lib/expenses";
 import Select from "./Select";
 import DatePicker from "./DatePicker";
@@ -22,6 +22,7 @@ export default function ExpenseForm({
   initialItems,
   initialCurrency,
   initialTax,
+  initialWarrantyClaim,
   categorySource,
   disabled = false,
 }: {
@@ -31,6 +32,7 @@ export default function ExpenseForm({
     date: string;
     category: ExpenseCategory;
     tax?: number;
+    isWarrantyClaim?: boolean;
     note?: string;
     location?: string;
     items?: ExpenseItem[];
@@ -45,6 +47,7 @@ export default function ExpenseForm({
   initialItems?: ExpenseItem[];
   initialCurrency?: string;
   initialTax?: number;
+  initialWarrantyClaim?: boolean;
   /** Where initialCategory came from — shows a hint next to the Category field so the
    * user knows to double-check an AI guess, or that detection failed and it defaulted. */
   categorySource?: "ai" | "fallback";
@@ -62,6 +65,7 @@ export default function ExpenseForm({
   const [currency, setCurrency] = useState(initialCurrency ?? DEFAULT_CURRENCY);
   const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
   const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
+  const [isWarrantyClaim, setIsWarrantyClaim] = useState(initialWarrantyClaim ?? false);
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
   const [categoryTouched, setCategoryTouched] = useState(false);
@@ -104,6 +108,7 @@ export default function ExpenseForm({
       date,
       category,
       tax: parsedTax,
+      isWarrantyClaim,
       note: note.trim() || undefined,
       location: location.trim() || undefined,
       items: items.length > 0 ? items : undefined,
@@ -307,6 +312,27 @@ export default function ExpenseForm({
           className={inputClass}
         />
       </div>
+
+      <button
+        type="button"
+        onClick={() => setIsWarrantyClaim((v) => !v)}
+        aria-pressed={isWarrantyClaim}
+        className="flex items-center gap-[8px] rounded-md border border-hairline-input bg-canvas px-[11px] py-[9px] text-left transition-colors hover:bg-canvas-soft"
+      >
+        <span
+          className={
+            isWarrantyClaim
+              ? "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-sm bg-primary"
+              : "h-[16px] w-[16px] shrink-0 rounded-sm border border-hairline-input"
+          }
+        >
+          {isWarrantyClaim && <Check size={11} weight="bold" className="text-on-primary" />}
+        </span>
+        <Shield size={15} weight="light" className="shrink-0 text-ink-mute" />
+        <span className="text-[13px] font-medium text-ink">
+          Tag as Warranty Claim
+        </span>
+      </button>
 
       <div className="mt-[4px] flex items-center gap-[8px]">
         <button

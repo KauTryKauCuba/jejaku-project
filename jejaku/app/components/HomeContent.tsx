@@ -210,40 +210,49 @@ export default function HomeContent({
 
   return (
     <>
-      {/* Hero on gradient mesh */}
-      <div className="gradient-mesh">
-        <div className="mesh-blob" aria-hidden="true" />
-        <FlowLines />
-        <SiteHeader />
+      {/* Hero on gradient mesh — the background is a sibling of the
+          header/hero content, not their parent. gradient-mesh clips
+          overflow, which would cut off the UserBadge popover
+          (Settings/Log out) if it were a descendant. Same rule as the
+          Dashboard Shell navbar, documented in DESIGN.md. */}
+      <div className="relative">
+        <div className="gradient-mesh" style={{ position: "absolute", inset: 0 }} aria-hidden="true">
+          <div className="mesh-blob" aria-hidden="true" />
+          <FlowLines />
+        </div>
 
-        {isDashboard ? (
-          <section
-            id="projects"
-            className="mx-auto max-w-6xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]"
-          >
-            {projectsHeading}
-            {dashboardCardsGrid}
-            {projectsGrid}
-          </section>
-        ) : (
-          <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-[46px] px-[23px] pt-[38px] pb-[91px] lg:grid-cols-2 lg:gap-[61px] lg:pt-[61px]">
-            <div>
-              <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[53px] md:tracking-[-1.33px]">
-                Things I built
-                <br />
-                while learning
-              </h1>
-              <p className="mt-[23px] max-w-[46ch] text-[16px] leading-relaxed text-ink-secondary">
-                Jejaku is where I put projects after I finish them. Free to
-                use, nothing for sale.
-              </p>
-            </div>
+        <div className="relative">
+          <SiteHeader />
 
-            <div className="flex justify-center lg:justify-end">
-              <HeroAuthCard />
-            </div>
-          </section>
-        )}
+          {isDashboard ? (
+            <section
+              id="projects"
+              className="mx-auto max-w-6xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]"
+            >
+              {projectsHeading}
+              {dashboardCardsGrid}
+              {projectsGrid}
+            </section>
+          ) : (
+            <section className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-[46px] px-[23px] pt-[38px] pb-[91px] lg:grid-cols-2 lg:gap-[61px] lg:pt-[61px]">
+              <div>
+                <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[53px] md:tracking-[-1.33px]">
+                  Things I built
+                  <br />
+                  while learning
+                </h1>
+                <p className="mt-[23px] max-w-[46ch] text-[16px] leading-relaxed text-ink-secondary">
+                  Jejaku is where I put projects after I finish them. Free to
+                  use, nothing for sale.
+                </p>
+              </div>
+
+              <div className="flex justify-center lg:justify-end">
+                <HeroAuthCard />
+              </div>
+            </section>
+          )}
+        </div>
       </div>
 
       {!isDashboard && (

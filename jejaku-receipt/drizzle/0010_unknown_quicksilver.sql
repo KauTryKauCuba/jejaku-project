@@ -1,0 +1,1 @@
+ALTER TABLE "expenses" ADD COLUMN "is_warranty_claim" boolean DEFAULT false NOT NULL;

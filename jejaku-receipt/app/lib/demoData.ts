@@ -3,6 +3,7 @@ import { db } from "../db";
 import { expenses, users } from "../db/schema";
 import { convertCurrency } from "./exchangeRates";
 import { DEMO_EXPENSES } from "./demoExpenses";
+import { AUDIT_ACTIONS, logAudit } from "./auditLog";
 
 export { DEMO_EXPENSES };
 
@@ -28,6 +29,7 @@ export async function seedDemoExpenses(userId: string, homeCurrency: string) {
       items: d.items ?? null,
     });
   }
+  await logAudit(userId, AUDIT_ACTIONS.DEMO_SEEDED, `${DEMO_EXPENSES.length} sample receipts`);
   return DEMO_EXPENSES.length;
 }
 

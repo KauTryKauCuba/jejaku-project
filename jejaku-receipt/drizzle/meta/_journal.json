@@ -71,6 +71,20 @@
       "when": 1788181804504,
       "tag": "0009_lucky_thor_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788298373471,
+      "tag": "0010_unknown_quicksilver",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788300107577,
+      "tag": "0011_special_fixer",
+      "breakpoints": true
     }
   ]
 }

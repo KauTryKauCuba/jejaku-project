@@ -29,6 +29,10 @@ export const expenses = pgTable("expenses", {
   // data" delete exactly those rows and nothing the user entered
   // themselves, unlike the Danger Zone's full wipe.
   isDemo: boolean("is_demo").notNull().default(false),
+  // User-set tag, not auto-detected — lets someone mark a receipt as
+  // something they'll need for a warranty claim later, so it can be
+  // filtered for and found quickly instead of scrolling every receipt.
+  isWarrantyClaim: boolean("is_warranty_claim").notNull().default(false),
   note: text("note"),
   photoUrl: text("photo_url"),
   location: text("location"),
@@ -42,5 +46,21 @@ export const expenses = pgTable("expenses", {
   homeCurrencyAmount: doublePrecision("home_currency_amount"),
   homeCurrencyCode: text("home_currency_code"),
   items: jsonb("items").$type<{ name: string; price: number }[]>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// A running log of account-level actions — every expense created, edited,
+// or deleted, categories added, demo data seeded/removed, and the Danger
+// Zone wipe. Shown in Settings so a user can see what happened to their
+// data and when, not derived from the expenses table itself since rows
+// there get overwritten or deleted (an edit/delete wouldn't leave a trace
+// otherwise).
+export const auditLogs = pgTable("audit_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  action: text("action").notNull(),
+  detail: text("detail"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

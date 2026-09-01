@@ -4,6 +4,7 @@ import { getCurrentUser } from "../../lib/currentUser";
 import { db } from "../../db";
 import { users } from "../../db/schema";
 import { EXPENSE_CATEGORIES, MAX_CATEGORY_LENGTH, MAX_CUSTOM_CATEGORIES } from "../../lib/expenses";
+import { AUDIT_ACTIONS, logAudit } from "../../lib/auditLog";
 
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
 
   const customCategories = [...user.customCategories, name];
   await db.update(users).set({ customCategories }).where(eq(users.id, user.id));
+  await logAudit(user.id, AUDIT_ACTIONS.CATEGORY_CREATED, name);
 
   return NextResponse.json({ customCategories });
 }

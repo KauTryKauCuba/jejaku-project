@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/currentUser";
 import { db } from "../../../db";
 import { expenses } from "../../../db/schema";
+import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
 
 // Deletes only this user's demo-seeded expenses (isDemo = true), leaving
 // anything they entered themselves untouched — unlike the Danger Zone's
@@ -18,6 +19,10 @@ export async function DELETE() {
     .delete(expenses)
     .where(and(eq(expenses.userId, user.id), eq(expenses.isDemo, true)))
     .returning({ id: expenses.id });
+
+  if (deleted.length > 0) {
+    await logAudit(user.id, AUDIT_ACTIONS.DEMO_REMOVED, `${deleted.length} sample receipts`);
+  }
 
   return NextResponse.json({ deleted: deleted.length });
 }

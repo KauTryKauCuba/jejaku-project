@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { auth } from "../lib/auth";
 import { jejakuUrl } from "../lib/jejakuUrl";
 import { db } from "../db";
-import { expenses, users } from "../db/schema";
+import { expenses, users, auditLogs } from "../db/schema";
 import DashboardShell from "../components/DashboardShell";
 import MemberCard from "../components/MemberCard";
 import DemoDataCard from "../components/DemoDataCard";
 import DangerZoneCard from "../components/DangerZoneCard";
+import AuditTrailCard from "../components/AuditTrailCard";
 
 export const metadata: Metadata = {
   title: "Settings — Jejaku Receipt",
@@ -28,6 +29,23 @@ export default async function SettingsPage() {
     : [];
   const expenseCount = userExpenses.length;
   const demoCount = userExpenses.filter((e) => e.isDemo).length;
+
+  const auditLogRows = user
+    ? await db.query.auditLogs.findMany({
+        where: eq(auditLogs.userId, user.id),
+        orderBy: desc(auditLogs.createdAt),
+        // A running log grows forever — cap what a single Settings visit
+        // fetches rather than pulling every row an active account has
+        // ever produced.
+        limit: 500,
+      })
+    : [];
+  const auditLogEntries = auditLogRows.map((row) => ({
+    id: row.id,
+    action: row.action,
+    detail: row.detail,
+    createdAt: row.createdAt.toISOString(),
+  }));
 
   return (
     <DashboardShell>
@@ -64,6 +82,10 @@ export default async function SettingsPage() {
       <div className="mt-[19px] grid gap-[19px] md:grid-cols-2">
         <DemoDataCard demoCount={demoCount} />
         <DangerZoneCard expenseCount={expenseCount} />
+      </div>
+
+      <div className="mt-[19px]">
+        <AuditTrailCard initialLogs={auditLogEntries} />
       </div>
     </DashboardShell>
   );

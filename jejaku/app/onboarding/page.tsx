@@ -13,16 +13,26 @@ export const metadata: Metadata = {
 export default function OnboardingPage() {
   return (
     <>
-      <div className="gradient-mesh">
-        <div className="mesh-blob" aria-hidden="true" />
-        <FlowLines />
-        <SiteHeader />
+      <div className="relative">
+        {/* Background layer is a sibling of the header/hero content below,
+            not their parent — gradient-mesh clips overflow, which would
+            cut off the UserBadge popover (Settings/Log out) if it were a
+            descendant. Same rule as the Dashboard Shell navbar, documented
+            in DESIGN.md. */}
+        <div className="gradient-mesh" style={{ position: "absolute", inset: 0 }} aria-hidden="true">
+          <div className="mesh-blob" aria-hidden="true" />
+          <FlowLines />
+        </div>
 
-        <section className="mx-auto max-w-6xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]">
-          <Suspense fallback={null}>
-            <OnboardingCard />
-          </Suspense>
-        </section>
+        <div className="relative">
+          <SiteHeader />
+
+          <section className="mx-auto max-w-6xl px-[23px] pt-[38px] pb-[91px] lg:pt-[61px]">
+            <Suspense fallback={null}>
+              <OnboardingCard />
+            </Suspense>
+          </section>
+        </div>
       </div>
 
       <SiteFooter />

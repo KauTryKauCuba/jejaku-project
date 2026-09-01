@@ -5,7 +5,8 @@ import { convertCurrency } from "../../../lib/exchangeRates";
 import { db } from "../../../db";
 import { expenses } from "../../../db/schema";
 import { toExpense } from "../../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseItem } from "../../../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, type ExpenseItem } from "../../../lib/expenses";
+import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
@@ -35,6 +36,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const category = typeof form.get("category") === "string" ? (form.get("category") as string) : "";
   const taxRaw = form.get("tax");
   const tax = typeof taxRaw === "string" && taxRaw ? Number(taxRaw) : null;
+  const isWarrantyClaim = form.get("isWarrantyClaim") === "true";
   const noteRaw = form.get("note");
   const note = typeof noteRaw === "string" ? noteRaw.trim() : "";
   const locationRaw = form.get("location");
@@ -93,6 +95,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       date,
       category,
       tax,
+      isWarrantyClaim,
       note: note || null,
       location: location || null,
       currency: currency || null,
@@ -102,6 +105,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     })
     .where(eq(expenses.id, id))
     .returning();
+
+  await logAudit(
+    user.id,
+    AUDIT_ACTIONS.EXPENSE_UPDATED,
+    `${merchant} — ${formatCurrency(amount, currency || DEFAULT_CURRENCY)}`
+  );
 
   return NextResponse.json(toExpense(row));
 }
@@ -116,11 +125,18 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const deleted = await db
     .delete(expenses)
     .where(and(eq(expenses.id, id), eq(expenses.userId, user.id)))
-    .returning({ id: expenses.id });
+    .returning({ id: expenses.id, merchant: expenses.merchant, amount: expenses.amount, currency: expenses.currency });
 
   if (deleted.length === 0) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
+
+  const [row] = deleted;
+  await logAudit(
+    user.id,
+    AUDIT_ACTIONS.EXPENSE_DELETED,
+    `${row.merchant} — ${formatCurrency(row.amount, row.currency ?? DEFAULT_CURRENCY)}`
+  );
 
   return NextResponse.json({ ok: true });
 }

@@ -8,7 +8,8 @@ import { convertCurrency } from "../../lib/exchangeRates";
 import { db } from "../../db";
 import { expenses } from "../../db/schema";
 import { toExpense } from "../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseItem } from "../../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, type ExpenseItem } from "../../lib/expenses";
+import { AUDIT_ACTIONS, logAudit } from "../../lib/auditLog";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
   const category = typeof form.get("category") === "string" ? (form.get("category") as string) : "";
   const taxRaw = form.get("tax");
   const tax = typeof taxRaw === "string" && taxRaw ? Number(taxRaw) : null;
+  const isWarrantyClaim = form.get("isWarrantyClaim") === "true";
   const noteRaw = form.get("note");
   const note = typeof noteRaw === "string" ? noteRaw.trim() : "";
   const locationRaw = form.get("location");
@@ -121,6 +123,7 @@ export async function POST(request: Request) {
       date,
       category,
       tax,
+      isWarrantyClaim,
       note: note || null,
       photoUrl,
       location: location || null,
@@ -130,6 +133,12 @@ export async function POST(request: Request) {
       items: items && items.length > 0 ? items : null,
     })
     .returning();
+
+  await logAudit(
+    user.id,
+    AUDIT_ACTIONS.EXPENSE_CREATED,
+    `${merchant} — ${formatCurrency(amount, currency || DEFAULT_CURRENCY)}`
+  );
 
   return NextResponse.json(toExpense(row));
 }
@@ -155,6 +164,10 @@ export async function DELETE() {
         unlink(path.join(UPLOADS_DIR, path.basename(row.photoUrl))).catch(() => {})
       )
   );
+
+  if (deleted.length > 0) {
+    await logAudit(user.id, AUDIT_ACTIONS.EXPENSES_DELETED_ALL, `${deleted.length} expenses`);
+  }
 
   return NextResponse.json({ deleted: deleted.length });
 }

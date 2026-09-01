@@ -19,19 +19,29 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <div className="gradient-mesh">
-        <div className="mesh-blob" aria-hidden="true" />
-        <FlowLines />
-        <SiteHeader />
+      <div className="relative">
+        {/* Background layer is a sibling of the header/hero content below,
+            not their parent — gradient-mesh clips overflow, which would
+            cut off the UserBadge popover (Settings/Log out) if it were a
+            descendant. Same rule already applied below for the currency
+            dropdown cards, documented in DESIGN.md. */}
+        <div className="gradient-mesh" style={{ position: "absolute", inset: 0 }} aria-hidden="true">
+          <div className="mesh-blob" aria-hidden="true" />
+          <FlowLines />
+        </div>
 
-        <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[46px] lg:pt-[61px]">
-          <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[46px]">
-            Settings
-          </h1>
-          <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
-            Your name and photo here are shared across Jejaku and Jejaku Receipt.
-          </p>
-        </section>
+        <div className="relative">
+          <SiteHeader />
+
+          <section className="mx-auto max-w-4xl px-[23px] pt-[38px] pb-[46px] lg:pt-[61px]">
+            <h1 className="text-[38px] font-light leading-[1.05] tracking-[-1.14px] text-ink md:text-[46px]">
+              Settings
+            </h1>
+            <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
+              Your name and photo here are shared across Jejaku and Jejaku Receipt.
+            </p>
+          </section>
+        </div>
       </div>
 
       {/* Cards live outside .gradient-mesh, not just below its content —
