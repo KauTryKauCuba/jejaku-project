@@ -144,19 +144,35 @@ body {
   animation: mesh-drift-c 30s ease-in-out infinite;
 }
 
+/* A 40px blur recomputed every animation frame is the single heaviest
+   thing on these pages for a mobile GPU — halving it on small screens
+   cuts that raster cost roughly 4x (blur cost scales with radius²)
+   while the mesh is still plenty soft-looking at this size. */
+@media (max-width: 640px) {
+  .gradient-mesh::before,
+  .gradient-mesh::after,
+  .gradient-mesh .mesh-blob {
+    filter: blur(20px);
+  }
+}
+
+/* translate-only — no scale() here. Scaling a blurred layer forces the
+   browser to re-rasterize the blur at its new size every frame; a pure
+   translate lets the compositor just reposition the already-rasterized
+   bitmap, which is dramatically cheaper on mobile GPUs. */
 @keyframes mesh-drift-a {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(4%, 6%) scale(1.08); }
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(4%, 6%); }
 }
 
 @keyframes mesh-drift-b {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-5%, 4%) scale(1.05); }
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-5%, 4%); }
 }
 
 @keyframes mesh-drift-c {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-3%, -5%) scale(1.06); }
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3%, -5%); }
 }
 
 .card-reveal {
