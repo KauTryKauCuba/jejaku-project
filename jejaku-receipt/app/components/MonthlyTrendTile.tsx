@@ -13,7 +13,7 @@ export default function MonthlyTrendTile() {
   const expenses = useExpenses();
   const currency = useDefaultCurrency();
   const [hovered, setHovered] = useState<number | null>(null);
-  const [range, setRange] = useState(RANGE_OPTIONS[0]);
+  const [range, setRange] = useState(RANGE_OPTIONS[2]);
   const monthsShown = monthsInRange(range);
 
   const now = new Date();

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/currentUser";
 import { convertCurrency } from "../../../lib/exchangeRates";
+import { lookupCoordinates } from "../../../lib/cityCoordinates";
 import { db } from "../../../db";
 import { expenses } from "../../../db/schema";
 import { toExpense } from "../../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, type ExpenseItem } from "../../../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseSplit, type ExpenseItem } from "../../../lib/expenses";
 import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -39,8 +40,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const isWarrantyClaim = form.get("isWarrantyClaim") === "true";
   const noteRaw = form.get("note");
   const note = typeof noteRaw === "string" ? noteRaw.trim() : "";
-  const locationRaw = form.get("location");
-  const location = typeof locationRaw === "string" ? locationRaw.trim() : "";
+  const cityRaw = form.get("city");
+  const city = typeof cityRaw === "string" ? cityRaw.trim() : "";
+  const stateRaw = form.get("state");
+  const state = typeof stateRaw === "string" ? stateRaw.trim() : "";
+  const countryRaw = form.get("country");
+  const country = typeof countryRaw === "string" ? countryRaw.trim() : "";
+  const coords = lookupCoordinates(city, state, country);
   const currencyRaw = form.get("currency");
   const currency =
     typeof currencyRaw === "string" && CURRENCY_CODE_PATTERN.test(currencyRaw.toUpperCase())
@@ -66,6 +72,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       items = null;
     }
   }
+
+  const split = parseSplit(form.get("split"));
 
   if (
     !merchant ||
@@ -97,11 +105,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       tax,
       isWarrantyClaim,
       note: note || null,
-      location: location || null,
+      city: city || null,
+      state: state || null,
+      country: country || null,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
       currency: currency || null,
       homeCurrencyAmount,
       homeCurrencyCode: homeCurrencyAmount === null ? null : user.defaultCurrency,
       items: items && items.length > 0 ? items : null,
+      split,
     })
     .where(eq(expenses.id, id))
     .returning();

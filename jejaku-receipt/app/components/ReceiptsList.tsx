@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Tray, Camera, CaretLeft, CaretRight, PencilSimple, Trash, Check, X, Shield } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { Tray, Camera, CaretLeft, CaretRight, PencilSimple, Trash, Check, X, Shield, Users } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
 import Select from "./Select";
 import Modal from "./Modal";
 import ExpenseForm from "./ExpenseForm";
+import SplitBillModal from "./SplitBillModal";
 
 const PAGE_SIZE_OPTIONS = ["5", "10", "50", "100"];
 
@@ -16,6 +17,7 @@ function formatDate(dateStr: string) {
     day: "numeric",
   });
 }
+
 
 export default function ReceiptsList({
   title,
@@ -38,11 +40,25 @@ export default function ReceiptsList({
   const [pageSizeText, setPageSizeText] = useState(defaultPageSize);
   const pageSize = Number(pageSizeText);
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [splitting, setSplitting] = useState<Expense | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState<string | undefined>(undefined);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warrantyOnly, setWarrantyOnly] = useState(false);
+
+  // A short, memorable per-account receipt number (#0001, #0002, ...) in
+  // the order each receipt was added — the UUID primary key stays the
+  // real identifier underneath, this is purely a display label. Derived
+  // from the full unfiltered list so numbers stay stable across paging
+  // and the warranty-only filter, not recomputed per page.
+  const receiptNumbers = useMemo(() => {
+    const chronological = [...expenses].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1));
+    const numbers = new Map<string, number>();
+    chronological.forEach((e, i) => numbers.set(e.id, i + 1));
+    return numbers;
+  }, [expenses]);
+  const receiptNumber = (id: string) => `#${String(receiptNumbers.get(id) ?? 0).padStart(4, "0")}`;
 
   const hasWarrantyClaims = expenses.some((e) => e.isWarrantyClaim);
   const visibleExpenses = warrantyOnly ? expenses.filter((e) => e.isWarrantyClaim) : expenses;
@@ -133,9 +149,18 @@ export default function ReceiptsList({
                         aria-label="Warranty claim"
                       />
                     )}
+                    {e.split && e.split.people.length > 0 && (
+                      <Users
+                        size={12}
+                        weight="fill"
+                        className="shrink-0 text-primary"
+                        aria-label={`Split ${e.split.people.length} ways`}
+                      />
+                    )}
                   </p>
                   <p className="text-[11px] text-ink-mute">
-                    {e.category} · {formatDate(e.date)}
+                    {e.category} · {formatDate(e.date)} · <span className="tabular">{receiptNumber(e.id)}</span>
+                    {e.split && e.split.people.length > 0 && ` · Split ${e.split.people.length} ways`}
                   </p>
                 </div>
               </div>
@@ -167,6 +192,14 @@ export default function ReceiptsList({
                 </div>
               ) : (
                 <div className="flex shrink-0 items-center gap-[6px]">
+                  <button
+                    type="button"
+                    onClick={() => setSplitting(e)}
+                    aria-label={`Split ${e.merchant}`}
+                    className="flex h-[26px] w-[26px] items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+                  >
+                    <Users size={13} weight="light" />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
@@ -240,6 +273,7 @@ export default function ReceiptsList({
 
       {editing && (
         <Modal title="Edit expense" onClose={() => setEditing(null)}>
+          <p className="mb-[11px] tabular text-[11px] text-ink-mute">{receiptNumber(editing.id)}</p>
           {editError && <p className="mb-[8px] text-[12px] text-error">{editError}</p>}
           <ExpenseForm
             disabled={savingEdit}
@@ -247,8 +281,11 @@ export default function ReceiptsList({
             initialAmount={editing.amount}
             initialDate={editing.date}
             initialCategory={editing.category}
-            initialLocation={editing.location}
+            initialCity={editing.city}
+            initialState={editing.state}
+            initialCountry={editing.country}
             initialItems={editing.items}
+            initialSplit={editing.split}
             initialCurrency={editing.currency}
             initialTax={editing.tax}
             initialWarrantyClaim={editing.isWarrantyClaim}
@@ -268,6 +305,8 @@ export default function ReceiptsList({
           />
         </Modal>
       )}
+
+      {splitting && <SplitBillModal expense={splitting} onClose={() => setSplitting(null)} />}
     </div>
   );
 }

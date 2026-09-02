@@ -283,6 +283,27 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "Wednesday, September 2, 2026",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "See where your receipts came from",
+    body: "Receipts now capture city, state, and country instead of a free-text address, and the dashboard has a new Receipt Locations card: a draggable, zoomable globe (drag to spin, scroll to zoom) with a pin for every city you've spent in, plus a history list underneath. Countries you have a receipt from are highlighted. No external maps service involved — coordinates are resolved from an offline city lookup, and the globe is rendered entirely client-side.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Split — split a receipt by item",
+    body: "A new Quick Split button sits next to Quick Scan for exactly the case where you scan a receipt and only remember later it needs splitting. Add the people sharing a receipt, tag who had which item, and tax gets divided proportionally to what each person actually ordered. It's a dedicated flow, separate from scanning and editing, so it never gets in the way of just saving a receipt.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Receipts now have a short reference number",
+    body: "Each receipt shows a memorable #0001-style number (in the order it was added) on the receipts list and in the edit view, instead of the raw database ID — easier to say out loud or search for than a UUID fragment.",
+    dateLabel: "Shipped",
+    date: "Wednesday, September 2, 2026",
+  },
 ];
 
 export default function ChangelogPage() {

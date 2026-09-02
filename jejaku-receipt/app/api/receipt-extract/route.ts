@@ -8,7 +8,9 @@ type Extracted = {
   amount: number | null;
   date: string | null;
   category: (typeof EXPENSE_CATEGORIES)[number] | null;
-  location: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
   currency: string | null;
   tax: number | null;
   items: ExtractedItem[];
@@ -56,13 +58,17 @@ export async function POST(req: NextRequest) {
               text:
                 "Read this photo of a receipt and extract its details. " +
                 "Respond with ONLY a JSON object, no other text, in exactly this shape: " +
-                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","location":"...","currency":"...","tax":0,"items":[{"name":"...","price":0}]} ' +
+                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0}]} ' +
                 "merchant: the store/business name as printed. " +
                 "amount: the final total paid, as a plain number (no currency symbol). " +
                 `date: the transaction date in YYYY-MM-DD format. If no date is printed, use today's date, ${today}. ` +
                 `category: pick the single best fit from exactly this list: ${categoryList}. ` +
-                "location: the store's printed address or branch (street address, city, or branch name/number) " +
-                "— whatever identifies which specific location this is, as printed. Not the merchant's name again. " +
+                "city: the city the store is in, as printed on the address line. Not a street address or branch number. " +
+                "state: the state/province/region the store is in, only if it's printed — many countries don't print " +
+                "or use one, use null rather than guessing. " +
+                "country: the country the store is in. This is rarely printed outright on a domestic receipt — infer " +
+                "it from context (language, address format, phone number format, currency) the same way you infer " +
+                "currency below. Use null only if there's truly no signal to infer it from. " +
                 "currency: the 3-letter ISO 4217 currency code for whatever currency this receipt is priced in " +
                 "(e.g. USD, MYR, EUR, GBP, JPY, SGD) — infer it from the printed symbol/code, or from the store's " +
                 "address/language if no symbol is legible. " +
@@ -88,7 +94,9 @@ export async function POST(req: NextRequest) {
     amount: null,
     date: null,
     category: null,
-    location: null,
+    city: null,
+    state: null,
+    country: null,
     currency: null,
     tax: null,
     items: [],
@@ -112,7 +120,9 @@ export async function POST(req: NextRequest) {
     const amount = typeof parsed.amount === "number" && Number.isFinite(parsed.amount) ? parsed.amount : null;
     const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : null;
     const category = EXPENSE_CATEGORIES.includes(parsed.category) ? parsed.category : null;
-    const location = typeof parsed.location === "string" ? parsed.location : null;
+    const city = typeof parsed.city === "string" ? parsed.city : null;
+    const state = typeof parsed.state === "string" ? parsed.state : null;
+    const country = typeof parsed.country === "string" ? parsed.country : null;
     const tax = typeof parsed.tax === "number" && Number.isFinite(parsed.tax) ? parsed.tax : null;
     const currency =
       typeof parsed.currency === "string" && CURRENCY_CODE_PATTERN.test(parsed.currency.toUpperCase())
@@ -128,7 +138,7 @@ export async function POST(req: NextRequest) {
             Number.isFinite((item as ExtractedItem).price)
         )
       : [];
-    return NextResponse.json({ merchant, amount, date, category, location, currency, tax, items } satisfies Extracted);
+    return NextResponse.json({ merchant, amount, date, category, city, state, country, currency, tax, items } satisfies Extracted);
   } catch {
     return NextResponse.json(empty);
   }

@@ -2,6 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "../db";
 import { expenses, users } from "../db/schema";
 import { convertCurrency } from "./exchangeRates";
+import { lookupCoordinates } from "./cityCoordinates";
 import { DEMO_EXPENSES } from "./demoExpenses";
 import { AUDIT_ACTIONS, logAudit } from "./auditLog";
 
@@ -13,6 +14,7 @@ export { DEMO_EXPENSES };
 export async function seedDemoExpenses(userId: string, homeCurrency: string) {
   for (const d of DEMO_EXPENSES) {
     const homeCurrencyAmount = await convertCurrency(d.amount, d.currency, homeCurrency);
+    const coords = lookupCoordinates(d.city, d.state, d.country);
     await db.insert(expenses).values({
       userId,
       merchant: d.merchant,
@@ -22,7 +24,11 @@ export async function seedDemoExpenses(userId: string, homeCurrency: string) {
       tax: d.tax ?? null,
       isDemo: true,
       note: d.note ?? null,
-      location: d.location ?? null,
+      city: d.city ?? null,
+      state: d.state ?? null,
+      country: d.country ?? null,
+      lat: coords?.lat ?? null,
+      lng: coords?.lng ?? null,
       currency: d.currency,
       homeCurrencyAmount,
       homeCurrencyCode: homeCurrencyAmount === null ? null : homeCurrency,

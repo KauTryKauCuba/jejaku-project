@@ -36,6 +36,16 @@ export const expenses = pgTable("expenses", {
   note: text("note"),
   photoUrl: text("photo_url"),
   location: text("location"),
+  // Structured in favor of the free-text `location` above (kept only so old
+  // rows aren't orphaned) — city/state/country extracted or entered per
+  // receipt, plus an approximate city-centroid lat/lng resolved from them
+  // via the offline lookup in lib/cityCoordinates.ts. Powers the location
+  // history map/list; not geocoded to the exact street address.
+  city: text("city"),
+  state: text("state"),
+  country: text("country"),
+  lat: doublePrecision("lat"),
+  lng: doublePrecision("lng"),
   currency: text("currency"),
   // Snapshot conversion into the user's home currency at the time this
   // expense was saved (or last re-converted, if the home currency was
@@ -46,6 +56,11 @@ export const expenses = pgTable("expenses", {
   homeCurrencyAmount: doublePrecision("home_currency_amount"),
   homeCurrencyCode: text("home_currency_code"),
   items: jsonb("items").$type<{ name: string; price: number }[]>(),
+  // Ad-hoc per-item bill split — see lib/expenses.ts's SplitData for the
+  // shape and computeSplitTotals for how tax gets divided proportionally.
+  // Not a separate table: like `items`, this is only ever read/written
+  // whole, alongside the same expense, so a join buys nothing here.
+  split: jsonb("split").$type<{ people: string[]; assignments: { itemIndex: number; people: string[] }[] }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

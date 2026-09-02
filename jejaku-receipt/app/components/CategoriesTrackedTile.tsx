@@ -12,7 +12,7 @@ import { colorForCategory } from "../lib/categoryColors";
 export default function CategoriesTrackedTile() {
   const expenses = useExpenses();
   const currency = useDefaultCurrency();
-  const [range, setRange] = useState(RANGE_OPTIONS[0]);
+  const [range, setRange] = useState(RANGE_OPTIONS[2]);
 
   const monthKeys = new Set(recentMonths(monthsInRange(range)).map((m) => m.key));
   const inRange = expenses.filter((e) => monthKeys.has(e.date.slice(0, 7)));

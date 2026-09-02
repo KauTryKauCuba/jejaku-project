@@ -24,9 +24,12 @@ function buildExpenseForm(input: NewExpense) {
   if (input.tax !== undefined) form.set("tax", String(input.tax));
   form.set("isWarrantyClaim", String(input.isWarrantyClaim === true));
   if (input.note) form.set("note", input.note);
-  if (input.location) form.set("location", input.location);
+  if (input.city) form.set("city", input.city);
+  if (input.state) form.set("state", input.state);
+  if (input.country) form.set("country", input.country);
   if (input.currency) form.set("currency", input.currency);
   if (input.items && input.items.length > 0) form.set("items", JSON.stringify(input.items));
+  if (input.split && input.split.people.length > 0) form.set("split", JSON.stringify(input.split));
   return form;
 }
 

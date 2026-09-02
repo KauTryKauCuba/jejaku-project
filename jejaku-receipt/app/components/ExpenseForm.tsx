@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Check, Plus, Shield, X } from "@phosphor-icons/react";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem } from "../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
 import Select from "./Select";
 import DatePicker from "./DatePicker";
 import { useAddCategory, useCategories } from "./ExpensesProvider";
@@ -18,11 +18,14 @@ export default function ExpenseForm({
   initialMerchant,
   initialAmount,
   initialCategory,
-  initialLocation,
+  initialCity,
+  initialState,
+  initialCountry,
   initialItems,
   initialCurrency,
   initialTax,
   initialWarrantyClaim,
+  initialSplit,
   categorySource,
   disabled = false,
 }: {
@@ -34,20 +37,30 @@ export default function ExpenseForm({
     tax?: number;
     isWarrantyClaim?: boolean;
     note?: string;
-    location?: string;
+    city?: string;
+    state?: string;
+    country?: string;
     items?: ExpenseItem[];
     currency?: string;
+    split?: SplitData;
   }) => void;
   onCancel: () => void;
   initialDate?: string;
   initialMerchant?: string;
   initialAmount?: number;
   initialCategory?: ExpenseCategory;
-  initialLocation?: string;
+  initialCity?: string;
+  initialState?: string;
+  initialCountry?: string;
   initialItems?: ExpenseItem[];
   initialCurrency?: string;
   initialTax?: number;
   initialWarrantyClaim?: boolean;
+  /** Not editable here — Quick Split lives in its own dedicated flow so it
+   * doesn't get mixed up with regular receipt entry/editing. Carried
+   * through unchanged (and reindexed if an item is deleted) so editing
+   * other fields doesn't silently drop or corrupt an existing split. */
+  initialSplit?: SplitData;
   /** Where initialCategory came from — shows a hint next to the Category field so the
    * user knows to double-check an AI guess, or that detection failed and it defaulted. */
   categorySource?: "ai" | "fallback";
@@ -61,9 +74,12 @@ export default function ExpenseForm({
   const [category, setCategory] = useState<ExpenseCategory>(
     initialCategory ?? EXPENSE_CATEGORIES[0]
   );
-  const [location, setLocation] = useState(initialLocation ?? "");
+  const [city, setCity] = useState(initialCity ?? "");
+  const [state, setState] = useState(initialState ?? "");
+  const [country, setCountry] = useState(initialCountry ?? "");
   const [currency, setCurrency] = useState(initialCurrency ?? DEFAULT_CURRENCY);
   const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
+  const [split, setSplit] = useState<SplitData | undefined>(initialSplit);
   const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
   const [isWarrantyClaim, setIsWarrantyClaim] = useState(initialWarrantyClaim ?? false);
   const [note, setNote] = useState("");
@@ -85,6 +101,16 @@ export default function ExpenseForm({
 
   const removeItem = (index: number) => {
     setItems((prev) => prev.filter((_, i) => i !== index));
+    setSplit((prev) =>
+      prev
+        ? {
+            ...prev,
+            assignments: prev.assignments
+              .filter((a) => a.itemIndex !== index)
+              .map((a) => (a.itemIndex > index ? { ...a, itemIndex: a.itemIndex - 1 } : a)),
+          }
+        : prev
+    );
   };
 
   const addItem = () => {
@@ -110,9 +136,12 @@ export default function ExpenseForm({
       tax: parsedTax,
       isWarrantyClaim,
       note: note.trim() || undefined,
-      location: location.trim() || undefined,
+      city: city.trim() || undefined,
+      state: state.trim() || undefined,
+      country: country.trim() || undefined,
       items: items.length > 0 ? items : undefined,
       currency: currency.trim().toUpperCase() || undefined,
+      split,
     });
   };
 
@@ -138,15 +167,37 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <label className={labelClass} htmlFor="expense-location">
+        <label className={labelClass}>
           Location <span className="font-normal text-ink-mute">(optional)</span>
         </label>
+        <div className="flex items-center gap-[8px]">
+          <div className="min-w-0 flex-1">
+            <input
+              type="text"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="City"
+              aria-label="City"
+              className={inputClass}
+            />
+          </div>
+          <div className="w-[88px] shrink-0">
+            <input
+              type="text"
+              value={state}
+              onChange={(e) => setState(e.target.value)}
+              placeholder="State"
+              aria-label="State"
+              className={inputClass}
+            />
+          </div>
+        </div>
         <input
-          id="expense-location"
           type="text"
-          value={location}
-          onChange={(e) => setLocation(e.target.value)}
-          placeholder="e.g. 123 Main St, Springfield"
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          placeholder="Country"
+          aria-label="Country"
           className={inputClass}
         />
       </div>

@@ -1,21 +1,24 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Camera, FilePdf, Image as ImageIcon, PencilSimple, X } from "@phosphor-icons/react";
+import { CaretLeft, Camera, FilePdf, Image as ImageIcon, PencilSimple, Users, X } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import ExpenseForm from "./ExpenseForm";
 import CameraCapture from "./CameraCapture";
-import type { ExpenseCategory, ExpenseItem } from "../lib/expenses";
-import { useAddExpense } from "./ExpensesProvider";
+import SplitBillModal from "./SplitBillModal";
+import { formatCurrency, type Expense, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
+import { useAddExpense, useExpenses } from "./ExpensesProvider";
 
-type Mode = "idle" | "camera" | "details";
+type Mode = "idle" | "camera" | "details" | "split";
 type PreviewKind = "image" | "pdf" | null;
 type Extracted = {
   merchant: string | null;
   amount: number | null;
   date: string | null;
   category: ExpenseCategory | null;
-  location: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
   currency: string | null;
   tax: number | null;
   items: ExpenseItem[];
@@ -39,6 +42,7 @@ function fileToDataUrl(file: File): Promise<string> {
 
 export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }) {
   const addExpense = useAddExpense();
+  const expenses = useExpenses();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,6 +54,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   const [error, setError] = useState<string | undefined>(undefined);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<Extracted | null>(null);
+  const [splitTarget, setSplitTarget] = useState<Expense | null>(null);
 
   const revokePreview = () => {
     setPreviewUrl((prev) => {
@@ -114,9 +119,12 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     category: ExpenseCategory;
     tax?: number;
     note?: string;
-    location?: string;
+    city?: string;
+    state?: string;
+    country?: string;
     items?: ExpenseItem[];
     currency?: string;
+    split?: SplitData;
   }) => {
     setSaving(true);
     setError(undefined);
@@ -167,14 +175,24 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
       {mode === "idle" && (
         <>
-          <button
-            type="button"
-            onClick={() => setMode("camera")}
-            className="mt-[19px] flex h-[37px] w-full items-center justify-center gap-[8px] rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
-          >
-            <Camera size={16} weight="light" />
-            Quick Scan
-          </button>
+          <div className="mt-[19px] flex items-center gap-[8px]">
+            <button
+              type="button"
+              onClick={() => setMode("camera")}
+              className="flex h-[37px] flex-1 items-center justify-center gap-[8px] rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+            >
+              <Camera size={16} weight="light" />
+              Quick Scan
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("split")}
+              className="flex h-[37px] flex-1 items-center justify-center gap-[8px] rounded-pill border border-hairline-input bg-canvas px-[15px] text-[14px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+            >
+              <Users size={16} weight="light" />
+              Quick Split
+            </button>
+          </div>
 
           <div className="mt-[15px] flex items-center gap-[11px]">
             <div className="h-px flex-1 bg-hairline" />
@@ -214,6 +232,53 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
       {mode === "camera" && (
         <CameraCapture onCapture={handleCameraCapture} onCancel={() => setMode("idle")} />
       )}
+
+      {mode === "split" && (
+        <div className="mt-[19px]">
+          <button
+            type="button"
+            onClick={() => setMode("idle")}
+            className="flex h-[26px] items-center gap-[4px] text-[12px] font-medium text-ink-mute transition-colors hover:text-ink"
+          >
+            <CaretLeft size={12} weight="bold" />
+            Back
+          </button>
+
+          <p className="mt-[8px] text-[12px] text-ink-mute">Pick a receipt to split.</p>
+
+          {expenses.length === 0 ? (
+            <p className="mt-[15px] text-[12px] text-ink-mute">No receipts yet — scan one first.</p>
+          ) : (
+            <ul className="mt-[11px] flex max-h-[280px] flex-col divide-y divide-hairline overflow-y-auto -mx-[11px]">
+              {expenses.map((e) => {
+                const hasItems = (e.items?.length ?? 0) > 0;
+                return (
+                  <li key={e.id}>
+                    <button
+                      type="button"
+                      disabled={!hasItems}
+                      onClick={() => setSplitTarget(e)}
+                      className="flex w-full items-center justify-between gap-[11px] rounded-md px-[11px] py-[9px] text-left transition-colors hover:bg-canvas-soft disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-medium text-ink">{e.merchant}</p>
+                        <p className="text-[11px] text-ink-mute">
+                          {hasItems ? `${e.items?.length} item${e.items?.length === 1 ? "" : "s"}` : "No items to split"}
+                        </p>
+                      </div>
+                      <p className="tabular shrink-0 text-[13px] font-medium text-ink">
+                        {formatCurrency(e.amount, e.currency)}
+                      </p>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {splitTarget && <SplitBillModal expense={splitTarget} onClose={() => setSplitTarget(null)} />}
 
       {mode === "details" && (
         <div className="mt-[19px]">
@@ -288,7 +353,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
                 initialAmount={extracted?.amount ?? undefined}
                 initialDate={extracted?.date ?? undefined}
                 initialCategory={extracted?.category ?? undefined}
-                initialLocation={extracted?.location ?? undefined}
+                initialCity={extracted?.city ?? undefined}
+                initialState={extracted?.state ?? undefined}
+                initialCountry={extracted?.country ?? undefined}
                 initialCurrency={extracted?.currency ?? undefined}
                 initialTax={extracted?.tax ?? undefined}
                 initialItems={extracted?.items}

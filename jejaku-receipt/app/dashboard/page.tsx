@@ -12,6 +12,7 @@ import DashboardGreeting from "../components/DashboardGreeting";
 import DashboardShell from "../components/DashboardShell";
 import ReceiptScannerCard from "../components/ReceiptScannerCard";
 import DashboardCalendar from "../components/DashboardCalendar";
+import LocationHistoryCard from "../components/LocationHistoryCard";
 import TotalSpentTile from "../components/TotalSpentTile";
 import ReceiptsScannedTile from "../components/ReceiptsScannedTile";
 import CategoriesTrackedTile from "../components/CategoriesTrackedTile";
@@ -55,9 +56,9 @@ export default async function DashboardPage() {
           Scan a receipt and we&apos;ll pull out the details.
         </p>
 
-        <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-6">
-          <div className="min-w-0 lg:col-span-5">
-            <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-[19px] grid items-start gap-[19px] lg:grid-cols-4">
+          <div className="min-w-0 lg:col-span-3">
+            <div className="grid gap-[19px] sm:grid-cols-2 lg:grid-cols-3">
               <ReceiptScannerCard />
               <div className="flex min-w-0 flex-col gap-[19px]">
                 <div className="flex-1">
@@ -67,10 +68,19 @@ export default async function DashboardPage() {
                   <ReceiptsScannedTile />
                 </div>
               </div>
+              <div className="flex min-w-0 flex-col gap-[19px]">
+                <div className="flex-1">
+                  <TaxRecordsTile />
+                </div>
+                <div className="flex-1">
+                  <WarrantyClaimsTile />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-[19px] grid gap-[19px] lg:grid-cols-2">
               <CategoriesTrackedTile />
               <MonthlyTrendTile />
-              <TaxRecordsTile />
-              <WarrantyClaimsTile />
             </div>
 
             <div className="mt-[19px]">
@@ -83,7 +93,10 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          <DashboardCalendar />
+          <div className="flex min-w-0 flex-col gap-[19px]">
+            <DashboardCalendar />
+            <LocationHistoryCard />
+          </div>
         </div>
       </DashboardShell>
     </ExpensesProvider>

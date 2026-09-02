@@ -42,6 +42,77 @@ export type ExpenseItem = {
   price: number;
 };
 
+// Which people share each line item — itemIndex refers into the expense's
+// `items` array. An item can be shared by more than one person (its price
+// splits evenly among everyone assigned to it); an item with nobody
+// assigned isn't included in anyone's total. Tax is distributed
+// proportionally to each person's item subtotal.
+export type SplitAssignment = {
+  itemIndex: number;
+  people: string[];
+};
+
+export type SplitData = {
+  people: string[];
+  assignments: SplitAssignment[];
+};
+
+// Parses the `split` FormData field posted by ExpenseForm. Malformed input
+// degrades to no split rather than rejecting the whole expense submission
+// over a non-essential field — same as `items` beside it.
+export function parseSplit(raw: FormDataEntryValue | null): SplitData | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !Array.isArray(parsed.people) ||
+      !parsed.people.every((p: unknown) => typeof p === "string") ||
+      !Array.isArray(parsed.assignments)
+    ) {
+      return null;
+    }
+    const assignments = parsed.assignments.filter(
+      (a: unknown): a is SplitAssignment =>
+        typeof a === "object" &&
+        a !== null &&
+        typeof (a as SplitAssignment).itemIndex === "number" &&
+        Array.isArray((a as SplitAssignment).people) &&
+        (a as SplitAssignment).people.every((p: unknown) => typeof p === "string")
+    );
+    if (parsed.people.length === 0) return null;
+    return { people: parsed.people, assignments };
+  } catch {
+    return null;
+  }
+}
+
+export function computeSplitTotals(items: ExpenseItem[], tax: number | undefined, split: SplitData | undefined) {
+  const totals = new Map<string, number>();
+  if (!split) return totals;
+  for (const person of split.people) totals.set(person, 0);
+
+  let assignedSubtotal = 0;
+  for (const assignment of split.assignments) {
+    const item = items[assignment.itemIndex];
+    if (!item || assignment.people.length === 0) continue;
+    const share = item.price / assignment.people.length;
+    assignedSubtotal += item.price;
+    for (const person of assignment.people) {
+      totals.set(person, (totals.get(person) ?? 0) + share);
+    }
+  }
+
+  if (tax && assignedSubtotal > 0) {
+    for (const [person, subtotal] of totals) {
+      totals.set(person, subtotal + tax * (subtotal / assignedSubtotal));
+    }
+  }
+
+  return totals;
+}
+
 export type Expense = {
   id: string;
   merchant: string;
@@ -54,7 +125,13 @@ export type Expense = {
   note?: string;
   photoUrl?: string;
   location?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  lat?: number;
+  lng?: number;
   currency?: string;
+  split?: SplitData;
   homeCurrencyAmount?: number;
   homeCurrencyCode?: string;
   items?: ExpenseItem[];

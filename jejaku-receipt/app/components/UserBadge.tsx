@@ -1,25 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import { useProfile } from "../lib/useProfile";
 import { getInitials } from "../lib/initials";
 import { jejakuUrl } from "../lib/jejakuUrl";
+import { useDismissable } from "../lib/useDismissable";
 import MemberCard from "./MemberCard";
 
 export default function UserBadge() {
   const { profile } = useProfile();
-  const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useDismissable(
+    open,
+    rootRef,
+    useCallback(() => setOpen(false), [])
+  );
 
   if (!profile) return null;
 
   return (
-    <div
-      className="relative"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="flex items-center gap-[8px]">
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className="flex items-center gap-[8px]"
+      >
         <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-hairline bg-canvas-soft text-[11px] font-medium text-primary-deep">
           {profile.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -37,9 +47,9 @@ export default function UserBadge() {
         <span className="hidden whitespace-nowrap text-[14px] font-medium text-ink sm:inline">
           {profile.fullName}
         </span>
-      </div>
+      </button>
 
-      {hovered && (
+      {open && (
         <div className="absolute right-0 top-full z-20 w-[280px] pt-[12px]">
           <div style={{ perspective: 1000 }}>
             <MemberCard profile={profile} />
