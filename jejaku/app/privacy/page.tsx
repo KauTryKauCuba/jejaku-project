@@ -3,6 +3,7 @@ import Link from "next/link";
 import FlowLines from "../components/FlowLines";
 import SiteHeader from "../components/SiteHeader";
 import SiteFooter from "../components/SiteFooter";
+import TechLogo from "../components/TechLogo";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Jejaku",
@@ -65,25 +66,22 @@ export default function PrivacyPage() {
 
           <div>
             <h2 className="text-[18px] font-medium text-ink">Third parties involved</h2>
-            <ul className="mt-[11px] flex max-w-[65ch] flex-col gap-[8px] text-[14px] leading-relaxed text-ink-mute">
-              <li>
-                <strong className="font-medium text-ink">Google</strong> — if you sign in with
-                Google, Google handles that authentication; only your name, email, and photo are
-                passed back to Jejaku.
+            <ul className="mt-[11px] flex max-w-[65ch] flex-wrap gap-[19px]">
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="google" label="Google" size={18} />
+                <span className="text-[14px] font-medium text-ink">Google</span>
               </li>
-              <li>
-                <strong className="font-medium text-ink">Resend</strong> — sends the one-time
-                sign-in code to your email.
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="resend" label="Resend" size={18} />
+                <span className="text-[14px] font-medium text-ink">Resend</span>
               </li>
-              <li>
-                <strong className="font-medium text-ink">DeepSeek</strong> — when you scan a
-                receipt in Jejaku Receipt, that photo is sent to DeepSeek&apos;s API to read its
-                contents (merchant, amount, items, etc.).
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="deepseek" label="DeepSeek" size={18} />
+                <span className="text-[14px] font-medium text-ink">DeepSeek</span>
               </li>
-              <li>
-                <strong className="font-medium text-ink">Cloudflare</strong> — sits in front of
-                this site as a reverse proxy; sees standard connection details like your IP
-                address, the same as any site behind a CDN.
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="cloudflare" label="Cloudflare" size={18} />
+                <span className="text-[14px] font-medium text-ink">Cloudflare</span>
               </li>
             </ul>
           </div>
