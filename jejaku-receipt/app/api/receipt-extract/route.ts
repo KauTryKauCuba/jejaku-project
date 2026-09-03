@@ -54,31 +54,28 @@ export async function POST(req: NextRequest) {
             {
               type: "text",
               text:
-                "Read this photo of a receipt and extract its details. " +
-                "Respond with ONLY a JSON object, no other text, in exactly this shape: " +
+                "Read this receipt photo and extract its details as ONLY a JSON object, no other text, in " +
+                "exactly this shape: " +
                 '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0,"quantity":1}]} ' +
-                "merchant: the store/business name as printed. " +
-                "amount: the final total paid, as a plain number (no currency symbol). " +
-                `date: the transaction date in YYYY-MM-DD format. If no date is printed, use today's date, ${today}. ` +
-                `category: pick the single best fit from exactly this list: ${categoryList}. ` +
-                "city: the city the store is in, as printed on the address line. Not a street address or branch number. " +
-                "state: the state/province/region the store is in, only if it's printed — many countries don't print " +
-                "or use one, use null rather than guessing. " +
-                "country: the country the store is in. This is rarely printed outright on a domestic receipt — infer " +
-                "it from context (language, address format, phone number format, currency) the same way you infer " +
-                "currency below. Use null only if there's truly no signal to infer it from. " +
-                "currency: the 3-letter ISO 4217 currency code for whatever currency this receipt is priced in " +
-                "(e.g. USD, MYR, EUR, GBP, JPY, SGD) — infer it from the printed symbol/code, or from the store's " +
-                "address/language if no symbol is legible. " +
-                "tax: the printed tax amount (sales tax, GST, VAT, etc.) as a plain number, if the receipt " +
-                "shows one broken out from the total. Use null if no tax line is printed. " +
-                "items: every line item printed on the receipt, each with its own name, quantity, and price. " +
-                "price is the PER-UNIT price, not the line's total — if the receipt prints \"3 x 2.00 = 6.00\", " +
-                "price is 2.00 and quantity is 3, not 6.00. If only a line total is printed with no explicit unit " +
-                "price or quantity, use quantity 1 and price equal to that total. quantity is a plain integer, " +
-                "at least 1. Skip subtotal/tax/tip/total lines — those aren't items. If no individual items can be " +
-                "read, use an empty array. " +
-                "If a field genuinely cannot be determined, use null for it (items is always an array, never null).",
+                "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
+                "creases, fading), null rather than guessing. " +
+                "amount: final total paid, plain number, no currency symbol. " +
+                `date: YYYY-MM-DD; if none printed, use today, ${today}. ` +
+                `category: single best fit from: ${categoryList}. ` +
+                "city: store's city from the address line, not a street address or branch number. " +
+                "state: only if printed; null rather than guess. " +
+                "country: infer from context (language, address/phone format, currency) if not printed; null " +
+                "only if there's no signal. " +
+                "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
+                "store's address/language. " +
+                "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
+                "items: each line's name, quantity, and PER-UNIT price. Most receipts print only quantity + one " +
+                "price per line, and that price is the line's TOTAL — divide by quantity to get price whenever " +
+                "quantity > 1 (skip dividing only if quantity is 1, or a separate unit/\"each\" price is shown). " +
+                "Combo/bundle lines may list included items indented below with no price of their own — skip " +
+                "those, keep only the parent line. quantity is an integer ≥1. Skip subtotal/tax/tip/total lines. " +
+                "Empty array if none readable. " +
+                "null for any field that truly can't be determined (items is always an array, never null).",
             },
             {
               type: "image_url",

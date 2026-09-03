@@ -91,7 +91,15 @@ export default function CameraCapture({
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    // Boost contrast before DeepSeek ever sees this — thermal-printed
+    // receipts are often faint gray, not true black, and crumpled/glared
+    // photos make it worse. Pushing contrast up (and brightness slightly)
+    // darkens real ink and lightens the background, which reads much closer
+    // to a clean scan. Applied only to the captured frame, not the live
+    // preview, so what the user sees while framing the shot stays natural.
+    ctx.filter = "contrast(150%) brightness(108%)";
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.filter = "none";
 
     canvas.toBlob(
       (blob) => {
