@@ -45,13 +45,13 @@ export default function CameraCapture({
       ?.getUserMedia({
         video: {
           facingMode: "environment",
-          // Full HD is plenty sharp for a receipt photo — asking for the
-          // device's max resolution made the live preview laggy on phones,
-          // since decoding/rendering a near-4K+ video feed continuously is
-          // heavy. This still lets the browser pick lower if the device
-          // can't do 1080p.
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
+          // 2x Full HD — sharper source image genuinely helps DeepSeek read
+          // small/faded receipt text in a way no prompt tuning can, worth
+          // the live preview being somewhat more taxing to decode/render on
+          // lower-end phones. `ideal` still lets the browser pick lower if
+          // the device can't do 4K.
+          width: { ideal: 3840 },
+          height: { ideal: 2160 },
         },
         audio: false,
       })

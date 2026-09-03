@@ -22,6 +22,7 @@ type Extracted = {
   currency: string | null;
   tax: number | null;
   items: ExpenseItem[];
+  itemsMismatch: boolean;
 };
 
 // The model still returns a well-formed (mostly-null) response for a photo
@@ -322,7 +323,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
           <p
             className={
-              !extracting && extracted && extractionFoundNothing(extracted)
+              !extracting && extracted && (extractionFoundNothing(extracted) || extracted.itemsMismatch)
                 ? "mt-[15px] text-[12px] text-error"
                 : "mt-[15px] text-[12px] text-ink-mute"
             }
@@ -332,7 +333,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
               : extracted
                 ? extractionFoundNothing(extracted)
                   ? "Couldn't read this as a receipt — try again with a clearer photo, or fill in the details yourself below."
-                  : "Details auto-filled from the receipt — check them before saving."
+                  : extracted.itemsMismatch
+                    ? "Item prices don't quite add up to the total — double-check quantities and prices below before saving."
+                    : "Details auto-filled from the receipt — check them before saving."
                 : previewKind
                   ? "Fill in the details below."
                   : "Enter the expense details below."}

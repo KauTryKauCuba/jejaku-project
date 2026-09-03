@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EXPENSE_CATEGORIES, normalizeItems, type ExpenseItem } from "../../lib/expenses";
+import { EXPENSE_CATEGORIES, lineTotal, normalizeItems, type ExpenseItem } from "../../lib/expenses";
 
 type Extracted = {
   merchant: string | null;
@@ -12,7 +12,23 @@ type Extracted = {
   currency: string | null;
   tax: number | null;
   items: ExpenseItem[];
+  // True when the extracted items + tax don't reasonably add up to the
+  // extracted amount — a red flag that something was misread (e.g. the
+  // per-unit-price/quantity bug this was added to catch), surfaced to the
+  // user instead of silently pre-filling numbers that don't reconcile.
+  itemsMismatch: boolean;
 };
+
+// Generous on purpose: legitimate receipts often have a discount, service
+// charge, or rounding line that isn't captured in items/tax, so this only
+// needs to catch gross misreads (like a 2x pricing error), not nitpick
+// every few cents.
+function computeItemsMismatch(items: ExpenseItem[], tax: number | null, amount: number | null): boolean {
+  if (items.length === 0 || amount === null) return false;
+  const itemsTotal = items.reduce((sum, item) => sum + lineTotal(item), 0);
+  const expected = itemsTotal + (tax ?? 0);
+  return Math.abs(expected - amount) > Math.max(1, amount * 0.08);
+}
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
@@ -98,6 +114,7 @@ export async function POST(req: NextRequest) {
     currency: null,
     tax: null,
     items: [],
+    itemsMismatch: false,
   };
 
   if (!res.ok) {
@@ -127,7 +144,20 @@ export async function POST(req: NextRequest) {
         ? parsed.currency.toUpperCase()
         : null;
     const items = normalizeItems(parsed.items);
-    return NextResponse.json({ merchant, amount, date, category, city, state, country, currency, tax, items } satisfies Extracted);
+    const itemsMismatch = computeItemsMismatch(items, tax, amount);
+    return NextResponse.json({
+      merchant,
+      amount,
+      date,
+      category,
+      city,
+      state,
+      country,
+      currency,
+      tax,
+      items,
+      itemsMismatch,
+    } satisfies Extracted);
   } catch {
     return NextResponse.json(empty);
   }
