@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Camera, Flashlight, X } from "@phosphor-icons/react";
-import { useReceiptFrameDetector } from "../lib/useReceiptFrameDetector";
 
 // Torch control isn't part of the standard TS DOM types — it's a real but
 // non-standard capability (Chrome/Android only; no iOS Safari, no desktop).
@@ -31,7 +30,6 @@ export default function CameraCapture({
   const [capturing, setCapturing] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
-  const frameStatus = useReceiptFrameDetector(videoRef, ready);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -244,24 +242,6 @@ export default function CameraCapture({
           </div>
 
           <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-[15px] p-[23px] pb-[38px]">
-            {frameStatus !== "loading" && (
-              <span className="flex items-center gap-[6px] rounded-pill bg-ink/40 px-[11px] py-[5px] text-[11px] font-medium text-canvas">
-                <span
-                  className={
-                    frameStatus === "receipt"
-                      ? "h-[6px] w-[6px] shrink-0 rounded-full bg-[#3ecf6e]"
-                      : frameStatus === "document"
-                        ? "h-[6px] w-[6px] shrink-0 rounded-full bg-[#e0a530]"
-                        : "h-[6px] w-[6px] shrink-0 rounded-full bg-canvas/50"
-                  }
-                />
-                {frameStatus === "receipt"
-                  ? "Receipt detected"
-                  : frameStatus === "document"
-                    ? "Checking what's in frame…"
-                    : "Looking for a receipt…"}
-              </span>
-            )}
             <p className="max-w-[30ch] text-center text-[12px] font-medium text-canvas">
               Lay it flat, keep the whole receipt in frame, and make sure it&apos;s well lit
             </p>
