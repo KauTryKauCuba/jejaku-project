@@ -15,6 +15,12 @@ export default function SiteFooter() {
           </Link>
           <div className="flex gap-[30px]">
             <NavLinks className="text-[12px] text-ink-mute hover:text-ink" />
+            <Link href="/terms" className="text-[12px] text-ink-mute hover:text-ink">
+              Terms
+            </Link>
+            <Link href="/privacy" className="text-[12px] text-ink-mute hover:text-ink">
+              Privacy
+            </Link>
           </div>
         </div>
         <p className="mt-[38px] text-[12px] text-ink-mute">

@@ -85,8 +85,8 @@ const PROJECTS = [
     tag: "beta",
     title: "Jejaku Receipt",
     shortBody:
-      "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5.",
-    body: "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5. Built after evaluating a range of OCR approaches — including Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek via Ollama, PaddleOCR, Moondream, and Tesseract — before settling on this one. Free to try.",
+      "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction.",
+    body: "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction. Tried Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek, PaddleOCR, Moondream, and Tesseract first — landed on this instead. Free to try.",
   },
 ];
 

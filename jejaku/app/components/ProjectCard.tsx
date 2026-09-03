@@ -1,9 +1,22 @@
 "use client";
 
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, type CSSProperties } from "react";
 import { Lock, Hourglass } from "@phosphor-icons/react";
 import ReceiptIllustration from "./ReceiptIllustration";
 import { useProfile } from "../lib/useProfile";
+
+type Accent = {
+  primary: string;
+  primaryDeep: string;
+  primaryPress: string;
+  primarySoft: string;
+  primarySubdued: string;
+  hairline: string;
+  hairlineInput: string;
+  ink: string;
+  inkMute: string;
+  canvasSoft: string;
+};
 
 export default function ProjectCard({
   project,
@@ -16,6 +29,7 @@ export default function ProjectCard({
     shortBody?: string;
     url?: string;
     illustration?: ComponentType;
+    accent?: Accent;
   };
   collapsible?: boolean;
 }) {
@@ -34,8 +48,28 @@ export default function ProjectCard({
   const showShort = collapsible && !expanded && project.shortBody;
   const Illustration = project.illustration ?? ReceiptIllustration;
 
+  // Overrides the shared design tokens for just this card's subtree — every
+  // `bg-primary`/`border-hairline-input`/etc. class below (including inside
+  // ReceiptIllustration, which reads these same variables) picks this up,
+  // so scoping the override here — rather than touching the site-wide
+  // tokens in globals.css — recolors only this card.
+  const accentStyle = project.accent
+    ? ({
+        "--color-primary": project.accent.primary,
+        "--color-primary-deep": project.accent.primaryDeep,
+        "--color-primary-press": project.accent.primaryPress,
+        "--color-primary-soft": project.accent.primarySoft,
+        "--color-primary-subdued": project.accent.primarySubdued,
+        "--color-hairline": project.accent.hairline,
+        "--color-hairline-input": project.accent.hairlineInput,
+        "--color-ink": project.accent.ink,
+        "--color-ink-mute": project.accent.inkMute,
+        "--color-canvas-soft": project.accent.canvasSoft,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <div className="flex flex-col rounded-lg border border-hairline bg-canvas p-[30px]">
+    <div className="flex flex-col rounded-lg border border-hairline bg-canvas p-[30px]" style={accentStyle}>
       <Illustration />
       <span className="mt-[23px] inline-flex w-fit items-center rounded-pill bg-primary-subdued px-[8px] py-[4px] text-[9px] font-medium uppercase tracking-[0.1px] text-primary-deep">
         {project.tag}

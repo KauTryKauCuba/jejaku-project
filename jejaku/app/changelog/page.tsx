@@ -314,7 +314,7 @@ const TIMELINE = [
   {
     status: "Jejaku Beta v0.0.1",
     title: "Dates and times are ISO 8601 everywhere",
-    body: "Every date and time shown across Jejaku and Jejaku Receipt — the live clock, member card, account-created and last-login labels, the audit trail, the calendar, the date picker, receipts, and the trend chart's month labels — now renders as YYYY-MM-DD / YYYY-MM-DDTHH:MM, replacing the mix of locale-formatted strings (\"Sep 3, 3:45 PM\") used before.",
+    body: "Every date and time shown across Jejaku and Jejaku Receipt — the live clock, member card, account-created and last-login labels, the audit trail, the calendar, the date picker, receipts, and the trend chart's month labels — now renders as YYYY-MM-DD / YYYY-MM-DDTHH:MM (ISO 8601), replacing the mix of locale-formatted strings (\"Sep 3, 3:45 PM\") used before. Currency codes (ISO 4217 — MYR, USD, SGD, ...) and country codes (ISO 3166 — MY, SG, US, ...) were already following their own standards, so between the three, every value here that has an international standard to lean on now actually uses it.",
     dateLabel: "Shipped",
     date: "2026-09-03",
   },

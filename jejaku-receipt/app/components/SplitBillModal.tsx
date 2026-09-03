@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DEFAULT_CURRENCY, type Expense, type SplitData } from "../lib/expenses";
+import { DEFAULT_CURRENCY, formatCurrency, type Expense, type SplitData } from "../lib/expenses";
 import { useUpdateExpense } from "./ExpensesProvider";
 import Modal from "./Modal";
 import SplitBillSection from "./SplitBillSection";
@@ -44,7 +44,8 @@ export default function SplitBillModal({ expense, onClose }: { expense: Expense;
   return (
     <Modal title="Split bill" onClose={onClose}>
       <p className="mb-[11px] text-[12px] text-ink-mute">
-        {expense.merchant} · {expense.items?.length ?? 0} item{expense.items?.length === 1 ? "" : "s"}
+        {expense.merchant} · {expense.items?.length ?? 0} item{expense.items?.length === 1 ? "" : "s"} ·{" "}
+        {formatCurrency(expense.amount, expense.currency ?? DEFAULT_CURRENCY)}
       </p>
       {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
       {(expense.items?.length ?? 0) === 0 ? (

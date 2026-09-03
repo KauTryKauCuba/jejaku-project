@@ -89,10 +89,25 @@ const PROJECTS = [
     tag: "beta",
     title: "Jejaku Receipt",
     shortBody:
-      "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5.",
-    body: "A receipt scanner that turns a photo into structured expense data, powered by Claude Sonnet 5. Built after evaluating a range of OCR approaches — including Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek via Ollama, PaddleOCR, Moondream, and Tesseract — before settling on this one. Free to try.",
+      "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction.",
+    body: "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction. Tried Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek, PaddleOCR, Moondream, and Tesseract first — landed on this instead. Free to try.",
     url: `${process.env.NEXT_PUBLIC_RECEIPT_URL}/dashboard`,
     illustration: ReceiptIllustration,
+    // Jejaku Receipt's own blue theme (its app/globals.css), not jejaku's
+    // teal — this card is a preview of that sibling app, so it borrows its
+    // colors rather than blending into the rest of this site.
+    accent: {
+      primary: "#1d4ed8",
+      primaryDeep: "#1e3a8a",
+      primaryPress: "#172554",
+      primarySoft: "#3b82f6",
+      primarySubdued: "#bfdbfe",
+      hairline: "#dbe4ef",
+      hairlineInput: "#a8c8e0",
+      ink: "#0a1826",
+      inkMute: "#5c6e7a",
+      canvasSoft: "#f4f8fc",
+    },
   },
   {
     tag: "concept",
