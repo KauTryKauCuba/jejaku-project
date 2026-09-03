@@ -1,10 +1,18 @@
 #!/bin/bash
 set -e
 
+# Pull LETSENCRYPT_EMAIL (and anything else) from .env, same file
+# docker compose already reads its own vars from.
+if [ -f .env ]; then
+  set -a
+  source .env
+  set +a
+fi
+
 domains=(jejaku.my jejaku-receipt.jejaku.my)
 rsa_key_size=4096
 data_path="./certbot"
-email="muddmma91.learn@gmail.com"
+email="${LETSENCRYPT_EMAIL:?Set LETSENCRYPT_EMAIL in .env}"
 staging=0 # set to 1 to test against Let's Encrypt staging (avoids rate limits)
 
 if [ -d "$data_path" ]; then

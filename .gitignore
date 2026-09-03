@@ -4,3 +4,7 @@ node_modules
 .vscode/
 .env
 certbot/
+
+# Machine-specific — hardcode a local absolute path to a personal VS Code
+# extension install, not portable, shouldn't be shared via the repo.
+.claude/hooks/
