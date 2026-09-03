@@ -19,6 +19,7 @@ export default function CameraCapture({
   const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | undefined>(undefined);
   const [ready, setReady] = useState(false);
+  const [capturing, setCapturing] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
 
@@ -45,13 +46,15 @@ export default function CameraCapture({
       ?.getUserMedia({
         video: {
           facingMode: "environment",
-          // 2x Full HD — sharper source image genuinely helps DeepSeek read
-          // small/faded receipt text in a way no prompt tuning can, worth
-          // the live preview being somewhat more taxing to decode/render on
-          // lower-end phones. `ideal` still lets the browser pick lower if
-          // the device can't do 4K.
-          width: { ideal: 3840 },
-          height: { ideal: 2160 },
+          // Full HD keeps the *live preview* smooth — decoding/rendering a
+          // near-4K+ video feed continuously is heavy on phones (confirmed
+          // laggy at 3840x2160 here). The actual captured photo is sharper
+          // than this: `capture()` below prefers the browser's separate
+          // still-photo API (ImageCapture.takePhoto()), which many phone
+          // cameras can serve at a much higher resolution than the video
+          // track's own constraints, independent of this preview stream.
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
         },
         audio: false,
       })
@@ -82,33 +85,63 @@ export default function CameraCapture({
     };
   }, []);
 
-  const capture = () => {
+  const capture = async () => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || capturing) return;
+    setCapturing(true);
 
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    // Boost contrast before DeepSeek ever sees this — thermal-printed
-    // receipts are often faint gray, not true black, and crumpled/glared
-    // photos make it worse. Pushing contrast up (and brightness slightly)
-    // darkens real ink and lightens the background, which reads much closer
-    // to a clean scan. Applied only to the captured frame, not the live
-    // preview, so what the user sees while framing the shot stays natural.
-    ctx.filter = "contrast(150%) brightness(108%)";
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    ctx.filter = "none";
+    try {
+      // Prefer the browser's still-photo capture API over the live video
+      // frame — on most phone cameras it can serve a meaningfully higher
+      // resolution than the video track itself, without needing to run the
+      // *live preview* at that resolution (which was laggy on lower-end
+      // phones). Falls back to grabbing the current video frame wherever
+      // this isn't supported (notably Safari/iOS, which doesn't implement
+      // takePhoto()) or the device rejects it.
+      let source: CanvasImageSource = video;
+      let sourceWidth = video.videoWidth;
+      let sourceHeight = video.videoHeight;
 
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) return;
-        onCapture(new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" }));
-      },
-      "image/jpeg",
-      0.92
-    );
+      const track = streamRef.current?.getVideoTracks()[0];
+      if (track && typeof ImageCapture !== "undefined") {
+        try {
+          const photoBlob = await new ImageCapture(track).takePhoto();
+          const bitmap = await createImageBitmap(photoBlob);
+          source = bitmap;
+          sourceWidth = bitmap.width;
+          sourceHeight = bitmap.height;
+        } catch {
+          // Fall through to the video-frame source above.
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = sourceWidth;
+      canvas.height = sourceHeight;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      // Boost contrast before DeepSeek ever sees this — thermal-printed
+      // receipts are often faint gray, not true black, and crumpled/glared
+      // photos make it worse. Pushing contrast up (and brightness slightly)
+      // darkens real ink and lightens the background, which reads much
+      // closer to a clean scan. Applied only to the captured frame, not the
+      // live preview, so what the user sees while framing the shot stays
+      // natural.
+      ctx.filter = "contrast(150%) brightness(108%)";
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      ctx.filter = "none";
+
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return;
+          onCapture(new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" }));
+        },
+        "image/jpeg",
+        0.92
+      );
+    } finally {
+      setCapturing(false);
+    }
   };
 
   const toggleTorch = async () => {
@@ -204,7 +237,7 @@ export default function CameraCapture({
             <button
               type="button"
               onClick={capture}
-              disabled={!ready}
+              disabled={!ready || capturing}
               aria-label="Capture photo"
               className="flex h-[64px] w-[64px] items-center justify-center rounded-full border-4 border-canvas bg-canvas/20 transition-transform active:scale-95 disabled:opacity-50"
             >
