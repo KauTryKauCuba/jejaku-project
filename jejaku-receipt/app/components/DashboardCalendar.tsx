@@ -36,10 +36,7 @@ export default function DashboardCalendar() {
   const { year, month } = cursor;
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = new Date(year, month, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = `${year}-${String(month + 1).padStart(2, "0")}`;
 
   const cells: (number | null)[] = [
     ...Array(firstWeekday).fill(null),
@@ -58,10 +55,6 @@ export default function DashboardCalendar() {
   };
 
   const selectedExpenses = expenses.filter((e) => e.date === selected);
-  const selectedLabel = new Date(`${selected}T00:00:00`).toLocaleDateString(
-    "en-US",
-    { weekday: "long", month: "long", day: "numeric" }
-  );
 
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
@@ -135,7 +128,7 @@ export default function DashboardCalendar() {
       </div>
 
       <div className="mt-[19px] border-t border-hairline pt-[19px]">
-        <p className="text-[13px] font-medium text-ink">{selectedLabel}</p>
+        <p className="text-[13px] font-medium text-ink">{selected}</p>
 
         {selectedExpenses.length === 0 ? (
           <p className="mt-[8px] text-[12px] text-ink-mute">

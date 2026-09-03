@@ -25,6 +25,7 @@ import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
 import ValuesSpecsTabs from "./ValuesSpecsTabs";
 import { useProfile } from "../lib/useProfile";
+import { formatIsoMinute } from "../lib/formatIso";
 
 const VALUES = [
   {
@@ -99,12 +100,7 @@ export default function HomeContent({
   const firstName = profile?.fullName?.split(" ")[0];
 
   const auditValue = profile
-    ? `Account created ${new Date(profile.registeredAt).toLocaleString(undefined, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      })}`
+    ? `Account created ${formatIsoMinute(new Date(profile.registeredAt))}`
     : "No activity yet";
   const auditDetail = "A log of sign-ins and account changes.";
 

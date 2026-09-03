@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { Plus, Users, X } from "@phosphor-icons/react";
-import { computeSplitTotals, formatCurrency, type ExpenseItem, type SplitData } from "../lib/expenses";
+import { computeSplitTotals, formatCurrency, lineTotal, type ExpenseItem, type SplitData } from "../lib/expenses";
 
 export default function SplitBillSection({
   items,
@@ -136,8 +136,9 @@ export default function SplitBillSection({
               return (
                 <div key={i} className="flex flex-wrap items-center justify-between gap-[6px]">
                   <p className="min-w-0 truncate text-[12px] text-ink">
-                    {item.name || `Item ${i + 1}`}{" "}
-                    <span className="tabular text-ink-mute">{formatCurrency(item.price, currency)}</span>
+                    {item.name || `Item ${i + 1}`}
+                    {(item.quantity ?? 1) !== 1 && ` ×${item.quantity}`}{" "}
+                    <span className="tabular text-ink-mute">{formatCurrency(lineTotal(item), currency)}</span>
                   </p>
                   <div className="flex flex-wrap gap-[4px]">
                     {value.people.map((person) => {

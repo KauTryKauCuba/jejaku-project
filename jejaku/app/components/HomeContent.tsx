@@ -27,6 +27,7 @@ import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
 import ValuesSpecsTabs from "./ValuesSpecsTabs";
 import { useProfile } from "../lib/useProfile";
+import { formatIsoMinute } from "../lib/formatIso";
 
 const VALUES = [
   {
@@ -112,13 +113,7 @@ export default function HomeContent({
   const { profile, lastSignInAt } = useProfile();
   const firstName = profile?.fullName?.split(" ")[0];
 
-  const formatTimestamp = (iso: string) =>
-    new Date(iso).toLocaleString(undefined, {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  const formatTimestamp = (iso: string) => formatIsoMinute(new Date(iso));
 
   const auditValue = lastSignInAt
     ? `Signed in ${formatTimestamp(lastSignInAt)}`

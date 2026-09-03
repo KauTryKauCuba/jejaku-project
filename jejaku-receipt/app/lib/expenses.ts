@@ -39,8 +39,52 @@ export const MAX_CATEGORY_LENGTH = 24;
 
 export type ExpenseItem = {
   name: string;
+  /** Unit price — the line's total is price × quantity, not price alone. */
   price: number;
+  /** Defaults to 1 when absent (older saved items never had this field). */
+  quantity?: number;
 };
+
+export function lineTotal(item: ExpenseItem): number {
+  return Math.round(item.price * (item.quantity ?? 1) * 100) / 100;
+}
+
+// Validates and normalizes an already-JSON-parsed items array (e.g. the
+// AI-extracted `items` field) — filters out anything not shaped like an
+// item, and drops a nonsensical quantity (non-finite or <= 0) rather than
+// rejecting the whole item over it.
+export function normalizeItems(raw: unknown): ExpenseItem[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter(
+      (item): item is ExpenseItem =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as ExpenseItem).name === "string" &&
+        typeof (item as ExpenseItem).price === "number" &&
+        Number.isFinite((item as ExpenseItem).price)
+    )
+    .map((item) => ({
+      name: item.name,
+      price: item.price,
+      quantity:
+        typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
+          ? item.quantity
+          : undefined,
+    }));
+}
+
+// Parses the `items` FormData field posted by ExpenseForm. Malformed input
+// degrades to no items rather than rejecting the whole expense submission
+// over a non-essential field — same as `split` beside it.
+export function parseItems(raw: FormDataEntryValue | null): ExpenseItem[] | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    return normalizeItems(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
 
 // Which people share each line item — itemIndex refers into the expense's
 // `items` array. An item can be shared by more than one person (its price
@@ -97,8 +141,9 @@ export function computeSplitTotals(items: ExpenseItem[], tax: number | undefined
   for (const assignment of split.assignments) {
     const item = items[assignment.itemIndex];
     if (!item || assignment.people.length === 0) continue;
-    const share = item.price / assignment.people.length;
-    assignedSubtotal += item.price;
+    const total = lineTotal(item);
+    const share = total / assignment.people.length;
+    assignedSubtotal += total;
     for (const person of assignment.people) {
       totals.set(person, (totals.get(person) ?? 0) + share);
     }

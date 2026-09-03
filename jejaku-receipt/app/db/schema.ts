@@ -55,7 +55,7 @@ export const expenses = pgTable("expenses", {
   // past month shouldn't shift every time the dashboard is reopened.
   homeCurrencyAmount: doublePrecision("home_currency_amount"),
   homeCurrencyCode: text("home_currency_code"),
-  items: jsonb("items").$type<{ name: string; price: number }[]>(),
+  items: jsonb("items").$type<{ name: string; price: number; quantity?: number }[]>(),
   // Ad-hoc per-item bill split — see lib/expenses.ts's SplitData for the
   // shape and computeSplitTotals for how tax gets divided proportionally.
   // Not a separate table: like `items`, this is only ever read/written

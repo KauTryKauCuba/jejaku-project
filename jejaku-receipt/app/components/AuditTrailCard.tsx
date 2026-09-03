@@ -13,6 +13,7 @@ import {
   CaretRight,
 } from "@phosphor-icons/react";
 import { AUDIT_ACTIONS, AUDIT_LABELS, type AuditLogEntry } from "../lib/auditActions";
+import { formatIsoDateTime } from "../lib/formatIso";
 import Select from "./Select";
 
 const PAGE_SIZE_OPTIONS = ["10", "25", "50", "100"];
@@ -28,13 +29,7 @@ const ACTION_ICON: Record<string, typeof Plus> = {
 };
 
 function formatTimestamp(iso: string) {
-  return new Date(iso).toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+  return formatIsoDateTime(new Date(iso));
 }
 
 export default function AuditTrailCard({ initialLogs }: { initialLogs: AuditLogEntry[] }) {

@@ -12,6 +12,7 @@ export function monthKey(date: Date) {
 export function recentMonths(monthsShown: number, now: Date = new Date()) {
   return Array.from({ length: monthsShown }, (_, i) => {
     const d = new Date(now.getFullYear(), now.getMonth() - (monthsShown - 1 - i), 1);
-    return { key: monthKey(d), label: d.toLocaleDateString("en-US", { month: "short" }) };
+    const key = monthKey(d);
+    return { key, label: key };
   });
 }

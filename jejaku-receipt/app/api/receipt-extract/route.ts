@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EXPENSE_CATEGORIES } from "../../lib/expenses";
-
-type ExtractedItem = { name: string; price: number };
+import { EXPENSE_CATEGORIES, normalizeItems, type ExpenseItem } from "../../lib/expenses";
 
 type Extracted = {
   merchant: string | null;
@@ -13,7 +11,7 @@ type Extracted = {
   country: string | null;
   currency: string | null;
   tax: number | null;
-  items: ExtractedItem[];
+  items: ExpenseItem[];
 };
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
@@ -58,7 +56,7 @@ export async function POST(req: NextRequest) {
               text:
                 "Read this photo of a receipt and extract its details. " +
                 "Respond with ONLY a JSON object, no other text, in exactly this shape: " +
-                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0}]} ' +
+                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0,"quantity":1}]} ' +
                 "merchant: the store/business name as printed. " +
                 "amount: the final total paid, as a plain number (no currency symbol). " +
                 `date: the transaction date in YYYY-MM-DD format. If no date is printed, use today's date, ${today}. ` +
@@ -74,8 +72,11 @@ export async function POST(req: NextRequest) {
                 "address/language if no symbol is legible. " +
                 "tax: the printed tax amount (sales tax, GST, VAT, etc.) as a plain number, if the receipt " +
                 "shows one broken out from the total. Use null if no tax line is printed. " +
-                "items: every line item printed on the receipt, each with its own name and price as a plain " +
-                "number. Skip subtotal/tax/tip/total lines — those aren't items. If no individual items can be " +
+                "items: every line item printed on the receipt, each with its own name, quantity, and price. " +
+                "price is the PER-UNIT price, not the line's total — if the receipt prints \"3 x 2.00 = 6.00\", " +
+                "price is 2.00 and quantity is 3, not 6.00. If only a line total is printed with no explicit unit " +
+                "price or quantity, use quantity 1 and price equal to that total. quantity is a plain integer, " +
+                "at least 1. Skip subtotal/tax/tip/total lines — those aren't items. If no individual items can be " +
                 "read, use an empty array. " +
                 "If a field genuinely cannot be determined, use null for it (items is always an array, never null).",
             },
@@ -128,16 +129,7 @@ export async function POST(req: NextRequest) {
       typeof parsed.currency === "string" && CURRENCY_CODE_PATTERN.test(parsed.currency.toUpperCase())
         ? parsed.currency.toUpperCase()
         : null;
-    const items: ExtractedItem[] = Array.isArray(parsed.items)
-      ? parsed.items.filter(
-          (item: unknown): item is ExtractedItem =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof (item as ExtractedItem).name === "string" &&
-            typeof (item as ExtractedItem).price === "number" &&
-            Number.isFinite((item as ExtractedItem).price)
-        )
-      : [];
+    const items = normalizeItems(parsed.items);
     return NextResponse.json({ merchant, amount, date, category, city, state, country, currency, tax, items } satisfies Extracted);
   } catch {
     return NextResponse.json(empty);

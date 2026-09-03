@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { getInitials } from "../lib/initials";
+import { formatIsoMinute } from "../lib/formatIso";
 import type { OnboardingProfile } from "./OnboardingForm";
 
 export default function MemberCard({
@@ -7,19 +8,7 @@ export default function MemberCard({
 }: {
   profile: OnboardingProfile;
 }) {
-  // Pinned to en-US (not the visitor's locale) so this always renders the
-  // same on the server and after hydration — see the hydration mismatch
-  // this caused before it was pinned. Two stats now share the row that
-  // used to hold one, inside a fixed-aspect card — every extra character
-  // (year, weekday) either overflowed the row's height or got clipped
-  // width-wise. Month/day/time is the floor that reliably fits both.
-  const formatDateTime = (iso: string) =>
-    new Date(iso).toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  const formatDateTime = (iso: string) => formatIsoMinute(new Date(iso));
 
   const registered = formatDateTime(profile.registeredAt);
   const lastSignIn = profile.lastSignInAt ? formatDateTime(profile.lastSignInAt) : "First visit";

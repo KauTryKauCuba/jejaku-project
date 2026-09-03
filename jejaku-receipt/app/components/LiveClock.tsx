@@ -2,21 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Clock } from "@phosphor-icons/react";
-
-function formatNow(date: Date) {
-  const day = date.toLocaleDateString(undefined, {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-  const time = date.toLocaleTimeString(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: true,
-  });
-  return `${day}, ${time}`;
-}
+import { formatIsoDateTime } from "../lib/formatIso";
 
 export default function LiveClock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -33,7 +19,7 @@ export default function LiveClock() {
   return (
     <span className="flex items-center gap-[6px] text-[14px] text-ink-secondary">
       <Clock size={15} weight="light" />
-      <span className="tabular">{formatNow(now)}</span>
+      <span className="tabular">{formatIsoDateTime(now)}</span>
     </span>
   );
 }

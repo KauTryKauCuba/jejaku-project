@@ -11,13 +11,6 @@ import SplitBillModal from "./SplitBillModal";
 
 const PAGE_SIZE_OPTIONS = ["5", "10", "50", "100"];
 
-function formatDate(dateStr: string) {
-  return new Date(`${dateStr}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 
 export default function ReceiptsList({
   title,
@@ -159,7 +152,7 @@ export default function ReceiptsList({
                     )}
                   </p>
                   <p className="text-[11px] text-ink-mute">
-                    {e.category} · {formatDate(e.date)} · <span className="tabular">{receiptNumber(e.id)}</span>
+                    {e.category} · {e.date} · <span className="tabular">{receiptNumber(e.id)}</span>
                     {e.split && e.split.people.length > 0 && ` · Split ${e.split.people.length} ways`}
                   </p>
                 </div>

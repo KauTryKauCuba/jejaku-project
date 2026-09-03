@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { Fingerprint } from "@phosphor-icons/react";
 import GoogleButton from "./GoogleButton";
+import GithubButton from "./GithubButton";
+import MicrosoftButton from "./MicrosoftButton";
+import DiscordButton from "./DiscordButton";
 import EmailOtpForm from "./EmailOtpForm";
 
 export default function HeroAuthCard() {
@@ -57,8 +60,11 @@ export default function HeroAuthCard() {
         No password — just a quick code by email.
       </p>
 
-      <div className="mt-[15px]">
+      <div className="mt-[15px] flex flex-col gap-[8px]">
         <GoogleButton label="Continue with Google" />
+        <GithubButton label="Continue with GitHub" />
+        <MicrosoftButton label="Continue with Microsoft" />
+        <DiscordButton label="Continue with Discord" />
       </div>
 
       <div className="mt-[15px] flex items-center gap-[11px]">

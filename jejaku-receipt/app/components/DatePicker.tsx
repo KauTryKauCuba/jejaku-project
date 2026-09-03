@@ -20,14 +20,6 @@ function todayKey() {
   return toDateKey(t.getFullYear(), t.getMonth(), t.getDate());
 }
 
-function formatLabel(key: string) {
-  return new Date(`${key}T00:00:00`).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export default function DatePicker({
   id,
   value,
@@ -59,10 +51,7 @@ export default function DatePicker({
   const { year, month } = cursor;
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthLabel = new Date(year, month, 1).toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+  const monthLabel = `${year}-${String(month + 1).padStart(2, "0")}`;
   const cells: (number | null)[] = [
     ...Array(firstWeekday).fill(null),
     ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -85,7 +74,7 @@ export default function DatePicker({
         onClick={() => (open ? setOpen(false) : openPicker())}
         className="flex h-[37px] w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
       >
-        {value ? formatLabel(value) : "Select date"}
+        {value || "Select date"}
         <CalendarBlank size={14} weight="light" className="shrink-0 text-ink-mute" />
       </button>
 

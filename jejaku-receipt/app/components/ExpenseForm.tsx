@@ -1,11 +1,20 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Check, Plus, Shield, X } from "@phosphor-icons/react";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
+import { EXPENSE_CATEGORIES, lineTotal, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
+import { SUPPORTED_CURRENCIES, type SupportedCurrency } from "../lib/currencies";
+
+// Falls back to USD for a currency outside the app's supported/convertible
+// list (e.g. AI-inferred from a receipt, or a user's account default) — the
+// Select below can only offer SUPPORTED_CURRENCIES, so seeding it with an
+// unlisted code would show a value with no matching, selectable option.
+function toSupportedCurrency(code: string): SupportedCurrency {
+  return (SUPPORTED_CURRENCIES as readonly string[]).includes(code) ? (code as SupportedCurrency) : "USD";
+}
 import Select from "./Select";
 import DatePicker from "./DatePicker";
-import { useAddCategory, useCategories } from "./ExpensesProvider";
+import { useAddCategory, useCategories, useDefaultCurrency } from "./ExpensesProvider";
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -66,6 +75,7 @@ export default function ExpenseForm({
   categorySource?: "ai" | "fallback";
   disabled?: boolean;
 }) {
+  const defaultCurrency = useDefaultCurrency();
   const [merchant, setMerchant] = useState(initialMerchant ?? "");
   const [amount, setAmount] = useState(
     initialAmount !== undefined ? String(initialAmount) : ""
@@ -77,16 +87,41 @@ export default function ExpenseForm({
   const [city, setCity] = useState(initialCity ?? "");
   const [state, setState] = useState(initialState ?? "");
   const [country, setCountry] = useState(initialCountry ?? "");
-  const [currency, setCurrency] = useState(initialCurrency ?? DEFAULT_CURRENCY);
+  const [currency, setCurrency] = useState(toSupportedCurrency(initialCurrency ?? defaultCurrency));
   const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
   const [split, setSplit] = useState<SplitData | undefined>(initialSplit);
   const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
   const [isWarrantyClaim, setIsWarrantyClaim] = useState(initialWarrantyClaim ?? false);
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
+  const [taxError, setTaxError] = useState<string | undefined>(undefined);
   const [categoryTouched, setCategoryTouched] = useState(false);
+  // Whether Amount is a free-typed value rather than following the items
+  // total. Starts unlocked when the form is seeded with existing items (a
+  // scan's extracted list, or an existing receipt being edited) so we
+  // don't clobber an already-correct printed total with a possibly
+  // incomplete item list. The moment the user actively edits an item's
+  // price/count themselves, it locks and starts tracking live — see
+  // updateItemPrice/addItem/removeItem below.
+  const [amountUnlocked, setAmountUnlocked] = useState((initialItems?.length ?? 0) > 0);
   const categories = useCategories();
   const addCategory = useAddCategory();
+
+  const itemsTotal = useMemo(() => {
+    const parsedTax = tax.trim() ? parseFloat(tax) : 0;
+    const sum = items.reduce((s, i) => s + lineTotal(i), 0) + (Number.isFinite(parsedTax) ? parsedTax : 0);
+    return Math.round(sum * 100) / 100;
+  }, [items, tax]);
+
+  // Gate on actual priced items, not just item.length>0 — otherwise
+  // clicking "Add item" on a blank row (price 0) would instantly lock and
+  // zero out an Amount the user had already typed by hand.
+  const itemsHavePrice = items.some((i) => i.price !== 0);
+  const amountLocked = itemsHavePrice && !amountUnlocked;
+  // While locked, the displayed/submitted amount is always the live items
+  // total — `amount` state itself is only ever read when unlocked (manual
+  // entry), so there's nothing to keep in sync via an effect.
+  const displayAmount = amountLocked ? String(itemsTotal) : amount;
 
   const updateItemName = (index: number, name: string) => {
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, name } : item)));
@@ -97,6 +132,17 @@ export default function ExpenseForm({
     setItems((prev) =>
       prev.map((item, i) => (i === index ? { ...item, price: Number.isFinite(price) ? price : 0 } : item))
     );
+    setAmountUnlocked(false);
+  };
+
+  const updateItemQuantity = (index: number, quantityText: string) => {
+    const quantity = Number(quantityText);
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index ? { ...item, quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1 } : item
+      )
+    );
+    setAmountUnlocked(false);
   };
 
   const removeItem = (index: number) => {
@@ -111,23 +157,28 @@ export default function ExpenseForm({
           }
         : prev
     );
+    setAmountUnlocked(false);
   };
 
   const addItem = () => {
-    setItems((prev) => [...prev, { name: "", price: 0 }]);
+    setItems((prev) => [...prev, { name: "", price: 0, quantity: 1 }]);
   };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const parsedAmount = parseFloat(amount);
+    const parsedAmount = amountLocked ? itemsTotal : parseFloat(amount);
     const parsedTax = tax.trim() ? parseFloat(tax) : undefined;
     if (!date) {
       setDateError("Pick a date.");
       return;
     }
     setDateError(undefined);
+    if (parsedTax !== undefined && Number.isNaN(parsedTax)) {
+      setTaxError("That doesn't look like a valid number.");
+      return;
+    }
+    setTaxError(undefined);
     if (!merchant.trim() || Number.isNaN(parsedAmount)) return;
-    if (parsedTax !== undefined && Number.isNaN(parsedTax)) return;
     onSubmit({
       merchant: merchant.trim(),
       amount: parsedAmount,
@@ -140,7 +191,7 @@ export default function ExpenseForm({
       state: state.trim() || undefined,
       country: country.trim() || undefined,
       items: items.length > 0 ? items : undefined,
-      currency: currency.trim().toUpperCase() || undefined,
+      currency,
       split,
     });
   };
@@ -203,14 +254,18 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <div className="flex items-center justify-between gap-[8px]">
-          <label className={labelClass}>
+        <div className="flex items-center gap-[8px]">
+          <label className={`flex-1 ${labelClass}`}>
             Items <span className="font-normal text-ink-mute">(optional)</span>
           </label>
           {items.length > 0 && (
-            <span className={`mr-[41px] w-[88px] shrink-0 text-left ${labelClass}`}>
-              Price <span className="font-normal text-ink-mute">({currency.trim() || DEFAULT_CURRENCY})</span>
-            </span>
+            <>
+              <span className={`w-[52px] shrink-0 text-left ${labelClass}`}>Qty</span>
+              <span className={`w-[76px] shrink-0 text-left ${labelClass}`}>
+                Price <span className="font-normal text-ink-mute">({currency})</span>
+              </span>
+              <span className="w-[33px] shrink-0" />
+            </>
           )}
         </div>
         {items.length > 0 && (
@@ -227,7 +282,19 @@ export default function ExpenseForm({
                     className={inputClass}
                   />
                 </div>
-                <div className="w-[88px] shrink-0">
+                <div className="w-[52px] shrink-0">
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    step="1"
+                    min="1"
+                    value={item.quantity ?? 1}
+                    onChange={(e) => updateItemQuantity(i, e.target.value)}
+                    aria-label={`Item ${i + 1} quantity`}
+                    className={`${inputClass} text-center`}
+                  />
+                </div>
+                <div className="w-[76px] shrink-0">
                   <input
                     type="number"
                     inputMode="decimal"
@@ -236,7 +303,7 @@ export default function ExpenseForm({
                     value={item.price}
                     onChange={(e) => updateItemPrice(i, e.target.value)}
                     placeholder="0.00"
-                    aria-label={`Item ${i + 1} price`}
+                    aria-label={`Item ${i + 1} unit price`}
                     className={inputClass}
                   />
                 </div>
@@ -263,19 +330,26 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
-        <label className={labelClass} htmlFor="expense-amount">
-          Amount
-        </label>
+        <div className="flex items-center justify-between gap-[8px]">
+          <label className={labelClass} htmlFor="expense-amount">
+            Amount
+          </label>
+          {itemsHavePrice && (
+            <button
+              type="button"
+              onClick={() => setAmountUnlocked((v) => !v)}
+              className="text-[12px] font-medium text-primary hover:underline"
+            >
+              {amountLocked ? "Enter manually" : `Use items total (${itemsTotal})`}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-[6px]">
-          <div className="w-[62px] shrink-0">
-            <input
-              type="text"
+          <div className="w-[88px] shrink-0">
+            <Select
               value={currency}
-              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-              maxLength={3}
-              aria-label="Currency code"
-              placeholder={DEFAULT_CURRENCY}
-              className={`${inputClass} text-center uppercase`}
+              options={SUPPORTED_CURRENCIES}
+              onChange={setCurrency}
             />
           </div>
           <div className="min-w-0 flex-1">
@@ -286,10 +360,11 @@ export default function ExpenseForm({
               step="0.01"
               min="0"
               required
-              value={amount}
+              readOnly={amountLocked}
+              value={displayAmount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
-              className={inputClass}
+              className={amountLocked ? `${inputClass} cursor-not-allowed bg-canvas-soft` : inputClass}
             />
           </div>
         </div>
@@ -306,10 +381,14 @@ export default function ExpenseForm({
           step="0.01"
           min="0"
           value={tax}
-          onChange={(e) => setTax(e.target.value)}
+          onChange={(e) => {
+            setTax(e.target.value);
+            if (taxError) setTaxError(undefined);
+          }}
           placeholder="0.00"
           className={inputClass}
         />
+        {taxError && <p className="text-[12px] text-error">{taxError}</p>}
       </div>
 
       <div className="flex flex-col gap-[4px]">

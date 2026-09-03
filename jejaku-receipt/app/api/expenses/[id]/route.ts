@@ -6,7 +6,7 @@ import { lookupCoordinates } from "../../../lib/cityCoordinates";
 import { db } from "../../../db";
 import { expenses } from "../../../db/schema";
 import { toExpense } from "../../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseSplit, type ExpenseItem } from "../../../lib/expenses";
+import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseItems, parseSplit } from "../../../lib/expenses";
 import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -53,25 +53,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ? currencyRaw.toUpperCase()
       : "";
 
-  const itemsRaw = form.get("items");
-  let items: ExpenseItem[] | null = null;
-  if (typeof itemsRaw === "string" && itemsRaw) {
-    try {
-      const parsed = JSON.parse(itemsRaw);
-      if (Array.isArray(parsed)) {
-        items = parsed.filter(
-          (item): item is ExpenseItem =>
-            typeof item === "object" &&
-            item !== null &&
-            typeof item.name === "string" &&
-            typeof item.price === "number" &&
-            Number.isFinite(item.price)
-        );
-      }
-    } catch {
-      items = null;
-    }
-  }
+  const items = parseItems(form.get("items"));
 
   const split = parseSplit(form.get("split"));
 
