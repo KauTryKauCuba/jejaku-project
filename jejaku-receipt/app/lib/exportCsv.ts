@@ -1,4 +1,6 @@
 import type { Expense } from "./expenses";
+import { formatIsoDate } from "./formatIso";
+import { warrantyExpiryDate } from "./warranty";
 
 const CSV_COLUMNS = [
   "Date",
@@ -8,6 +10,8 @@ const CSV_COLUMNS = [
   "Currency",
   "Tax",
   "Warranty claim",
+  "Warranty coverage (months)",
+  "Warranty expiry",
   "City",
   "State",
   "Country",
@@ -24,8 +28,15 @@ function csvField(value: string | number | undefined): string {
 }
 
 export function expensesToCsv(expenses: Expense[]): string {
-  const rows = expenses.map((e) =>
-    [
+  const rows = expenses.map((e) => {
+    // Coverage length is only meaningful alongside the claim flag — a
+    // claim tagged before this field existed (or with no length picked)
+    // has nothing to derive an expiry from, so both stay blank rather
+    // than showing a coverage number with no corresponding date.
+    const warrantyMonths = e.isWarrantyClaim ? e.warrantyMonths : undefined;
+    const warrantyExpiry =
+      warrantyMonths !== undefined ? formatIsoDate(warrantyExpiryDate(e.date, warrantyMonths)) : undefined;
+    return [
       e.date,
       e.merchant,
       e.category,
@@ -33,14 +44,16 @@ export function expensesToCsv(expenses: Expense[]): string {
       e.currency ?? "",
       e.tax ?? "",
       e.isWarrantyClaim ? "Yes" : "",
+      warrantyMonths ?? "",
+      warrantyExpiry ?? "",
       e.city ?? "",
       e.state ?? "",
       e.country ?? "",
       e.note ?? "",
     ]
       .map(csvField)
-      .join(",")
-  );
+      .join(",");
+  });
   // Leading BOM so Excel (which sniffs encoding rather than assuming UTF-8)
   // renders non-ASCII merchant/note text correctly instead of mangling it.
   return "﻿" + [CSV_COLUMNS.join(","), ...rows].join("\r\n");
