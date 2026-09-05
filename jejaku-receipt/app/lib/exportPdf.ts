@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatCurrency, formatItemsList, type Expense } from "./expenses";
 import { formatIsoDate } from "./formatIso";
-import { warrantyExportFields } from "./warranty";
+import { warrantyClaimsFor } from "./warranty";
 
 // Same fields as the CSV export (see CSV_COLUMNS there) — Currency and
 // City/State/Country stay separate, structured columns in CSV for
@@ -18,10 +18,19 @@ function locationOf(e: Expense): string {
 }
 
 function warrantyOf(e: Expense): string {
-  const { isClaim, months, expiry } = warrantyExportFields(e);
-  if (!isClaim) return "";
-  if (months === undefined || !expiry) return "Yes";
-  return `Yes — ${months}mo, expires ${formatIsoDate(expiry)}`;
+  const claims = warrantyClaimsFor(e);
+  if (claims.length === 0) return "";
+  // Single-claim text is unchanged from before item-level tags existed
+  // ("Yes" / "Yes — 12mo, expires ..."); multiple tagged items instead
+  // list each by name, since "Yes" alone wouldn't say which of them.
+  if (claims.length === 1) {
+    const [c] = claims;
+    if (c.months === undefined || !c.expiry) return "Yes";
+    return `Yes — ${c.months}mo, expires ${formatIsoDate(c.expiry)}`;
+  }
+  return claims
+    .map((c) => (c.months !== undefined && c.expiry ? `${c.label}: ${c.months}mo, expires ${formatIsoDate(c.expiry)}` : `${c.label}: —`))
+    .join("; ");
 }
 
 export function downloadPdf(filename: string, expenses: Expense[]) {

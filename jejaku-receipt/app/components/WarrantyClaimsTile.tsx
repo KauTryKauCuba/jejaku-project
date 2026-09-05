@@ -6,7 +6,7 @@ import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
 import { useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
-import { warrantyStatus } from "../lib/warranty";
+import { warrantyClaimStatuses } from "../lib/warranty";
 import { SHIELD_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
 
 // Matches the "close-in" window formatWarrantyStatus starts counting in
@@ -31,13 +31,18 @@ export default function WarrantyClaimsTile() {
   const [range, setRange] = useState(RANGE_OPTIONS[0]);
   const monthsShown = monthsInRange(range);
 
+  // Counts individual claims, not receipts — an itemized receipt with two
+  // tagged items (a kettle and a blender, say) counts as 2 here, same as
+  // two separate receipts each tagged once would.
   const monthKeys = new Set(recentMonths(monthsShown).map((m) => m.key));
-  const inRange = expenses.filter((e) => e.isWarrantyClaim && monthKeys.has(e.date.slice(0, 7)));
-  const allTimeCount = expenses.filter((e) => e.isWarrantyClaim).length;
-  const expiringSoonCount = expenses.filter((e) => {
-    const status = warrantyStatus(e);
-    return status.kind === "active" && status.daysLeft <= EXPIRING_SOON_DAYS;
-  }).length;
+  const allClaimStatuses = expenses.flatMap((e) => warrantyClaimStatuses(e));
+  const inRangeCount = expenses
+    .filter((e) => monthKeys.has(e.date.slice(0, 7)))
+    .reduce((sum, e) => sum + warrantyClaimStatuses(e).length, 0);
+  const allTimeCount = allClaimStatuses.length;
+  const expiringSoonCount = allClaimStatuses.filter(
+    ({ status }) => status.kind === "active" && status.daysLeft <= EXPIRING_SOON_DAYS
+  ).length;
 
   const rangeLabel = range === "This month" ? "this month" : `the last ${range}`;
 
@@ -120,10 +125,10 @@ export default function WarrantyClaimsTile() {
         Warranty Claims
       </p>
       <p className="relative mt-[3px] text-[15px] font-light tracking-[-0.16px] text-ink">
-        {inRange.length}
+        {inRangeCount}
       </p>
       <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
-        {inRange.length > 0
+        {inRangeCount > 0
           ? `Tagged ${rangeLabel}.`
           : `Nothing tagged ${rangeLabel}.`}
       </p>

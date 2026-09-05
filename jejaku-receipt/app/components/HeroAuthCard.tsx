@@ -15,7 +15,13 @@ export default function HeroAuthCard() {
 
       <div className="mt-[15px]">
         <Link
-          href={jejakuUrl("/login")}
+          // Sends the visitor to jejaku's own landing page rather than
+          // straight to its /login form — a deliberate choice for this
+          // card specifically, since it's reached from marketing/browsing
+          // context (unlike this app's own protected-route redirects,
+          // which still go straight to /login for someone who was already
+          // trying to do something specific).
+          href={jejakuUrl("/")}
           className="flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
         >
           Sign in on jejaku

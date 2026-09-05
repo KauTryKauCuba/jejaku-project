@@ -458,6 +458,41 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Warranty tracking, down to the item",
+    body: "Tagging used to cover a whole receipt at once — a Lazada order with a kettle and a phone case had no way to tell them apart. Items can now be tagged individually, with a keyword-based suggestion for how long common appliances and electronics are usually covered (a starting guess to confirm, never applied on its own), and a one-tap Claim Kit PDF for anything tagged — the receipt photo, the item, the dates, and a pre-written claim message, ready to hand over.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "A bell for expiring warranties",
+    body: "A badge next to the account menu now lists anything expired or expiring within 30 days, across every tagged item and receipt — previously the only way to notice was opening the Warranty Claims card yourself.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Sample data that actually shows off warranty tracking",
+    body: "None of the sample receipts a new account starts with had ever been tagged for warranty, so the feature looked unused on day one. Added a small appliance purchase timed to show up as \"expiring soon,\" and tagged one item on an existing sample receipt to demonstrate tagged and untagged items sitting side by side on the same receipt.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "The landing page, trimmed down to what it's actually for",
+    body: "The public landing page was a stale copy of jejaku's own homepage — the same portfolio pitch, hardware specs, and tech stack tabs, with a card linking to itself. Removed the Projects list and the Mind/Hardware/Tech Stack tabs, and the \"Sign in on jejaku\" button now opens jejaku's homepage instead of skipping straight to its login form.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A \"Learn more\" button on the landing page's project cards",
+    body: "Each project card only ever offered a way to use it — or a login wall if you weren't signed in — with no way to just read about it first. Jejaku Receipt's card now has a Learn more button pointing at its own landing page; Jejaku Tree's is in place too, waiting on somewhere to send it.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

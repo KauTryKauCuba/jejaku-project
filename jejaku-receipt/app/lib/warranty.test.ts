@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatWarrantyStatus, warrantyExpiryDate, warrantyExportFields, warrantyStatus } from "./warranty";
+import {
+  formatWarrantyStatus,
+  warrantyClaimsFor,
+  warrantyClaimStatuses,
+  warrantyExpiryDate,
+  warrantyStatus,
+} from "./warranty";
 
 describe("warrantyExpiryDate", () => {
   it("adds the given number of months to the purchase date", () => {
@@ -64,31 +70,96 @@ describe("warrantyStatus", () => {
   });
 });
 
-describe("warrantyExportFields", () => {
-  // Shared by the CSV and PDF exports — this is the one source of truth
-  // for "what counts as tracked coverage" so the two can't quietly
-  // disagree on it, which is exactly what happened before this existed.
+describe("warrantyClaimsFor", () => {
+  const base = { id: "e1", merchant: "Lazada", date: "2026-01-15" };
 
-  it("is not a claim when isWarrantyClaim is false, even with warrantyMonths set", () => {
-    expect(warrantyExportFields({ isWarrantyClaim: false, warrantyMonths: 12, date: "2026-01-01" })).toEqual({
-      isClaim: false,
-      months: undefined,
-      expiry: undefined,
+  it("returns nothing for a plain expense with no tags at all", () => {
+    expect(warrantyClaimsFor(base)).toEqual([]);
+  });
+
+  it("returns one claim for a receipt-level tag when there are no items", () => {
+    const claims = warrantyClaimsFor({ ...base, isWarrantyClaim: true, warrantyMonths: 12 });
+    expect(claims).toEqual([
+      { key: "e1:receipt", label: "Lazada", months: 12, expiry: warrantyExpiryDate("2026-01-15", 12) },
+    ]);
+  });
+
+  it("returns one claim per tagged item, skipping untagged ones, when any item is tagged", () => {
+    const claims = warrantyClaimsFor({
+      ...base,
+      items: [
+        { id: "i1", name: "Kettle", isWarrantyClaim: true, warrantyMonths: 12 },
+        { id: "i2", name: "Phone case" }, // never tagged
+        { id: "i3", name: "USB cable", isWarrantyClaim: true }, // tagged, no length picked
+      ],
     });
+    expect(claims).toEqual([
+      { key: "e1:i1", label: "Kettle", months: 12, expiry: warrantyExpiryDate("2026-01-15", 12) },
+      { key: "e1:i3", label: "USB cable", months: undefined, expiry: undefined },
+    ]);
   });
 
-  it("is a claim with no coverage when tagged but no length was picked", () => {
-    const result = warrantyExportFields({ isWarrantyClaim: true, date: "2026-01-01" });
-    expect(result.isClaim).toBe(true);
-    expect(result.months).toBeUndefined();
-    expect(result.expiry).toBeUndefined();
+  it("ignores the receipt-level tag once any item carries its own — the two never combine into extra claims", () => {
+    // Regression case for exactly the scenario this feature exists for: an
+    // older itemized receipt that still has its whole-receipt flag set
+    // from before item-level tagging existed, now with one item tagged.
+    const claims = warrantyClaimsFor({
+      ...base,
+      isWarrantyClaim: true,
+      warrantyMonths: 24,
+      items: [{ id: "i1", name: "Kettle", isWarrantyClaim: true, warrantyMonths: 12 }],
+    });
+    expect(claims).toHaveLength(1);
+    expect(claims[0]).toMatchObject({ label: "Kettle", months: 12 });
   });
 
-  it("derives an expiry date when both the claim flag and coverage length are set", () => {
-    const result = warrantyExportFields({ isWarrantyClaim: true, warrantyMonths: 6, date: "2026-01-15" });
-    expect(result.isClaim).toBe(true);
-    expect(result.months).toBe(6);
-    expect(result.expiry).toEqual(warrantyExpiryDate("2026-01-15", 6));
+  it("falls back to the receipt-level tag when items exist but none are tagged", () => {
+    const claims = warrantyClaimsFor({
+      ...base,
+      isWarrantyClaim: true,
+      warrantyMonths: 6,
+      items: [{ id: "i1", name: "Phone case" }],
+    });
+    expect(claims).toEqual([
+      { key: "e1:receipt", label: "Lazada", months: 6, expiry: warrantyExpiryDate("2026-01-15", 6) },
+    ]);
+  });
+
+  it("falls back to the item's array position for a key when it has no id (pre-migration data)", () => {
+    const claims = warrantyClaimsFor({ ...base, items: [{ name: "Kettle", isWarrantyClaim: true }] });
+    expect(claims[0].key).toBe("e1:0");
+  });
+});
+
+describe("warrantyClaimStatuses", () => {
+  const now = new Date(2026, 8, 5); // 2026-09-05
+
+  it("pairs each claim with its live status", () => {
+    const result = warrantyClaimStatuses(
+      {
+        id: "e1",
+        merchant: "Lazada",
+        date: "2026-08-01",
+        items: [
+          { id: "i1", name: "Kettle", isWarrantyClaim: true, warrantyMonths: 1 }, // expires 2026-09-01, so expired by now
+          { id: "i2", name: "Blender", isWarrantyClaim: true, warrantyMonths: 12 }, // active, far out
+        ],
+      },
+      now
+    );
+    expect(result).toHaveLength(2);
+    expect(result[0].claim.label).toBe("Kettle");
+    expect(result[0].status.kind).toBe("expired");
+    expect(result[1].claim.label).toBe("Blender");
+    expect(result[1].status.kind).toBe("active");
+  });
+
+  it("is untracked for a tagged item with no coverage length, same as an untracked receipt", () => {
+    const [{ status }] = warrantyClaimStatuses(
+      { id: "e1", merchant: "Store", date: "2026-01-01", items: [{ id: "i1", name: "Thing", isWarrantyClaim: true }] },
+      now
+    );
+    expect(status.kind).toBe("untracked");
   });
 });
 

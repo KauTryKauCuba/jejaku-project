@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import LiveClock from "./LiveClock";
 import UserBadge from "./UserBadge";
+import WarrantyBell from "./WarrantyBell";
 import DashboardSidebar from "./DashboardSidebar";
 import { NavLinks } from "./NavLinks";
 import FlowLines from "./FlowLines";
@@ -39,6 +40,7 @@ export default function DashboardShell({ children }: { children: ReactNode }) {
             <span className="hidden md:block">
               <LiveClock />
             </span>
+            <WarrantyBell />
             <UserBadge />
           </div>
         </header>

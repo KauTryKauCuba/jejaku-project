@@ -1,4 +1,5 @@
 import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import type { ExpenseItem } from "../lib/expenses";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -61,7 +62,13 @@ export const expenses = pgTable("expenses", {
   // past month shouldn't shift every time the dashboard is reopened.
   homeCurrencyAmount: doublePrecision("home_currency_amount"),
   homeCurrencyCode: text("home_currency_code"),
-  items: jsonb("items").$type<{ name: string; price: number; quantity?: number }[]>(),
+  // Typed against the single ExpenseItem definition in lib/expenses.ts
+  // (including each item's own optional isWarrantyClaim/warrantyMonths)
+  // rather than a second inline shape here, so the two can't drift apart —
+  // jsonb itself doesn't enforce structure, this is a TS-only annotation,
+  // so widening it (as when warranty fields were added to ExpenseItem)
+  // never requires a migration.
+  items: jsonb("items").$type<ExpenseItem[]>(),
   // Ad-hoc per-item bill split — see lib/expenses.ts's SplitData for the
   // shape and computeSplitTotals for how tax gets divided proportionally.
   // Not a separate table: like `items`, this is only ever read/written

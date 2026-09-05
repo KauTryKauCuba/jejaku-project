@@ -144,12 +144,42 @@ describe("formatItemsList", () => {
 describe("normalizeItems", () => {
   it("drops entries that aren't shaped like an item", () => {
     const result = normalizeItems([{ name: "Valid", price: 5 }, { name: "No price" }, "not an object", null]);
-    expect(result).toEqual([{ name: "Valid", price: 5, quantity: undefined }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toEqual(
+      expect.objectContaining({ name: "Valid", price: 5, quantity: undefined, isWarrantyClaim: undefined, warrantyMonths: undefined })
+    );
   });
 
   it("drops a nonsensical quantity rather than rejecting the item", () => {
     const result = normalizeItems([{ name: "Item", price: 5, quantity: -1 }]);
     expect(result[0].quantity).toBeUndefined();
+  });
+
+  it("assigns a stable id to an item that arrives without one", () => {
+    const result = normalizeItems([{ name: "Item", price: 5 }]);
+    expect(typeof result[0].id).toBe("string");
+    expect(result[0].id).not.toBe("");
+  });
+
+  it("preserves an item's existing id rather than replacing it", () => {
+    const result = normalizeItems([{ id: "keep-me", name: "Item", price: 5 }]);
+    expect(result[0].id).toBe("keep-me");
+  });
+
+  it("keeps isWarrantyClaim and warrantyMonths only when the item is actually tagged", () => {
+    const untagged = normalizeItems([{ name: "Item", price: 5, isWarrantyClaim: false, warrantyMonths: 12 }]);
+    expect(untagged[0].isWarrantyClaim).toBeUndefined();
+    expect(untagged[0].warrantyMonths).toBeUndefined();
+
+    const tagged = normalizeItems([{ name: "Item", price: 5, isWarrantyClaim: true, warrantyMonths: 12 }]);
+    expect(tagged[0].isWarrantyClaim).toBe(true);
+    expect(tagged[0].warrantyMonths).toBe(12);
+  });
+
+  it("drops a nonsensical warrantyMonths on a tagged item rather than rejecting it", () => {
+    const result = normalizeItems([{ name: "Item", price: 5, isWarrantyClaim: true, warrantyMonths: -3 }]);
+    expect(result[0].isWarrantyClaim).toBe(true);
+    expect(result[0].warrantyMonths).toBeUndefined();
   });
 
   it("returns an empty array for non-array input", () => {

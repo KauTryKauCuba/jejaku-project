@@ -2,9 +2,18 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { Check, Plus, Shield, X } from "@phosphor-icons/react";
-import { EXPENSE_CATEGORIES, lineTotal, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
+import {
+  EXPENSE_CATEGORIES,
+  lineTotal,
+  newItem,
+  normalizeItems,
+  type ExpenseCategory,
+  type ExpenseItem,
+  type SplitData,
+} from "../lib/expenses";
 import { SUPPORTED_CURRENCIES, type SupportedCurrency } from "../lib/currencies";
 import { WARRANTY_LENGTH_OPTIONS } from "../lib/warranty";
+import { suggestWarrantyMonths } from "../lib/warrantySuggest";
 
 const WARRANTY_NO_LENGTH = "No expiry tracked";
 const WARRANTY_LABEL_OPTIONS = [WARRANTY_NO_LENGTH, ...WARRANTY_LENGTH_OPTIONS.map((o) => o.label)] as const;
@@ -103,7 +112,12 @@ export default function ExpenseForm({
   const [state, setState] = useState(initialState ?? "");
   const [country, setCountry] = useState(initialCountry ?? "");
   const [currency, setCurrency] = useState(toSupportedCurrency(initialCurrency ?? defaultCurrency));
-  const [items, setItems] = useState<ExpenseItem[]>(initialItems ?? []);
+  // normalizeItems backfills a stable `id` on any item that arrives
+  // without one — a fresh scan's AI-extracted items always do, since
+  // DeepSeek's extraction has no concept of it — so every row has one to
+  // key its warranty tag (and its React list key) to from the first
+  // render, not just after the first save round-trip.
+  const [items, setItems] = useState<ExpenseItem[]>(() => normalizeItems(initialItems ?? []));
   const [split, setSplit] = useState<SplitData | undefined>(initialSplit);
   const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
   const [isWarrantyClaim, setIsWarrantyClaim] = useState(initialWarrantyClaim ?? false);
@@ -177,7 +191,15 @@ export default function ExpenseForm({
   };
 
   const addItem = () => {
-    setItems((prev) => [...prev, { name: "", price: 0, quantity: 1 }]);
+    setItems((prev) => [...prev, newItem()]);
+  };
+
+  // Only the two warranty fields — everything else about the item (name,
+  // price, quantity) is untouched, and this never flips `amountUnlocked`
+  // the way the other item edits above do, since tagging a warranty
+  // doesn't change what the receipt actually cost.
+  const updateItemWarranty = (index: number, patch: Partial<Pick<ExpenseItem, "isWarrantyClaim" | "warrantyMonths">>) => {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)));
   };
 
   const handleSubmit = (e: FormEvent) => {
@@ -286,54 +308,106 @@ export default function ExpenseForm({
           )}
         </div>
         {items.length > 0 && (
-          <div className="flex flex-col gap-[8px]">
-            {items.map((item, i) => (
-              <div key={i} className="flex items-center gap-[8px]">
-                <div className="min-w-0 flex-1">
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => updateItemName(i, e.target.value)}
-                    placeholder="Item name"
-                    aria-label={`Item ${i + 1} name`}
-                    className={inputClass}
-                  />
+          <div className="flex flex-col gap-[11px]">
+            {items.map((item, i) => {
+              const suggestedMonths = suggestWarrantyMonths(item.name);
+              return (
+                <div key={item.id} className="flex flex-col gap-[4px]">
+                  <div className="flex items-center gap-[8px]">
+                    <div className="min-w-0 flex-1">
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => updateItemName(i, e.target.value)}
+                        placeholder="Item name"
+                        aria-label={`Item ${i + 1} name`}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div className="w-[52px] shrink-0">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        step="1"
+                        min="1"
+                        value={item.quantity ?? 1}
+                        onChange={(e) => updateItemQuantity(i, e.target.value)}
+                        aria-label={`Item ${i + 1} quantity`}
+                        className={`${inputClass} text-center`}
+                      />
+                    </div>
+                    <div className="w-[76px] shrink-0">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.01"
+                        min="0"
+                        value={item.price}
+                        onChange={(e) => updateItemPrice(i, e.target.value)}
+                        placeholder="0.00"
+                        aria-label={`Item ${i + 1} unit price`}
+                        className={inputClass}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateItemWarranty(i, {
+                          isWarrantyClaim: !item.isWarrantyClaim,
+                          // Seed the length with the keyword suggestion the
+                          // first time this item is tagged on, so the
+                          // reveal below doesn't open on a blank picker —
+                          // untouched (left undefined) if untagging.
+                          warrantyMonths: !item.isWarrantyClaim ? (item.warrantyMonths ?? suggestedMonths) : item.warrantyMonths,
+                        })
+                      }
+                      aria-pressed={item.isWarrantyClaim ?? false}
+                      aria-label={`Tag item ${i + 1} for warranty`}
+                      className={
+                        item.isWarrantyClaim
+                          ? "flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-primary bg-primary/10 text-primary transition-colors"
+                          : "flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+                      }
+                    >
+                      <Shield size={14} weight={item.isWarrantyClaim ? "fill" : "light"} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(i)}
+                      aria-label={`Remove item ${i + 1}`}
+                      className="flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+                    >
+                      <X size={14} weight="light" />
+                    </button>
+                  </div>
+
+                  {item.isWarrantyClaim ? (
+                    <div className="ml-[4px] flex flex-col gap-[3px] pl-[24px]">
+                      <div className="w-[164px]">
+                        <Select
+                          value={warrantyMonthsToLabel(item.warrantyMonths)}
+                          options={WARRANTY_LABEL_OPTIONS}
+                          onChange={(label) => updateItemWarranty(i, { warrantyMonths: warrantyLabelToMonths(label) })}
+                        />
+                      </div>
+                      {item.warrantyMonths !== undefined && item.warrantyMonths === suggestedMonths && (
+                        <p className="text-[11px] text-ink-mute">Estimated — check yours.</p>
+                      )}
+                    </div>
+                  ) : (
+                    suggestedMonths !== undefined && (
+                      <button
+                        type="button"
+                        onClick={() => updateItemWarranty(i, { isWarrantyClaim: true, warrantyMonths: suggestedMonths })}
+                        className="ml-[4px] w-fit pl-[24px] text-left text-[11px] text-primary hover:underline"
+                      >
+                        Tag for warranty? ~{warrantyMonthsToLabel(suggestedMonths).toLowerCase()}
+                      </button>
+                    )
+                  )}
                 </div>
-                <div className="w-[52px] shrink-0">
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    step="1"
-                    min="1"
-                    value={item.quantity ?? 1}
-                    onChange={(e) => updateItemQuantity(i, e.target.value)}
-                    aria-label={`Item ${i + 1} quantity`}
-                    className={`${inputClass} text-center`}
-                  />
-                </div>
-                <div className="w-[76px] shrink-0">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    step="0.01"
-                    min="0"
-                    value={item.price}
-                    onChange={(e) => updateItemPrice(i, e.target.value)}
-                    placeholder="0.00"
-                    aria-label={`Item ${i + 1} unit price`}
-                    className={inputClass}
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeItem(i)}
-                  aria-label={`Remove item ${i + 1}`}
-                  className="flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
-                >
-                  <X size={14} weight="light" />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         <button

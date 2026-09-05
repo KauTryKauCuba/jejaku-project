@@ -38,12 +38,43 @@ export const MAX_CUSTOM_CATEGORIES = 20;
 export const MAX_CATEGORY_LENGTH = 24;
 
 export type ExpenseItem = {
+  // Stable across edits (assigned once, on creation) so a warranty tag
+  // stays pinned to the right line even if other items are later added,
+  // removed, or reordered — unlike SplitData's assignments below, which
+  // key by array index and can drift if the list changes shape after the
+  // fact. Optional only because items saved before this field existed have
+  // none; normalizeItems backfills one the moment the expense is next
+  // saved, and every item passing through ExpenseForm gets one on mount
+  // (see its `items` state init), so in practice anything the user can
+  // actually interact with already has one.
+  id?: string;
   name: string;
   /** Unit price — the line's total is price × quantity, not price alone. */
   price: number;
   /** Defaults to 1 when absent (older saved items never had this field). */
   quantity?: number;
+  // Per-item warranty tag — lets one itemized receipt carry a kettle with
+  // a year of coverage and a phone case with none, which a single
+  // receipt-level `isWarrantyClaim` (see the `expenses` table) can't
+  // express. See warrantyClaimsFor in lib/warranty.ts for how item-level
+  // tags and the receipt-level flag combine into one list.
+  isWarrantyClaim?: boolean;
+  warrantyMonths?: number;
 };
+
+// Web Crypto's randomUUID, not Node's `crypto` module import — this file
+// is bundled into client components (ExpenseForm) as well as server
+// routes, and Node's built-in module isn't available in the browser
+// bundle. `crypto.randomUUID` is global in both: Node 20 (this app's
+// runtime) and any browser over HTTPS or localhost.
+export function generateItemId(): string {
+  return crypto.randomUUID();
+}
+
+/** A blank item row for the "Add item" button — always gets its own id. */
+export function newItem(): ExpenseItem {
+  return { id: generateItemId(), name: "", price: 0, quantity: 1 };
+}
 
 export function lineTotal(item: ExpenseItem): number {
   return Math.round(item.price * (item.quantity ?? 1) * 100) / 100;
@@ -68,9 +99,11 @@ export function formatItemsList(e: Pick<Expense, "items" | "currency">): string 
 }
 
 // Validates and normalizes an already-JSON-parsed items array (e.g. the
-// AI-extracted `items` field) — filters out anything not shaped like an
-// item, and drops a nonsensical quantity (non-finite or <= 0) rather than
-// rejecting the whole item over it.
+// AI-extracted `items` field, which never has `id`/warranty fields at all,
+// or a client-submitted edit) — filters out anything not shaped like an
+// item, drops a nonsensical quantity (non-finite or <= 0) rather than
+// rejecting the whole item over it, and backfills a missing id rather than
+// rejecting the item or leaving it unaddressable for warranty tagging.
 export function normalizeItems(raw: unknown): ExpenseItem[] {
   if (!Array.isArray(raw)) return [];
   return raw
@@ -82,14 +115,29 @@ export function normalizeItems(raw: unknown): ExpenseItem[] {
         typeof (item as ExpenseItem).price === "number" &&
         Number.isFinite((item as ExpenseItem).price)
     )
-    .map((item) => ({
-      name: item.name,
-      price: item.price,
-      quantity:
-        typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
-          ? item.quantity
-          : undefined,
-    }));
+    .map((item) => {
+      const isWarrantyClaim = item.isWarrantyClaim === true;
+      return {
+        id: typeof item.id === "string" && item.id ? item.id : generateItemId(),
+        name: item.name,
+        price: item.price,
+        quantity:
+          typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
+            ? item.quantity
+            : undefined,
+        isWarrantyClaim: isWarrantyClaim || undefined,
+        // Same rule as the receipt-level field this mirrors (see the API
+        // routes' validation): only meaningful, and only kept, alongside
+        // an actual claim tag.
+        warrantyMonths:
+          isWarrantyClaim &&
+          typeof item.warrantyMonths === "number" &&
+          Number.isInteger(item.warrantyMonths) &&
+          item.warrantyMonths > 0
+            ? item.warrantyMonths
+            : undefined,
+      };
+    });
 }
 
 // Parses the `items` FormData field posted by ExpenseForm. Malformed input

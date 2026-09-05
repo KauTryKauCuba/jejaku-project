@@ -109,6 +109,14 @@ export function useExpenses(): Expense[] {
   return useExpensesContext().expenses;
 }
 
+// Unlike every other hook here, this one doesn't throw outside a provider —
+// DashboardShell (which renders WarrantyBell) is also used by the Settings
+// page, which has no ExpensesProvider around it. `null` lets the bell just
+// render nothing there instead of crashing the whole shell.
+export function useExpensesOptional(): Expense[] | null {
+  return useContext(ExpensesContext)?.expenses ?? null;
+}
+
 export function useAddExpense() {
   return useExpensesContext().addExpense;
 }

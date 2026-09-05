@@ -1,6 +1,6 @@
 import { formatItemsList, type Expense } from "./expenses";
 import { formatIsoDate } from "./formatIso";
-import { warrantyExportFields } from "./warranty";
+import { warrantyClaimsFor } from "./warranty";
 
 const CSV_COLUMNS = [
   "Date",
@@ -28,9 +28,29 @@ function csvField(value: string | number | undefined): string {
   return text;
 }
 
+// The coverage/expiry cells stay single scalar values (unchanged from
+// before item-level tags existed) when there's zero or one claim on the
+// receipt — the overwhelming common case — so existing spreadsheets built
+// against this column shape keep working. Only when a receipt has more
+// than one tagged item does either cell become a "label: value" list, one
+// per claim, joined the same way formatItemsList joins multiple items.
+function warrantyCells(expense: Expense): { claim: string; months: string; expiry: string } {
+  const claims = warrantyClaimsFor(expense);
+  if (claims.length === 0) return { claim: "", months: "", expiry: "" };
+  if (claims.length === 1) {
+    const [c] = claims;
+    return { claim: "Yes", months: c.months !== undefined ? String(c.months) : "", expiry: c.expiry ? formatIsoDate(c.expiry) : "" };
+  }
+  return {
+    claim: "Yes",
+    months: claims.map((c) => `${c.label}: ${c.months ?? "—"}`).join("; "),
+    expiry: claims.map((c) => `${c.label}: ${c.expiry ? formatIsoDate(c.expiry) : "—"}`).join("; "),
+  };
+}
+
 export function expensesToCsv(expenses: Expense[]): string {
   const rows = expenses.map((e) => {
-    const warranty = warrantyExportFields(e);
+    const warranty = warrantyCells(e);
     return [
       e.date,
       e.merchant,
@@ -38,9 +58,9 @@ export function expensesToCsv(expenses: Expense[]): string {
       e.amount,
       e.currency ?? "",
       e.tax ?? "",
-      warranty.isClaim ? "Yes" : "",
-      warranty.months ?? "",
-      warranty.expiry ? formatIsoDate(warranty.expiry) : "",
+      warranty.claim,
+      warranty.months,
+      warranty.expiry,
       e.city ?? "",
       e.state ?? "",
       e.country ?? "",

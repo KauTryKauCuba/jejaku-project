@@ -9,7 +9,7 @@ export type DemoExpense = {
   city?: string;
   state?: string;
   country?: string;
-  items?: { name: string; price: number; quantity?: number }[];
+  items?: { name: string; price: number; quantity?: number; isWarrantyClaim?: boolean; warrantyMonths?: number }[];
 };
 
 // Sample receipts spread across March-August so every dashboard chart
@@ -36,7 +36,9 @@ export const DEMO_EXPENSES: DemoExpense[] = [
   { merchant: "GSC Cinemas", amount: 32, currency: "MYR", date: "2026-08-18", category: "Entertainment", city: "Petaling Jaya", state: "Selangor", country: "Malaysia", note: "Movie night", items: [{ name: "Movie ticket", price: 13, quantity: 2 }, { name: "Popcorn combo", price: 6 }] },
   { merchant: "Din Tai Fung", amount: 96.5, currency: "SGD", date: "2026-08-20", category: "Food & Drink", tax: 6.75, city: "Singapore", country: "Singapore", note: "Business trip dinner", items: [{ name: "Xiao long bao", price: 18.9 }, { name: "Fried rice", price: 16.5 }, { name: "Iced tea", price: 4.5, quantity: 2 }, { name: "Pork dumplings", price: 22.68 }, { name: "Wontons in chili oil", price: 22.67 }] },
   { merchant: "Petronas", amount: 80, currency: "MYR", date: "2026-08-22", category: "Transport", city: "Kuala Lumpur", country: "Malaysia", note: "Fuel", items: [{ name: "RON95 fuel", price: 80 }] },
-  { merchant: "IKEA", amount: 245, currency: "MYR", date: "2026-08-27", category: "Home & Furniture", tax: 13.9, city: "Petaling Jaya", state: "Selangor", country: "Malaysia", note: "New desk lamp and shelves", items: [{ name: "Desk lamp", price: 83.95 }, { name: "Shelf unit", price: 147.15 }] },
+  // Desk lamp is tagged for warranty, the shelf unit isn't — the exact
+  // "one receipt, mixed items" case item-level warranty tagging exists for.
+  { merchant: "IKEA", amount: 245, currency: "MYR", date: "2026-08-27", category: "Home & Furniture", tax: 13.9, city: "Petaling Jaya", state: "Selangor", country: "Malaysia", note: "New desk lamp and shelves", items: [{ name: "Desk lamp", price: 83.95, isWarrantyClaim: true, warrantyMonths: 12 }, { name: "Shelf unit", price: 147.15 }] },
   { merchant: "Village Grocer", amount: 79.4, currency: "MYR", date: "2026-08-03", category: "Groceries", city: "Kuala Lumpur", country: "Malaysia", items: [{ name: "Fresh produce", price: 34.5 }, { name: "Dairy & eggs", price: 22.9 }, { name: "Snacks", price: 22 }] },
   { merchant: "OldTown White Coffee", amount: 17.5, currency: "MYR", date: "2026-08-06", category: "Food & Drink", tax: 1, city: "Kuala Lumpur", country: "Malaysia", items: [{ name: "Kopi O", price: 6.13 }, { name: "Kaya toast set", price: 10.37 }] },
   { merchant: "Grab", amount: 21, currency: "MYR", date: "2026-08-11", category: "Transport", city: "Kuala Lumpur", country: "Malaysia", items: [{ name: "Ride fare", price: 21 }] },
@@ -115,4 +117,10 @@ export const DEMO_EXPENSES: DemoExpense[] = [
   { merchant: "Unifi", amount: 129, currency: "MYR", date: "2026-03-06", category: "Bills & Utilities", city: "Kuala Lumpur", country: "Malaysia", note: "Internet bill", items: [{ name: "Internet subscription", price: 129 }] },
   { merchant: "MPH Bookstore", amount: 62.5, currency: "MYR", date: "2026-03-19", category: "Shopping", tax: 3.5, city: "Kuala Lumpur", country: "Malaysia", items: [{ name: "Novel", price: 37.67 }, { name: "Notebook", price: 21.33 }] },
   { merchant: "GNC", amount: 88, currency: "MYR", date: "2026-03-25", category: "Health", tax: 5, city: "Kuala Lumpur", country: "Malaysia", note: "Vitamins", items: [{ name: "Multivitamin bottle", price: 54.71 }, { name: "Protein bar", price: 9.43, quantity: 3 }] },
+  // 6-month coverage from this date lands just inside the 30-day "expiring
+  // soon" window as of when this file was written (early Sept 2026) — so a
+  // fresh signup's Warranty Claims tile and expiry bell aren't empty on
+  // first login. The descaler is left untagged, same mixed-item shape as
+  // the IKEA receipt above.
+  { merchant: "Courts", amount: 109, currency: "MYR", date: "2026-03-17", category: "Home & Furniture", tax: 6.2, city: "Kuala Lumpur", country: "Malaysia", note: "New kettle", items: [{ name: "Electric Kettle", price: 89.9, isWarrantyClaim: true, warrantyMonths: 6 }, { name: "Kettle descaler", price: 12.9 }] },
 ];

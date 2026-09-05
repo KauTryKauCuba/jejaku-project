@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ComponentType, type CSSProperties } from "react";
+import Link from "next/link";
 import { Lock, Hourglass } from "@phosphor-icons/react";
 import ReceiptIllustration from "./ReceiptIllustration";
 import { useProfile } from "../lib/useProfile";
@@ -28,6 +29,10 @@ export default function ProjectCard({
     body: string;
     shortBody?: string;
     url?: string;
+    /** Where "Learn more" goes — separate from `url` (which is gated on
+     * being logged in) since this is meant to be readable by anyone. No
+     * link at all (Jejaku Tree, for now) just renders an inert button. */
+    learnMoreUrl?: string;
     illustration?: ComponentType;
     accent?: Accent;
   };
@@ -115,6 +120,30 @@ export default function ProjectCard({
           <Lock size={13} weight="light" />
           Log in to use
         </span>
+      )}
+
+      {/* Shows for every project regardless of login/url state (including
+          "Coming soon" ones like Jejaku Tree), since it's meant to link to
+          a project's own info rather than gate on using it. Solid-filled
+          with bg-primary/text-on-primary, same as the CTA above — reads
+          the same accent-scoped tokens, so it's Jejaku Receipt's blue on
+          that card and jejaku's teal on Jejaku Tree's, automatically.
+          Renders as an inert button (no destination yet) when a project
+          has no learnMoreUrl set — Jejaku Tree, for now. */}
+      {project.learnMoreUrl ? (
+        <Link
+          href={project.learnMoreUrl}
+          className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+        >
+          Learn more
+        </Link>
+      ) : (
+        <button
+          type="button"
+          className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+        >
+          Learn more
+        </button>
       )}
     </div>
   );

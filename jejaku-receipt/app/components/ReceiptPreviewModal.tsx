@@ -1,9 +1,10 @@
 "use client";
 
-import { Camera, Shield, Users } from "@phosphor-icons/react";
+import { Camera, FilePdf, Shield, Users } from "@phosphor-icons/react";
 import { formatCurrency, lineTotal, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
-import { formatWarrantyStatus, warrantyStatus } from "../lib/warranty";
+import { formatWarrantyStatus, warrantyClaimStatuses } from "../lib/warranty";
+import { downloadClaimKit } from "../lib/claimKit";
 import Modal from "./Modal";
 
 export default function ReceiptPreviewModal({
@@ -15,8 +16,7 @@ export default function ReceiptPreviewModal({
   receiptNumber: string;
   onClose: () => void;
 }) {
-  const status = warrantyStatus(expense);
-  const warrantyLabel = formatWarrantyStatus(status);
+  const claimStatuses = warrantyClaimStatuses(expense);
   const location = [expense.city, expense.state, expense.country].filter(Boolean).join(", ");
 
   return (
@@ -40,7 +40,7 @@ export default function ReceiptPreviewModal({
         <div className="min-w-0">
           <p className="flex items-center gap-[5px] text-[15px] font-light tracking-[-0.19px] text-ink">
             <span className="truncate">{expense.merchant}</span>
-            {expense.isWarrantyClaim && (
+            {claimStatuses.length > 0 && (
               <Shield size={13} weight="fill" className="shrink-0 text-primary" aria-label="Warranty claim" />
             )}
             {expense.split && expense.split.people.length > 0 && (
@@ -62,18 +62,12 @@ export default function ReceiptPreviewModal({
         </p>
       </div>
 
-      {(expense.tax !== undefined || warrantyLabel || (expense.split && expense.split.people.length > 0)) && (
+      {(expense.tax !== undefined || (expense.split && expense.split.people.length > 0)) && (
         <div className="mt-[11px] flex flex-col gap-[6px] border-t border-hairline pt-[11px] text-[12px] text-ink-mute">
           {expense.tax !== undefined && (
             <div className="flex items-center justify-between">
               <span>Tax</span>
               <span className="tabular text-ink">{formatCurrency(expense.tax, expense.currency)}</span>
-            </div>
-          )}
-          {warrantyLabel && (
-            <div className="flex items-center justify-between">
-              <span>Warranty</span>
-              <span className={status.kind === "expired" ? "text-error" : "text-ink"}>{warrantyLabel}</span>
             </div>
           )}
           {expense.split && expense.split.people.length > 0 && (
@@ -85,16 +79,46 @@ export default function ReceiptPreviewModal({
         </div>
       )}
 
+      {claimStatuses.length > 0 && (
+        <div className="mt-[11px] flex flex-col gap-[8px] border-t border-hairline pt-[11px]">
+          <p className="text-[11px] font-medium uppercase tracking-[0.1px] text-ink-mute">Warranty</p>
+          {claimStatuses.map(({ claim, status }) => {
+            const label = formatWarrantyStatus(status);
+            return (
+              <div key={claim.key} className="flex items-center justify-between gap-[11px] text-[12px]">
+                <div className="min-w-0">
+                  <p className="truncate text-ink">{claim.label}</p>
+                  {label && <p className={status.kind === "expired" ? "text-error" : "text-ink-mute"}>{label}</p>}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => downloadClaimKit(expense, claim)}
+                  className="flex h-[28px] shrink-0 items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[11px] text-[12px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+                >
+                  <FilePdf size={13} weight="light" />
+                  Claim Kit
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {expense.items && expense.items.length > 0 && (
         <div className="mt-[11px] border-t border-hairline pt-[11px]">
           <p className="text-[11px] font-medium uppercase tracking-[0.1px] text-ink-mute">Items</p>
           <ul className="mt-[8px] flex flex-col divide-y divide-hairline">
             {expense.items.map((item, i) => (
-              <li key={i} className="flex items-center justify-between gap-[11px] py-[6px] text-[13px]">
-                <span className="min-w-0 truncate text-ink">
-                  {item.name}
-                  {item.quantity && item.quantity !== 1 && (
-                    <span className="text-ink-mute"> ×{item.quantity}</span>
+              <li key={item.id ?? i} className="flex items-center justify-between gap-[11px] py-[6px] text-[13px]">
+                <span className="flex min-w-0 items-center gap-[5px]">
+                  <span className="truncate text-ink">
+                    {item.name}
+                    {item.quantity && item.quantity !== 1 && (
+                      <span className="text-ink-mute"> ×{item.quantity}</span>
+                    )}
+                  </span>
+                  {item.isWarrantyClaim && (
+                    <Shield size={11} weight="fill" className="shrink-0 text-primary" aria-label="Warranty claim" />
                   )}
                 </span>
                 <span className="tabular shrink-0 text-ink-mute">

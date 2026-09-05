@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
-import { formatWarrantyStatus, warrantyStatus } from "../lib/warranty";
+import { formatWarrantyStatus, warrantyClaimsFor, warrantyClaimStatuses, type WarrantyStatus } from "../lib/warranty";
 import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
 import { downloadPdf } from "../lib/exportPdf";
 import { useCategories, useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
@@ -91,12 +91,12 @@ export default function ReceiptsList({
     [expenses]
   );
 
-  const hasWarrantyClaims = expenses.some((e) => e.isWarrantyClaim);
+  const hasWarrantyClaims = expenses.some((e) => warrantyClaimsFor(e).length > 0);
   const trimmedSearch = search.trim().toLowerCase();
   const hasActiveFilters =
     filterable && (trimmedSearch !== "" || categoryFilter !== ALL_CATEGORIES || dateFrom !== "" || dateTo !== "");
   const visibleExpenses = sortedExpenses.filter((e) => {
-    if (warrantyOnly && !e.isWarrantyClaim) return false;
+    if (warrantyOnly && warrantyClaimsFor(e).length === 0) return false;
     if (!filterable) return true;
     if (trimmedSearch) {
       const matchesMerchant = e.merchant.toLowerCase().includes(trimmedSearch);
@@ -283,7 +283,33 @@ export default function ReceiptsList({
         </div>
       ) : (
         <ul className="mt-[15px] flex flex-col divide-y divide-hairline">
-          {pageExpenses.map((e) => (
+          {pageExpenses.map((e) => {
+            // Picks one status to headline the row with: an expired claim
+            // first (most worth noticing), then whichever active claim
+            // expires soonest, falling back to any claim with no coverage
+            // length at all — same priority a single-claim receipt already
+            // showed, extended to "which of several claims matters most".
+            const claimStatuses = warrantyClaimStatuses(e);
+            const expired = claimStatuses.find(({ status }) => status.kind === "expired");
+            const soonestActive = claimStatuses
+              .filter(
+                (
+                  cs
+                ): cs is { claim: (typeof claimStatuses)[number]["claim"]; status: Extract<WarrantyStatus, { kind: "active" }> } =>
+                  cs.status.kind === "active"
+              )
+              .sort((a, b) => a.status.daysLeft - b.status.daysLeft)[0];
+            const headline = expired ?? soonestActive ?? claimStatuses[0];
+            const headlineText = headline ? formatWarrantyStatus(headline.status) : null;
+            const warrantyLabel =
+              claimStatuses.length > 1
+                ? headlineText
+                  ? `${claimStatuses.length} items · ${headlineText}`
+                  : `${claimStatuses.length} items tracked`
+                : headlineText;
+            const warrantyIsExpired = headline?.status.kind === "expired";
+
+            return (
             <li key={e.id}>
               {/* Padding and the rounded hover highlight live on this inner
                   div, not the li, so the highlight can be rounded without
@@ -308,7 +334,7 @@ export default function ReceiptsList({
                 <div className="min-w-0">
                   <p className="flex min-w-0 items-center gap-[5px] text-[13px] font-medium text-ink">
                     <span className="truncate">{e.merchant}</span>
-                    {e.isWarrantyClaim && (
+                    {claimStatuses.length > 0 && (
                       <Shield
                         size={12}
                         weight="fill"
@@ -328,17 +354,12 @@ export default function ReceiptsList({
                   <p className="text-[11px] text-ink-mute">
                     {e.category} · {withWeekday(e.date)} · <span className="tabular">{receiptNumber(e.id)}</span>
                     {e.split && e.split.people.length > 0 && ` · Split ${e.split.people.length} ways`}
-                    {(() => {
-                      const status = warrantyStatus(e);
-                      const label = formatWarrantyStatus(status);
-                      if (!label) return null;
-                      return (
-                        <>
-                          {" · "}
-                          <span className={status.kind === "expired" ? "text-error" : undefined}>{label}</span>
-                        </>
-                      );
-                    })()}
+                    {warrantyLabel && (
+                      <>
+                        {" · "}
+                        <span className={warrantyIsExpired ? "text-error" : undefined}>{warrantyLabel}</span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -401,7 +422,8 @@ export default function ReceiptsList({
               ))}
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

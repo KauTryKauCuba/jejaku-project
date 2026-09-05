@@ -40,6 +40,33 @@ describe("expensesToCsv", () => {
     expect(row).toContain(",,,,");
   });
 
+  it("ignores the receipt-level flag and reads item-level tags instead, once any item is tagged", () => {
+    const csv = expensesToCsv([
+      baseExpense({
+        isWarrantyClaim: true,
+        warrantyMonths: 24, // stale whole-receipt tag from before item-level tagging existed
+        items: [{ name: "Kettle", price: 20, isWarrantyClaim: true, warrantyMonths: 12 }],
+      }),
+    ]);
+    const row = csv.split("\r\n")[1];
+    expect(row).toContain(",Yes,12,2027-01-15,");
+  });
+
+  it("lists each tagged item by name in the coverage/expiry cells when more than one is tagged", () => {
+    const csv = expensesToCsv([
+      baseExpense({
+        items: [
+          { name: "Kettle", price: 20, isWarrantyClaim: true, warrantyMonths: 12 },
+          { name: "Phone case", price: 5 }, // untagged, excluded
+          { name: "USB cable", price: 8, isWarrantyClaim: true }, // tagged, no length picked
+        ],
+      }),
+    ]);
+    const row = csv.split("\r\n")[1];
+    expect(row).toContain("Kettle: 12; USB cable: —");
+    expect(row).toContain("Kettle: 2027-01-15; USB cable: —");
+  });
+
   it("includes the Items column in the header", () => {
     const csv = expensesToCsv([]);
     const header = csv.replace(/^﻿/, "").split("\r\n")[0];

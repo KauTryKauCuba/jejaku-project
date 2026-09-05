@@ -28,6 +28,7 @@ import SiteFooter from "./SiteFooter";
 import ValuesSpecsTabs from "./ValuesSpecsTabs";
 import { useProfile } from "../lib/useProfile";
 import { formatIsoMinute } from "../lib/formatIso";
+import { receiptUrl } from "../lib/receiptUrl";
 
 const VALUES = [
   {
@@ -92,6 +93,10 @@ const PROJECTS = [
       "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction.",
     body: "A receipt scanner that turns a photo into structured expense data, powered by AI vision extraction. Tried Groq, Gemini, Mistral OCR, locally-hosted Qwen and DeepSeek, PaddleOCR, Moondream, and Tesseract first — landed on this instead. Free to try.",
     url: `${process.env.NEXT_PUBLIC_RECEIPT_URL}/dashboard`,
+    // Separate from `url` above — that one's the logged-in "use it" CTA
+    // (straight to /dashboard); this is "Learn more", open to anyone,
+    // landing on jejaku-receipt's own public marketing page instead.
+    learnMoreUrl: receiptUrl("/"),
     illustration: ReceiptIllustration,
     // Jejaku Receipt's own blue theme (its app/globals.css), not jejaku's
     // teal — this card is a preview of that sibling app, so it borrows its

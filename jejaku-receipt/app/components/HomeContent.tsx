@@ -1,85 +1,19 @@
 "use client";
 
-import {
-  Brain,
-  Compass,
-  Lightbulb,
-  UsersThree,
-  Plant,
-  Cpu,
-  GraphicsCard,
-  Memory,
-  HardDrive,
-  Terminal,
-  ClipboardText,
-  Browsers,
-  Hourglass,
-} from "@phosphor-icons/react/dist/ssr";
+import { ClipboardText, Browsers, Hourglass } from "@phosphor-icons/react/dist/ssr";
 import HeroAuthCard from "./HeroAuthCard";
 import FlowLines from "./FlowLines";
 import IconFlowBadge from "./IconFlowBadge";
 import ProjectCard from "./ProjectCard";
-import PixelFaceIcon from "./PixelFaceIcon";
-import TechLogo from "./TechLogo";
 import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
-import ValuesSpecsTabs from "./ValuesSpecsTabs";
 import { useProfile } from "../lib/useProfile";
 import { formatIsoMinute } from "../lib/formatIso";
 
-const VALUES = [
-  {
-    icon: Compass,
-    title: "Curiosity first, product second",
-    body: "Every project here starts as a question I can't let go of. The project is just what's left after I find out.",
-  },
-  {
-    icon: Brain,
-    title: "The exploring is the point",
-    body: "I don't settle on the first tool that works. I'll try the paid option, the free one, and a couple local ones before I trust which is actually right for the job.",
-  },
-  {
-    icon: Lightbulb,
-    title: "No cost, no catch",
-    body: "Whatever I find out, I ship for free — to use, copy, or take apart.",
-  },
-  {
-    icon: UsersThree,
-    title: "Conversations started this",
-    body: "None of this began with me. Talking to people who shared what they knew or thought out loud is what sparked the questions — so I'm just passing that along.",
-  },
-  {
-    icon: Plant,
-    title: "For the habit, not the title",
-    body: "I'm not trying to be the best at this, or make it my career. I'm just building a habit worth keeping — learn something, hold onto it, put it to use, pass it on.",
-  },
-  {
-    icon: PixelFaceIcon,
-    title: "Your time is limited",
-    body: "“Your time is limited, so don't waste it living someone else's life.” — Steve Jobs",
-  },
-];
-
-const SPECS = [
-  { icon: Cpu, label: "CPU", value: "Intel i7-7700HQ @ 2.80GHz", detail: "4 cores / 8 threads, Kaby Lake" },
-  { icon: GraphicsCard, label: "GPU", value: "GTX 1050 Mobile (4GB)", detail: "+ Intel HD Graphics 630, hybrid" },
-  { icon: Memory, label: "RAM", value: "16GB", detail: "15Gi usable" },
-  { icon: HardDrive, label: "Storage", value: "223.6GB NVMe SSD", detail: "Kingston SA1000M8240G" },
-  { icon: Terminal, label: "OS", value: "Ubuntu 24.04.4 LTS", detail: "Linux 6.8.0-138-generic" },
-];
-
-const STACK = [
-  { logo: "nextdotjs", label: "Framework", value: "Next.js", detail: "App Router, React Server Components" },
-  { logo: "postgresql", label: "Database", value: "PostgreSQL", detail: "Self-hosted, on the box above" },
-  { logo: "cloudflare", label: "Networking", value: "Cloudflare Tunnel", detail: "No open ports, no exposed IP" },
-  { logo: "nginx", label: "Reverse proxy", value: "nginx", detail: "Sits in front of the app" },
-  { logo: "drizzle", label: "ORM", value: "Drizzle Kit", detail: "Migrations and schema, typed" },
-  { logo: "tailwindcss", label: "Styling", value: "Tailwind CSS", detail: "Utility-first, design tokens on top" },
-  { logo: "typescript", label: "Language", value: "TypeScript", detail: "Everywhere, no exceptions" },
-  { logo: "git", label: "Source control", value: "Git", detail: "Self-hosted + GitHub mirrors" },
-  { logo: "claude", label: "Pair programmer", value: "Claude Code", detail: "Most of this site, written with it" },
-];
-
+// Still referenced below only by the (currently unreachable in this app —
+// see the isDashboard branches further down) dashboard variant, kept for
+// parity with jejaku's own copy of this component, where that variant is
+// actually used.
 const PROJECTS = [
   {
     tag: "beta",
@@ -222,91 +156,6 @@ export default function HomeContent({
           </section>
         )}
       </div>
-
-      {!isDashboard && (
-        <section id="projects" className="bg-canvas py-[91px]">
-          <div className="mx-auto max-w-6xl px-[23px]">
-            {projectsHeading}
-            {projectsGrid}
-          </div>
-        </section>
-      )}
-
-      {/* Values / Specs tabs */}
-      {!isDashboard && (
-      <section className="bg-gradient-to-b from-canvas via-canvas-soft to-canvas-soft py-[91px]">
-        <div className="mx-auto max-w-6xl px-[23px]">
-          <ValuesSpecsTabs
-            valuesContent={
-              <div className="grid gap-[23px] md:grid-cols-3">
-                {VALUES.map(({ icon: Icon, title, body }, i) => (
-                  <div
-                    key={title}
-                    className="rounded-lg border border-hairline bg-canvas p-[30px]"
-                  >
-                    <IconFlowBadge size={57} seed={i + 1}>
-                      <Icon size={22} weight="light" />
-                    </IconFlowBadge>
-                    <h3 className="mt-[23px] text-[19px] font-light tracking-[-0.19px] text-ink">
-                      {title}
-                    </h3>
-                    <p className="mt-[8px] text-[14px] leading-relaxed text-ink-mute">
-                      {body}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            }
-            specsContent={
-              <div className="grid gap-[23px] md:grid-cols-3">
-                {SPECS.map(({ icon: Icon, label, value, detail }, i) => (
-                  <div
-                    key={label}
-                    className="rounded-lg border border-hairline bg-canvas p-[30px]"
-                  >
-                    <IconFlowBadge size={57} seed={i + 1}>
-                      <Icon size={22} weight="light" />
-                    </IconFlowBadge>
-                    <p className="mt-[23px] text-[12px] font-medium uppercase tracking-[0.1px] text-ink-mute">
-                      {label}
-                    </p>
-                    <p className="tabular mt-[4px] text-[19px] font-light tracking-[-0.19px] text-ink">
-                      {value}
-                    </p>
-                    <p className="mt-[8px] text-[14px] leading-relaxed text-ink-mute">
-                      {detail}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            }
-            stackContent={
-              <div className="grid gap-[23px] md:grid-cols-3">
-                {STACK.map(({ logo, label, value, detail }, i) => (
-                  <div
-                    key={label}
-                    className="rounded-lg border border-hairline bg-canvas p-[30px]"
-                  >
-                    <IconFlowBadge size={57} seed={i + 1}>
-                      <TechLogo slug={logo} label={value} size={22} />
-                    </IconFlowBadge>
-                    <p className="mt-[23px] text-[12px] font-medium uppercase tracking-[0.1px] text-ink-mute">
-                      {label}
-                    </p>
-                    <p className="mt-[4px] text-[19px] font-light tracking-[-0.19px] text-ink">
-                      {value}
-                    </p>
-                    <p className="mt-[8px] text-[14px] leading-relaxed text-ink-mute">
-                      {detail}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            }
-          />
-        </div>
-      </section>
-      )}
 
       {/* Cream interlude */}
       {!isDashboard && (
