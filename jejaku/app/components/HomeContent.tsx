@@ -218,6 +218,7 @@ export default function HomeContent({
           key={project.title}
           project={project}
           collapsible={isDashboard}
+          showLearnMore={!isDashboard}
         />
       ))}
     </div>

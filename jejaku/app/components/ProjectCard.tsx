@@ -22,6 +22,7 @@ type Accent = {
 export default function ProjectCard({
   project,
   collapsible = false,
+  showLearnMore = true,
 }: {
   project: {
     tag: string;
@@ -37,6 +38,10 @@ export default function ProjectCard({
     accent?: Accent;
   };
   collapsible?: boolean;
+  /** Off on the signed-in dashboard — "Use this system" is already the
+   * card's whole point there, so a second "go read about it" button next
+   * to it is redundant in a way it isn't on the public landing page. */
+  showLearnMore?: boolean;
 }) {
   const { loggedIn } = useProfile();
   const [expanded, setExpanded] = useState(false);
@@ -124,27 +129,30 @@ export default function ProjectCard({
 
       {/* Shows for every project regardless of login/url state (including
           "Coming soon" ones like Jejaku Tree), since it's meant to link to
-          a project's own info rather than gate on using it. Solid-filled
-          with bg-primary/text-on-primary, same as the CTA above — reads
-          the same accent-scoped tokens, so it's Jejaku Receipt's blue on
-          that card and jejaku's teal on Jejaku Tree's, automatically.
-          Renders as an inert button (no destination yet) when a project
-          has no learnMoreUrl set — Jejaku Tree, for now. */}
-      {project.learnMoreUrl ? (
-        <Link
-          href={project.learnMoreUrl}
-          className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
-        >
-          Learn more
-        </Link>
-      ) : (
-        <button
-          type="button"
-          className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
-        >
-          Learn more
-        </button>
-      )}
+          a project's own info rather than gate on using it — except on
+          the dashboard (showLearnMore=false), where it'd just duplicate
+          "Use this system". Solid-filled with bg-primary/text-on-primary,
+          same as the CTA above — reads the same accent-scoped tokens, so
+          it's Jejaku Receipt's blue on that card and jejaku's teal on
+          Jejaku Tree's, automatically. Renders as an inert button (no
+          destination yet) when a project has no learnMoreUrl set —
+          Jejaku Tree, for now. */}
+      {showLearnMore &&
+        (project.learnMoreUrl ? (
+          <Link
+            href={project.learnMoreUrl}
+            className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+          >
+            Learn more
+          </Link>
+        ) : (
+          <button
+            type="button"
+            className="mt-[8px] flex h-[37px] w-full items-center justify-center rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
+          >
+            Learn more
+          </button>
+        ))}
     </div>
   );
 }
