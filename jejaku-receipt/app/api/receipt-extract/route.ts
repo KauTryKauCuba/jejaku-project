@@ -1,5 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
-import { EXPENSE_CATEGORIES, lineTotal, normalizeItems, type ExpenseItem } from "../../lib/expenses";
+import { EXPENSE_CATEGORIES, normalizeItems, type ExpenseItem } from "../../lib/expenses";
+import { computeItemsMismatch } from "../../lib/receiptSanity";
+import { getCurrentUser } from "../../lib/currentUser";
+import { MAX_UPLOAD_SIZE_BYTES } from "../../lib/uploads";
+
+// This is the one route in the app that bills a real per-call cost
+// (DeepSeek vision) and — unlike every other mutating route — had no auth
+// check at all: the endpoint ships in the client bundle, so it's public
+// surface, not a secret URL. `getCurrentUser` is the real gate (raises the
+// bar from "anyone with curl" to "a verified, otp-confirmed account"); the
+// two checks below it are hardening behind that gate, not the primary
+// defense.
+
+// Soft per-user cap on scans per calendar day, to catch a runaway loop or
+// a compromised session rather than to be an airtight quota. In-memory
+// and scoped to this server process — same tradeoff as exchangeRates.ts's
+// rate cache — so it resets on a deploy/restart; that's rare and fine for
+// a cap this generous (no real user comes close to it in a day).
+const DAILY_SCAN_LIMIT = 50;
+const scanCountsByUser = new Map<string, { day: string; count: number }>();
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Returns false once a user has hit today's cap; otherwise records this
+// scan against their count and returns true.
+function recordScanAndCheckLimit(userId: string): boolean {
+  const day = todayKey();
+  const entry = scanCountsByUser.get(userId);
+  if (!entry || entry.day !== day) {
+    scanCountsByUser.set(userId, { day, count: 1 });
+    return true;
+  }
+  if (entry.count >= DAILY_SCAN_LIMIT) return false;
+  entry.count += 1;
+  return true;
+}
 
 type Extracted = {
   merchant: string | null;
@@ -13,29 +50,38 @@ type Extracted = {
   tax: number | null;
   items: ExpenseItem[];
   // True when the extracted items + tax don't reasonably add up to the
-  // extracted amount — a red flag that something was misread (e.g. the
-  // per-unit-price/quantity bug this was added to catch), surfaced to the
-  // user instead of silently pre-filling numbers that don't reconcile.
+  // extracted amount — see computeItemsMismatch in lib/receiptSanity.ts.
   itemsMismatch: boolean;
 };
-
-// Generous on purpose: legitimate receipts often have a discount, service
-// charge, or rounding line that isn't captured in items/tax, so this only
-// needs to catch gross misreads (like a 2x pricing error), not nitpick
-// every few cents.
-function computeItemsMismatch(items: ExpenseItem[], tax: number | null, amount: number | null): boolean {
-  if (items.length === 0 || amount === null) return false;
-  const itemsTotal = items.reduce((sum, item) => sum + lineTotal(item), 0);
-  const expected = itemsTotal + (tax ?? 0);
-  return Math.abs(expected - amount) > Math.max(1, amount * 0.08);
-}
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
 export async function POST(req: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { image } = (await req.json()) as { image?: string };
   if (!image) {
     return NextResponse.json({ error: "Missing image" }, { status: 400 });
+  }
+
+  // Rough decoded size from the base64 payload's own length (~4/3 the size
+  // of the bytes it encodes) rather than actually decoding it — cheap, and
+  // precise enough for a ceiling. Mirrors the size cap saveExpensePhoto
+  // enforces on an uploaded file, so this route can't be used to bill
+  // DeepSeek for an image far larger than anything the app would ever
+  // actually store.
+  const commaIndex = image.indexOf(",");
+  const base64Payload = commaIndex === -1 ? image : image.slice(commaIndex + 1);
+  const approxDecodedBytes = (base64Payload.length * 3) / 4;
+  if (approxDecodedBytes > MAX_UPLOAD_SIZE_BYTES) {
+    return NextResponse.json({ error: "Image is too large." }, { status: 413 });
+  }
+
+  if (!recordScanAndCheckLimit(user.id)) {
+    return NextResponse.json({ error: "Daily scan limit reached. Try again tomorrow." }, { status: 429 });
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;

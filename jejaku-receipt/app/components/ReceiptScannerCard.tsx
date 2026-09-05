@@ -61,6 +61,12 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   const [error, setError] = useState<string | undefined>(undefined);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<Extracted | null>(null);
+  // Set when the extraction request itself didn't succeed (blocked, or
+  // never reached the server) — distinct from `extracted` coming back
+  // well-formed but low-confidence (extractionFoundNothing/itemsMismatch
+  // below), which is a different message. Previously this case fell
+  // through silently to a blank form with no explanation.
+  const [extractError, setExtractError] = useState<string | undefined>(undefined);
   const [splitTarget, setSplitTarget] = useState<Expense | null>(null);
 
   const revokePreview = () => {
@@ -83,12 +89,18 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     setPhoto(null);
     setPreviewKind(null);
     setExtracted(null);
+    setExtractError(undefined);
     setMode("details");
   };
 
-  const handleCameraCapture = async (file: File) => {
-    applyFile(file, "image");
+  // Shared by the camera and "Import photo" paths — both end up holding a
+  // File the same way, and extraction doesn't care where it came from.
+  // PDF import deliberately doesn't call this: DeepSeek's vision model
+  // can't read a PDF directly, so that would need a render-to-image step
+  // this doesn't have yet.
+  const runExtraction = async (file: File) => {
     setExtracted(null);
+    setExtractError(undefined);
     setExtracting(true);
     try {
       const dataUrl = await fileToDataUrl(file);
@@ -99,13 +111,36 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
       });
       if (res.ok) {
         setExtracted((await res.json()) as Extracted);
+      } else {
+        // Extraction is a convenience, not a blocker — the form below still
+        // works with everything filled in by hand — but a blocked/failed
+        // request used to fall through silently with no explanation at
+        // all, indistinguishable from "nothing was ever attempted".
+        setExtractError(
+          res.status === 429
+            ? "Daily scan limit reached — enter this receipt manually, or try again tomorrow."
+            : res.status === 413
+              ? "That photo is too large to scan — try a smaller one, or enter it manually."
+              : res.status === 401
+                ? "Your session expired — refresh the page and sign in again to use Quick Scan."
+                : "Couldn't reach the scanner — enter this receipt manually."
+        );
       }
     } catch {
-      // Extraction is a convenience — leave the form blank on failure
-      // rather than blocking the user from entering the receipt manually.
+      setExtractError("Couldn't reach the scanner — check your connection, or enter this receipt manually.");
     } finally {
       setExtracting(false);
     }
+  };
+
+  const handleCameraCapture = (file: File) => {
+    applyFile(file, "image");
+    runExtraction(file);
+  };
+
+  const handlePhotoImport = (file: File) => {
+    applyFile(file, "image");
+    runExtraction(file);
   };
 
   const reset = () => {
@@ -113,6 +148,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     setPhoto(null);
     setPreviewKind(null);
     setExtracted(null);
+    setExtractError(undefined);
     setExtracting(false);
     setMode("idle");
     if (photoInputRef.current) photoInputRef.current.value = "";
@@ -125,6 +161,8 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     date: string;
     category: ExpenseCategory;
     tax?: number;
+    isWarrantyClaim?: boolean;
+    warrantyMonths?: number;
     note?: string;
     city?: string;
     state?: string;
@@ -166,7 +204,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) applyFile(file, "image");
+          if (file) handlePhotoImport(file);
         }}
       />
       <input
@@ -332,22 +370,25 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
           <p
             className={
-              !extracting && extracted && (extractionFoundNothing(extracted) || extracted.itemsMismatch)
+              !extracting &&
+              (extractError || (extracted && (extractionFoundNothing(extracted) || extracted.itemsMismatch)))
                 ? "mt-[15px] text-[12px] text-error"
                 : "mt-[15px] text-[12px] text-ink-mute"
             }
           >
             {extracting
               ? "Reading the receipt…"
-              : extracted
-                ? extractionFoundNothing(extracted)
-                  ? "Couldn't read this as a receipt — try again with a clearer photo, or fill in the details yourself below."
-                  : extracted.itemsMismatch
-                    ? "Item prices don't quite add up to the total — double-check quantities and prices below before saving."
-                    : "Details auto-filled from the receipt — check them before saving."
-                : previewKind
-                  ? "Fill in the details below."
-                  : "Enter the expense details below."}
+              : extractError
+                ? extractError
+                : extracted
+                  ? extractionFoundNothing(extracted)
+                    ? "Couldn't read this as a receipt — try again with a clearer photo, or fill in the details yourself below."
+                    : extracted.itemsMismatch
+                      ? "Item prices don't quite add up to the total — double-check quantities and prices below before saving."
+                      : "Details auto-filled from the receipt — check them before saving."
+                  : previewKind
+                    ? "Fill in the details below."
+                    : "Enter the expense details below."}
           </p>
           <div className="mt-[8px]">
             {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}

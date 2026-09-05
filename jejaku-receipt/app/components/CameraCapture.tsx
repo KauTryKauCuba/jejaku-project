@@ -245,6 +245,13 @@ export default function CameraCapture({
             <p className="max-w-[30ch] text-center text-[12px] font-medium text-canvas">
               Lay it flat, keep the whole receipt in frame, and make sure it&apos;s well lit
             </p>
+            {/* The one AI call in this app that happens on a photo — sent
+                to DeepSeek to read it, not stored there. Anywhere else a
+                receipt image is added (import photo/PDF, manual entry) it
+                stays local, no AI call. */}
+            <p className="max-w-[30ch] text-center text-[11px] text-canvas/70">
+              This photo is sent to DeepSeek to read it — not stored there.
+            </p>
             <button
               type="button"
               onClick={capture}
