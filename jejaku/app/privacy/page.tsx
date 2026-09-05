@@ -53,20 +53,31 @@ export default function PrivacyPage() {
               city/state/country, currency), any receipt photos you upload, and your default
               currency.
             </p>
+            <p className="mt-[8px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              Standard connection details (like IP address and browser type) are also visible to
+              the infrastructure in front of this site, the same as with any website — see Third
+              parties below.
+            </p>
           </div>
 
           <div>
-            <h2 className="text-[18px] font-medium text-ink">How it&apos;s used</h2>
+            <h2 className="text-[18px] font-medium text-ink">How it&apos;s used, and why</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               Only to run the features you&apos;re actually using — showing your own expenses
-              back to you, pre-filling a form from a scanned receipt, keeping you signed in. Not
-              used for advertising, not sold, not shared with data brokers.
+              back to you, pre-filling a form from a scanned receipt, keeping you signed in. Every
+              use above ties directly to something you asked the app to do; none of it is used for
+              advertising, profiling, or sold or shared with data brokers.
             </p>
           </div>
 
           <div>
             <h2 className="text-[18px] font-medium text-ink">Third parties involved</h2>
-            <ul className="mt-[11px] flex max-w-[65ch] flex-wrap gap-[19px]">
+            <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              A handful of specialized services are involved in running this site — sign-in,
+              sending the email code, reading a scanned receipt, and standard network/security
+              infrastructure. Each only sees what it needs to do its one job.
+            </p>
+            <ul className="mt-[15px] flex max-w-[65ch] flex-wrap gap-[19px]">
               <li className="flex items-center gap-[8px]">
                 <TechLogo slug="google" label="Google" size={18} />
                 <span className="text-[14px] font-medium text-ink">Google</span>
@@ -84,14 +95,26 @@ export default function PrivacyPage() {
                 <span className="text-[14px] font-medium text-ink">Cloudflare</span>
               </li>
             </ul>
+            <p className="mt-[15px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              These services may process data outside your own country — each operates under its
+              own privacy policy and security practices, which this page doesn&apos;t control.
+            </p>
           </div>
 
           <div>
             <h2 className="text-[18px] font-medium text-ink">Where your data lives</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
-              On the developer&apos;s own server — a self-hosted Postgres database, not a
-              third-party cloud database vendor — and receipt photos are stored on that same
-              server&apos;s disk.
+              In a private database and file storage, not a third-party cloud data platform —
+              access is restricted to what&apos;s needed to run the service.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-[18px] font-medium text-ink">Security</h2>
+            <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              Traffic to and from this site is encrypted (HTTPS), and sign-in is cookie-based
+              rather than a password you could reuse elsewhere. No system is perfectly secure, but
+              reasonable care is taken with how your data is handled and stored.
             </p>
           </div>
 
@@ -104,11 +127,15 @@ export default function PrivacyPage() {
           </div>
 
           <div>
-            <h2 className="text-[18px] font-medium text-ink">Deleting your data</h2>
+            <h2 className="text-[18px] font-medium text-ink">Data retention &amp; your rights</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
-              In Jejaku Receipt, Settings has a Danger Zone that lets you permanently delete every
-              expense on your account yourself. There&apos;s no self-serve full account deletion
-              yet.
+              Your data is kept for as long as your account exists. In Jejaku Receipt, Settings
+              lets you permanently delete all of your expenses yourself, at any time, and that
+              happens immediately. There&apos;s no self-serve full account deletion yet.
+            </p>
+            <p className="mt-[8px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              You can also ask to see what&apos;s stored about you, or have it corrected, the same
+              way — through the same account you already have.
             </p>
           </div>
 

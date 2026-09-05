@@ -2,12 +2,18 @@
 
 import { useRef, useState } from "react";
 import { CaretLeft, Camera, FilePdf, Image as ImageIcon, PencilSimple, Users, X } from "@phosphor-icons/react";
-import IconFlowBadge from "./IconFlowBadge";
+import ReceiptIllustration from "./ReceiptIllustration";
 import ExpenseForm from "./ExpenseForm";
 import CameraCapture from "./CameraCapture";
 import SplitBillModal from "./SplitBillModal";
 import { formatCurrency, type Expense, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
+import { withWeekday } from "../lib/formatIso";
 import { useAddExpense, useExpenses } from "./ExpensesProvider";
+
+// Bump whenever receipt-extract's prompt, capture pipeline, or sanity
+// checks change meaningfully — a quick visible marker of how current the
+// scan quality is, without digging through the changelog.
+const SCAN_TUNING_DATE = "2026-09-04";
 
 type Mode = "idle" | "camera" | "details" | "split";
 type PreviewKind = "image" | "pdf" | null;
@@ -142,16 +148,16 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
-      <IconFlowBadge size={40} seed={7}>
-        <Camera size={16} weight="light" />
-      </IconFlowBadge>
-
-      <h3 className="mt-[15px] text-[15px] font-light tracking-[-0.19px] text-ink">
+      <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">
         Receipt Scanner
       </h3>
       <p className="mt-[4px] max-w-md text-[12px] leading-relaxed text-ink-mute">
         Snap a receipt, import a file, or enter it yourself.
       </p>
+
+      <div className="mt-[15px]">
+        <ReceiptIllustration />
+      </div>
 
       <input
         ref={photoInputRef}
@@ -194,6 +200,9 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
               Quick Split
             </button>
           </div>
+          <p className="mt-[6px] text-[11px] text-ink-mute">
+            Scan accuracy tuned {withWeekday(SCAN_TUNING_DATE)}
+          </p>
 
           <div className="mt-[15px] flex items-center gap-[11px]">
             <div className="h-px flex-1 bg-hairline" />

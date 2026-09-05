@@ -4,7 +4,7 @@
 
 Jejaku Receipt's marketing pages (landing, roadmap, onboarding) follow Jejaku's own quiet, editorial, light-on-chrome language — gradient hero, flat bordered cards, a pill-shaped auth/onboarding card. The signed-in `/dashboard`, however, is a real product surface, not a portfolio page: it's a proper sidebar + navbar app shell, since this is the one place on either site where "dashboard" isn't just a word — the app actually does something (scan a receipt). See **Dashboard Shell** below; everywhere else, the marketing-page rules still apply: no pricing tables, no dark "product UI" surfaces, gradient mesh confined to a hero band.
 
-The color system centers on **Blue** (`{colors.primary}` — `#1d4ed8`), used sparingly for the single filled pill button per section and for link/label emphasis. **Deep blue-black ink** (`{colors.ink}` — `#0a1826`) is the body text color everywhere — never pure black. Amber, sky-blue, and citrine live only inside the animated gradient mesh blobs and the `IconFlowBadge` accent lines; they never appear as button or text colors.
+The color system centers on **Blue** (`{colors.primary}` — `#1d4ed8`), used sparingly for the single filled pill button per section and for link/label emphasis. **Deep blue-black ink** (`{colors.ink}` — `#0a1826`) is the body text color everywhere — never pure black. Amber, sky-blue, and citrine live only inside the animated gradient mesh blobs, the `IconFlowBadge` accent lines, and the four gradient-watermark dashboard stat cards (see Dashboard Content Components); they never appear as button or text colors.
 
 Typography runs on **Inter** (`next/font/google`, weights 300/400/500/600) with the `ss01` stylistic set enabled globally on `<body>`. Headlines render at weight 300 (font-light) with tight negative tracking; UI text (nav, labels, buttons) sits at 400–600. Numeric/tabular values use the `.tabular` utility (`tnum` + tightened tracking).
 
@@ -32,8 +32,8 @@ Typography runs on **Inter** (`next/font/google`, weights 300/400/500/600) with 
 - **Blue Subdued** (`{colors.primary-subdued}` — `#bfdbfe`): Soft pill-tag background (e.g. the "tool" tag on project cards).
 - **Brand Dark 900** (`{colors.brand-dark-900}` — `#051f3d`): Defined as a token but not currently used in any shipped surface — reserve for a future dark/inverted panel.
 - **Amber** (`{colors.amber}` — `#e8a33d`): Gradient-mesh blob stop only.
-- **Skyline** (`{colors.seafoam}` — `#7fc0e0`): Gradient-mesh blob stop and `IconFlowBadge` flow-line stop.
-- **Citrine** (`{colors.citrine}` — `#c9a227`): Reserved gradient stop; not currently rendered.
+- **Skyline** (`{colors.seafoam}` — `#7fc0e0`): Gradient-mesh blob stop, `IconFlowBadge` flow-line stop, and the Receipts Scanned gradient-watermark stat card's accent.
+- **Citrine** (`{colors.citrine}` — `#c9a227`): The Total Spent gradient-watermark stat card's accent — its first shipped surface, previously reserved with no rendered use.
 
 ### Surface
 - **Canvas** (`{colors.canvas}` — `#ffffff`): Default page background; card background.
@@ -206,6 +206,12 @@ The one departure from the marketing-page pattern, used only on `/dashboard` (`D
 
 **`DashboardStats`** — a 3-up grid (`sm:grid-cols-3`) of stat tiles, same shape as Jejaku's own `dashboardCardsGrid`: `IconFlowBadge` (40px, 16px icon) + uppercase 10–11px label + 15–16px light value + muted detail line. Values are honest zeros (`$0.00`, `0`) until there's a real backend — no fake data.
 
+**Gradient watermark stat cards** (`TotalSpentTile`, `ReceiptsScannedTile`, `TaxRecordsTile`, `WarrantyClaimsTile`) — a deliberate departure from the flat-bordered default (see Elevation & Depth), reserved for exactly these four dashboard stat tiles, each keyed to its own accent, run at full saturation so the four read as clearly distinct colors rather than four pale tints of the same two hue families: Total Spent → `{colors.citrine}`, Receipts Scanned → `{colors.seafoam}`, Tax Records → `{colors.primary}`/`{colors.primary-subdued}`, Warranty Claims → `{colors.amber}`. Structure, all built from `app/lib/iconMaskPaths.ts` + the `.icon-outline-spin` keyframe in `globals.css`:
+- Card background: `bg-gradient-to-br from-{accent}/25 via-canvas to-canvas` — a pale tint of the accent in the top-left corner, fading quickly to plain canvas. All four cards share this exact formula (only the accent and its opacity value vary slightly by design, e.g. Tax Records' `/25`-equivalent split across `primary-subdued`/`canvas` since it has no single accent token) so the set reads as one consistent pattern rather than four different treatments.
+- A large (132px) copy of the tile's own Phosphor icon, "light" weight, oversized and bled off the top-right corner (`-right-[22px] -top-[26px]`) as a watermark — two stacked layers, both using the *same* icon path as a CSS `mask-image` (raw SVG path data, since a React `<Icon>` component can't be embedded in a mask): a static faint fill (the accent color at ~15–20% alpha) for the icon's silhouette, and a stroke-outline mask (accent white on transparent, `stroke-width: 3` in the 256 viewBox) holding a spinning `conic-gradient` (the `.icon-outline-spin` 5s linear rotation) at full-to-partial alpha of the same accent — so the icon reads as filled, with a brighter gradient ring visibly sweeping around its outline. Filled (not stroked) for the base layer specifically because "light"-weight Phosphor paths are already thin bands; stroking that boundary traces both its inner and outer edge and doubles every line.
+- This uses `{colors.citrine}` as a real card surface for the first time (previously reserved/unused — see Colors below) and `{colors.seafoam}` as a full card background for the first time (previously only a gradient-mesh/`IconFlowBadge` accent stop). Note: citrine/amber and seafoam/primary are close enough in hue that at this pale `/25` tint, Total Spent and Warranty Claims (and Receipts Scanned and Tax Records) read as similar colors rather than clearly distinct ones — a known tradeoff of keeping all four cards on the same gradient formula, accepted deliberately over a higher-saturation variant that broke visual consistency with the set.
+- Every other stat/content tile in the app stays flat-bordered, shadow-free, no watermark — this pattern is scoped to these four cards, not a new default.
+
 **`ScanCard`** — the primary dashboard action, not a bare button. A `card-content-flat` container: `IconFlowBadge` + "Scan a receipt" title + a short tip list (lay it flat / keep it in frame / we'll structure it), then the `ScanReceiptButton` pill CTA at the bottom. Instructional copy always precedes the action for anything camera/upload-related — don't ship a bare capture button without it.
 
 **`ScanReceiptButton`** — a hidden `<input type="file" accept="image/*" capture="environment">` behind a `button-primary-pill` labeled "Scan a receipt" with a `Camera` icon. `capture="environment"` opens the device camera directly on mobile; desktop falls back to a normal file picker. On selection, swaps to a preview card (captured image + Retake / discard actions) — client-side only, no upload wired up yet.
@@ -226,7 +232,7 @@ The one departure from the marketing-page pattern, used only on `/dashboard` (`D
 - Don't add drop shadows to cards — the entire site is currently shadow-free by design.
 - Don't bring the sidebar/navbar app-shell pattern into any marketing page (landing, roadmap, onboarding) — it's `/dashboard`-only.
 - Don't add a second filled-blue button in the same view.
-- Don't use `{colors.brand-dark-900}` or `{colors.citrine}` yet — they're reserved tokens with no shipped surface; if you use them, document the new surface here.
+- Don't use `{colors.brand-dark-900}` yet — it's a reserved token with no shipped surface; if you use it, document the new surface here (`{colors.citrine}` is no longer in this category — see Colors above).
 - Don't wrap a popover-holding element (dropdowns, hover cards, tooltips) as a *descendant* of a `.gradient-mesh` box unless that box is guaranteed taller than the popover — `.gradient-mesh` clips overflow. Use it as an absolutely-positioned decorative sibling instead when the wrapper is short (see Dashboard Shell navbar).
 - Don't hardcode spacing to a strict 8px grid — match the existing arbitrary-but-consistent bracket values (23/30/46/61/91px etc.) already in use.
 

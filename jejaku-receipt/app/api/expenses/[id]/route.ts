@@ -8,11 +8,12 @@ import { expenses } from "../../../db/schema";
 import { toExpense } from "../../../db/toExpense";
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseItems, parseSplit } from "../../../lib/expenses";
 import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const PATCH = withApiErrorHandling(async (request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -108,9 +109,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   );
 
   return NextResponse.json(toExpense(row));
-}
+});
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export const DELETE = withApiErrorHandling(async (_request: Request, { params }: { params: Promise<{ id: string }> }) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -134,4 +135,4 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   );
 
   return NextResponse.json({ ok: true });
-}
+});

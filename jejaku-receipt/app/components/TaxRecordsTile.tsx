@@ -7,6 +7,7 @@ import Select from "./Select";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
+import { PERCENT_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
 
 // Tax is saved in the expense's own currency, not a home-currency snapshot
 // like amount is — so it's converted here using that same expense's
@@ -58,19 +59,54 @@ export default function TaxRecordsTile() {
           : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. the period before (${formatCurrency(previousTotal, defaultCurrency)}).`;
 
   return (
-    <div className="flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
-      <div className="flex flex-wrap items-start justify-between gap-[8px]">
-        <IconFlowBadge size={40} seed={4}>
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-primary-subdued via-canvas to-canvas p-[20px]">
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px]"
+        style={{
+          WebkitMaskImage: iconFillMaskDataUri(PERCENT_LIGHT_PATH),
+          maskImage: iconFillMaskDataUri(PERCENT_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+          backgroundColor: "rgba(29,78,216,0.14)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px] overflow-hidden"
+        style={{
+          WebkitMaskImage: iconStrokeMaskDataUri(PERCENT_LIGHT_PATH),
+          maskImage: iconStrokeMaskDataUri(PERCENT_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+        aria-hidden="true"
+      >
+        <div
+          className="icon-outline-spin absolute inset-[-50%]"
+          style={{ background: "conic-gradient(from 0deg, #1d4ed8, #3b82f6, #7fc0e0, #1d4ed8)" }}
+        />
+      </div>
+
+      <div className="relative flex flex-wrap items-start justify-between gap-[8px]">
+        <IconFlowBadge size={40}>
           <Percent size={16} weight="light" />
         </IconFlowBadge>
         <div className="w-[124px] shrink-0">
           <Select value={range} options={RANGE_OPTIONS} onChange={setRange} />
         </div>
       </div>
-      <p className="mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
+      <p className="relative mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
         Tax Records
       </p>
-      <p className="mt-[3px] flex items-center gap-[4px] text-[15px] font-light tracking-[-0.16px] text-ink">
+      <p className="relative mt-[3px] flex items-center gap-[4px] text-[15px] font-light tracking-[-0.16px] text-ink">
         {formatCurrency(currentTotal, defaultCurrency)}
         {hasComparison && delta !== 0 && (
           <span className="text-ink-mute">
@@ -82,11 +118,11 @@ export default function TaxRecordsTile() {
           </span>
         )}
       </p>
-      <p className="mt-[3px] text-[11px] leading-relaxed text-ink-mute">
+      <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {detail}
       </p>
 
-      <div className="mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
+      <div className="relative mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
         <span className="text-[11px] text-ink-mute">All-time</span>
         <span className="tabular text-[13px] font-medium text-ink">
           {formatCurrency(allTimeTotal, defaultCurrency)}

@@ -7,6 +7,7 @@ import Select from "./Select";
 import { formatCurrency } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
+import { CURRENCY_DOLLAR_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
 
 export default function TotalSpentTile() {
   const expenses = useExpenses();
@@ -47,8 +48,49 @@ export default function TotalSpentTile() {
         : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. the period before (${formatCurrency(previousTotal, defaultCurrency)}).`;
 
   return (
-    <div className="flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
-      <div className="flex flex-wrap items-start justify-between gap-[8px]">
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-citrine/25 via-canvas to-canvas p-[20px]">
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px]"
+        style={{
+          WebkitMaskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+          maskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+          backgroundColor: "rgba(201,162,39,0.18)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px] overflow-hidden"
+        style={{
+          WebkitMaskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+          maskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+        aria-hidden="true"
+      >
+        <div
+          className="icon-outline-spin absolute inset-[-50%]"
+          style={{
+            // Citrine only — {colors.citrine}, previously a reserved token
+            // with no shipped surface; this dashboard-card watermark is
+            // that surface, documented in DESIGN.md.
+            background:
+              "conic-gradient(from 0deg, rgba(201,162,39,1), rgba(201,162,39,0.3), rgba(201,162,39,1))",
+          }}
+        />
+      </div>
+
+      <div className="relative flex flex-wrap items-start justify-between gap-[8px]">
         <IconFlowBadge size={40} seed={1}>
           <CurrencyDollar size={16} weight="light" />
         </IconFlowBadge>
@@ -56,10 +98,10 @@ export default function TotalSpentTile() {
           <Select value={range} options={RANGE_OPTIONS} onChange={setRange} />
         </div>
       </div>
-      <p className="mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
+      <p className="relative mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
         Total Spent
       </p>
-      <p className="mt-[3px] flex items-center gap-[4px] text-[15px] font-light tracking-[-0.16px] text-ink">
+      <p className="relative mt-[3px] flex items-center gap-[4px] text-[15px] font-light tracking-[-0.16px] text-ink">
         {formatCurrency(currentTotal, defaultCurrency)}
         {hasComparison && delta !== 0 && (
           <span className="text-ink-mute">
@@ -71,11 +113,11 @@ export default function TotalSpentTile() {
           </span>
         )}
       </p>
-      <p className="mt-[3px] text-[11px] leading-relaxed text-ink-mute">
+      <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {detail}
       </p>
 
-      <div className="mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
+      <div className="relative mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
         <span className="text-[11px] text-ink-mute">All-time</span>
         <span className="tabular text-[13px] font-medium text-ink">
           {formatCurrency(allTimeTotal, defaultCurrency)}

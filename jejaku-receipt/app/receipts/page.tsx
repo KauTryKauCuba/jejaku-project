@@ -59,6 +59,7 @@ export default async function ReceiptsPage() {
               description="Browse and page through everything you've scanned or entered."
               defaultPageSize="10"
               editable
+              filterable
             />
           </div>
         </div>

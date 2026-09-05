@@ -318,6 +318,48 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-03",
   },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Terms of Service and Privacy Policy",
+    body: "Real pages, not placeholders — what's collected, why, who else (Google, Resend, DeepSeek, Cloudflare) is involved and for what, where it's stored, and what's still manual (like full account deletion) rather than self-serve. Linked from both apps' footers.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Receipt Scanner card back to its correct size",
+    body: "On the Receipts page, the scanner card had drifted narrower than its actual width on the dashboard after an earlier layout change — the 24-column split it was sized against was based on a dashboard structure that no longer existed. Corrected the math so it matches again.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Jejaku Receipt's project card wears its own colors",
+    body: "The Jejaku Receipt card on the landing page now borrows that app's blue theme instead of jejaku's teal — tag, button, and the receipt illustration itself — since it's previewing a sibling app with its own identity, not blending into this site's palette.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A digit sphere on the sign-in code screen",
+    body: "A small draggable, auto-rotating sphere of scattered digits now sits above the email code entry — a Fibonacci-lattice globe (same technique as Jejaku Receipt's location globe) where the digits nearest the center glow larger and brighter as it turns. Type a digit and it visibly plucks a matching one off the sphere and flies it into the box you just filled.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Search and filter on the Receipts page",
+    body: "The full Receipts list was a plain paginated dump — fine at 20 receipts, painful past 200. It now has a merchant search box, a category filter, and a from/to date range, all combinable, with pagination recalculated against the filtered set instead of the full list.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Export your receipts as CSV or PDF",
+    body: "An Export button on the Receipts page hands you whatever's currently filtered — as a CSV (RFC 4180-escaped, with a UTF-8 byte-order mark so Excel doesn't mangle non-ASCII merchant names) or a formatted PDF table with a total. The first way to get data out of the app rather than just into it — handing a month's receipts to an accountant no longer means opening each one by hand.",
+    dateLabel: "Shipped",
+    date: "2026-09-04",
+  },
 ];
 
 export default function ChangelogPage() {

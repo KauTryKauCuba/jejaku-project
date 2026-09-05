@@ -6,6 +6,7 @@ import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
 import { useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
+import { RECEIPT_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
 
 export default function ReceiptsScannedTile() {
   const expenses = useExpenses();
@@ -18,8 +19,49 @@ export default function ReceiptsScannedTile() {
   const rangeLabel = range === "This month" ? "this month" : `the last ${range}`;
 
   return (
-    <div className="flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-canvas p-[20px]">
-      <div className="flex flex-wrap items-start justify-between gap-[8px]">
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-seafoam/25 via-canvas to-canvas p-[20px]">
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px]"
+        style={{
+          WebkitMaskImage: iconFillMaskDataUri(RECEIPT_LIGHT_PATH),
+          maskImage: iconFillMaskDataUri(RECEIPT_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+          backgroundColor: "rgba(127,192,224,0.2)",
+        }}
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px] overflow-hidden"
+        style={{
+          WebkitMaskImage: iconStrokeMaskDataUri(RECEIPT_LIGHT_PATH),
+          maskImage: iconStrokeMaskDataUri(RECEIPT_LIGHT_PATH),
+          WebkitMaskRepeat: "no-repeat",
+          maskRepeat: "no-repeat",
+          WebkitMaskSize: "contain",
+          maskSize: "contain",
+          WebkitMaskPosition: "center",
+          maskPosition: "center",
+        }}
+        aria-hidden="true"
+      >
+        <div
+          className="icon-outline-spin absolute inset-[-50%]"
+          style={{
+            // Seafoam only — {colors.seafoam}, previously used only as a
+            // gradient-mesh/IconFlowBadge accent stop, not a full card
+            // surface; documented in DESIGN.md as that new use.
+            background:
+              "conic-gradient(from 0deg, rgba(127,192,224,1), rgba(127,192,224,0.3), rgba(127,192,224,1))",
+          }}
+        />
+      </div>
+
+      <div className="relative flex flex-wrap items-start justify-between gap-[8px]">
         <IconFlowBadge size={40} seed={2}>
           <Receipt size={16} weight="light" />
         </IconFlowBadge>
@@ -27,19 +69,19 @@ export default function ReceiptsScannedTile() {
           <Select value={range} options={RANGE_OPTIONS} onChange={setRange} />
         </div>
       </div>
-      <p className="mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
+      <p className="relative mt-[12px] text-[10px] font-medium uppercase tracking-[0.1px] text-ink-mute">
         Receipts Scanned
       </p>
-      <p className="mt-[3px] text-[15px] font-light tracking-[-0.16px] text-ink">
+      <p className="relative mt-[3px] text-[15px] font-light tracking-[-0.16px] text-ink">
         {inRange.length}
       </p>
-      <p className="mt-[3px] text-[11px] leading-relaxed text-ink-mute">
+      <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {inRange.length > 0
           ? `Logged in ${rangeLabel}.`
           : `Nothing logged in ${rangeLabel}.`}
       </p>
 
-      <div className="mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
+      <div className="relative mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
         <span className="text-[11px] text-ink-mute">All-time</span>
         <span className="tabular text-[13px] font-medium text-ink">{expenses.length}</span>
       </div>

@@ -35,7 +35,12 @@ export async function GET() {
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401, headers: corsHeaders() });
   }
-  return NextResponse.json({ currency: user.defaultCurrency }, { headers: corsHeaders() });
+  try {
+    return NextResponse.json({ currency: user.defaultCurrency }, { headers: corsHeaders() });
+  } catch (err) {
+    console.error("[api]", err);
+    return NextResponse.json({ error: "Something went wrong. Try again." }, { status: 500, headers: corsHeaders() });
+  }
 }
 
 export async function POST(request: Request) {
@@ -53,49 +58,54 @@ export async function POST(request: Request) {
   }
   const newCurrency = currency.toUpperCase();
 
-  await db.update(users).set({ defaultCurrency: newCurrency }).where(eq(users.id, user.id));
+  try {
+    await db.update(users).set({ defaultCurrency: newCurrency }).where(eq(users.id, user.id));
 
-  // Re-snapshot every existing expense into the new home currency so
-  // aggregate totals stay consistent — otherwise old rows would keep their
-  // homeCurrencyAmount in the *previous* home currency and summing them
-  // with new ones would silently reproduce the mixed-currency bug.
-  const userExpenses = await db.query.expenses.findMany({
-    where: eq(expenses.userId, user.id),
-  });
+    // Re-snapshot every existing expense into the new home currency so
+    // aggregate totals stay consistent — otherwise old rows would keep their
+    // homeCurrencyAmount in the *previous* home currency and summing them
+    // with new ones would silently reproduce the mixed-currency bug.
+    const userExpenses = await db.query.expenses.findMany({
+      where: eq(expenses.userId, user.id),
+    });
 
-  const distinctCurrencies = [...new Set(userExpenses.map((e) => e.currency ?? DEFAULT_CURRENCY))];
-  const rateByCurrency = new Map<string, number | null>();
-  await Promise.all(
-    distinctCurrencies.map(async (code) => {
-      rateByCurrency.set(code, await getExchangeRate(code, newCurrency));
-    })
-  );
+    const distinctCurrencies = [...new Set(userExpenses.map((e) => e.currency ?? DEFAULT_CURRENCY))];
+    const rateByCurrency = new Map<string, number | null>();
+    await Promise.all(
+      distinctCurrencies.map(async (code) => {
+        rateByCurrency.set(code, await getExchangeRate(code, newCurrency));
+      })
+    );
 
-  let failedCount = 0;
-  await Promise.all(
-    userExpenses.map(async (expense) => {
-      const originalCurrency = expense.currency ?? DEFAULT_CURRENCY;
-      const rate = rateByCurrency.get(originalCurrency) ?? null;
-      if (rate === null) {
-        failedCount += 1;
+    let failedCount = 0;
+    await Promise.all(
+      userExpenses.map(async (expense) => {
+        const originalCurrency = expense.currency ?? DEFAULT_CURRENCY;
+        const rate = rateByCurrency.get(originalCurrency) ?? null;
+        if (rate === null) {
+          failedCount += 1;
+          return db
+            .update(expenses)
+            .set({ homeCurrencyAmount: null, homeCurrencyCode: null })
+            .where(eq(expenses.id, expense.id));
+        }
         return db
           .update(expenses)
-          .set({ homeCurrencyAmount: null, homeCurrencyCode: null })
+          .set({ homeCurrencyAmount: expense.amount * rate, homeCurrencyCode: newCurrency })
           .where(eq(expenses.id, expense.id));
-      }
-      return db
-        .update(expenses)
-        .set({ homeCurrencyAmount: expense.amount * rate, homeCurrencyCode: newCurrency })
-        .where(eq(expenses.id, expense.id));
-    })
-  );
+      })
+    );
 
-  return NextResponse.json(
-    {
-      currency: newCurrency,
-      reconverted: userExpenses.length - failedCount,
-      failed: failedCount,
-    },
-    { headers: corsHeaders() }
-  );
+    return NextResponse.json(
+      {
+        currency: newCurrency,
+        reconverted: userExpenses.length - failedCount,
+        failed: failedCount,
+      },
+      { headers: corsHeaders() }
+    );
+  } catch (err) {
+    console.error("[api]", err);
+    return NextResponse.json({ error: "Something went wrong. Try again." }, { status: 500, headers: corsHeaders() });
+  }
 }

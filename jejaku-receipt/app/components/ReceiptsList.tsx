@@ -1,15 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Tray, Camera, CaretLeft, CaretRight, PencilSimple, Trash, Check, X, Shield, Users } from "@phosphor-icons/react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
-import { useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
+import { withWeekday } from "../lib/formatIso";
+import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
+import { downloadPdf } from "../lib/exportPdf";
+import { useCategories, useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
+import { useDismissable } from "../lib/useDismissable";
 import Select from "./Select";
+import DatePicker from "./DatePicker";
 import Modal from "./Modal";
 import ExpenseForm from "./ExpenseForm";
 import SplitBillModal from "./SplitBillModal";
 
 const PAGE_SIZE_OPTIONS = ["5", "10", "50", "100"];
+const ALL_CATEGORIES = "All categories";
 
 
 export default function ReceiptsList({
@@ -17,6 +23,7 @@ export default function ReceiptsList({
   description,
   defaultPageSize = "5",
   editable = false,
+  filterable = false,
 }: {
   title: string;
   description: string;
@@ -25,8 +32,14 @@ export default function ReceiptsList({
    * compact Recent Receipts card stays read-only — only the full /receipts
    * page opts in. */
   editable?: boolean;
+  /** Shows the merchant search / category / date-range filter bar and a CSV
+   * export button. Off by default for the same reason as `editable` — the
+   * dashboard's compact card has too few rows for filtering to earn its
+   * space, only the full /receipts page opts in. */
+  filterable?: boolean;
 }) {
   const expenses = useExpenses();
+  const categories = useCategories();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
   const [page, setPage] = useState(0);
@@ -39,6 +52,13 @@ export default function ReceiptsList({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warrantyOnly, setWarrantyOnly] = useState(false);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+  useDismissable(exportMenuOpen, exportMenuRef, useCallback(() => setExportMenuOpen(false), []));
 
   // A short, memorable per-account receipt number (#0001, #0002, ...) in
   // the order each receipt was added — the UUID primary key stays the
@@ -54,7 +74,30 @@ export default function ReceiptsList({
   const receiptNumber = (id: string) => `#${String(receiptNumbers.get(id) ?? 0).padStart(4, "0")}`;
 
   const hasWarrantyClaims = expenses.some((e) => e.isWarrantyClaim);
-  const visibleExpenses = warrantyOnly ? expenses.filter((e) => e.isWarrantyClaim) : expenses;
+  const trimmedSearch = search.trim().toLowerCase();
+  const hasActiveFilters =
+    filterable && (trimmedSearch !== "" || categoryFilter !== ALL_CATEGORIES || dateFrom !== "" || dateTo !== "");
+  const visibleExpenses = expenses.filter((e) => {
+    if (warrantyOnly && !e.isWarrantyClaim) return false;
+    if (!filterable) return true;
+    if (trimmedSearch && !e.merchant.toLowerCase().includes(trimmedSearch)) return false;
+    if (categoryFilter !== ALL_CATEGORIES && e.category !== categoryFilter) return false;
+    if (dateFrom && e.date < dateFrom) return false;
+    if (dateTo && e.date > dateTo) return false;
+    return true;
+  });
+
+  const exportBaseName = `jejaku-receipt-export-${new Date().toISOString().slice(0, 10)}`;
+
+  const handleExportCsv = () => {
+    setExportMenuOpen(false);
+    downloadCsv(`${exportBaseName}.csv`, expensesToCsv(visibleExpenses));
+  };
+
+  const handleExportPdf = () => {
+    setExportMenuOpen(false);
+    downloadPdf(`${exportBaseName}.pdf`, visibleExpenses);
+  };
 
   const handleDelete = async (id: string) => {
     setDeletingId(id);
@@ -83,36 +126,133 @@ export default function ReceiptsList({
           <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">{title}</h3>
           <p className="mt-[4px] text-[12px] text-ink-mute">{description}</p>
         </div>
-        {hasWarrantyClaims && (
-          <button
-            type="button"
-            onClick={() => {
-              setWarrantyOnly((v) => !v);
+        <div className="flex shrink-0 items-center gap-[8px]">
+          {hasWarrantyClaims && (
+            <button
+              type="button"
+              onClick={() => {
+                setWarrantyOnly((v) => !v);
+                setPage(0);
+              }}
+              aria-pressed={warrantyOnly}
+              className={
+                warrantyOnly
+                  ? "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill bg-primary px-[13px] text-[13px] font-medium text-on-primary transition-colors"
+                  : "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+              }
+            >
+              <Shield size={13} weight={warrantyOnly ? "fill" : "light"} />
+              Warranty claims
+            </button>
+          )}
+          {filterable && visibleExpenses.length > 0 && (
+            <div ref={exportMenuRef} className="relative shrink-0">
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={exportMenuOpen}
+                onClick={() => setExportMenuOpen((v) => !v)}
+                className="flex h-[33px] items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+              >
+                Export
+                <CaretDown size={11} weight="bold" />
+              </button>
+              {exportMenuOpen && (
+                <ul
+                  role="menu"
+                  className="absolute right-0 top-[calc(100%+4px)] z-20 w-[160px] overflow-hidden rounded-sm border border-hairline bg-canvas py-[4px] shadow-lg"
+                >
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleExportCsv}
+                      className="flex w-full items-center gap-[8px] px-[11px] py-[8px] text-left text-[13px] text-ink transition-colors hover:bg-canvas-soft"
+                    >
+                      <FileCsv size={14} weight="light" />
+                      Export as CSV
+                    </button>
+                  </li>
+                  <li role="none">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleExportPdf}
+                      className="flex w-full items-center gap-[8px] px-[11px] py-[8px] text-left text-[13px] text-ink transition-colors hover:bg-canvas-soft"
+                    >
+                      <FilePdf size={14} weight="light" />
+                      Export as PDF
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {filterable && (
+        <div className="mt-[15px] grid grid-cols-2 gap-[8px] sm:grid-cols-4">
+          <div className="relative col-span-2 sm:col-span-1">
+            <MagnifyingGlass
+              size={13}
+              weight="light"
+              className="pointer-events-none absolute left-[11px] top-1/2 -translate-y-1/2 text-ink-mute"
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search merchant"
+              className="h-[37px] w-full rounded-sm border border-hairline-input bg-canvas pl-[29px] pr-[11px] text-[14px] text-ink outline-none transition-colors focus:border-primary"
+            />
+          </div>
+          <Select
+            value={categoryFilter}
+            options={[ALL_CATEGORIES, ...categories]}
+            onChange={(value) => {
+              setCategoryFilter(value);
               setPage(0);
             }}
-            aria-pressed={warrantyOnly}
-            className={
-              warrantyOnly
-                ? "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill bg-primary px-[13px] text-[13px] font-medium text-on-primary transition-colors"
-                : "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
-            }
-          >
-            <Shield size={13} weight={warrantyOnly ? "fill" : "light"} />
-            Warranty claims
-          </button>
-        )}
-      </div>
+          />
+          <DatePicker
+            value={dateFrom}
+            placeholder="From date"
+            onChange={(value) => {
+              setDateFrom(value);
+              setPage(0);
+            }}
+          />
+          <DatePicker
+            value={dateTo}
+            placeholder="To date"
+            onChange={(value) => {
+              setDateTo(value);
+              setPage(0);
+            }}
+          />
+        </div>
+      )}
 
       {visibleExpenses.length === 0 ? (
         <div className="mt-[19px] flex flex-col items-center rounded-md bg-canvas-soft px-[15px] py-[38px] text-center">
           <Tray size={22} weight="light" className="text-ink-mute" />
           <p className="mt-[11px] text-[13px] font-medium text-ink">
-            {warrantyOnly ? "No warranty claims tagged" : "No receipts yet"}
+            {hasActiveFilters
+              ? "No receipts match"
+              : warrantyOnly
+                ? "No warranty claims tagged"
+                : "No receipts yet"}
           </p>
           <p className="mt-[4px] max-w-[26ch] text-[12px] leading-relaxed text-ink-mute">
-            {warrantyOnly
-              ? "Tag a receipt as a warranty claim from its edit screen and it'll show up here."
-              : "Scan a receipt above and it'll show up here."}
+            {hasActiveFilters
+              ? "Try a different search, category, or date range."
+              : warrantyOnly
+                ? "Tag a receipt as a warranty claim from its edit screen and it'll show up here."
+                : "Scan a receipt above and it'll show up here."}
           </p>
         </div>
       ) : (
@@ -152,7 +292,7 @@ export default function ReceiptsList({
                     )}
                   </p>
                   <p className="text-[11px] text-ink-mute">
-                    {e.category} · {e.date} · <span className="tabular">{receiptNumber(e.id)}</span>
+                    {e.category} · {withWeekday(e.date)} · <span className="tabular">{receiptNumber(e.id)}</span>
                     {e.split && e.split.people.length > 0 && ` · Split ${e.split.people.length} ways`}
                   </p>
                 </div>

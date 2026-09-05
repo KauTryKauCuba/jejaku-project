@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { signIn, getSession } from "next-auth/react";
 import FormField from "./FormField";
 import OtpInput from "./OtpInput";
+import DigitGlobe, { type DigitGlobeHandle } from "./DigitGlobe";
+import FlyingDigit, { type Flight } from "./FlyingDigit";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESEND_COOLDOWN_SECONDS = 120;
@@ -49,6 +51,24 @@ export default function EmailOtpForm({
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [cooldownActive, setCooldownActive] = useState(false);
   const autoSentRef = useRef(false);
+  const globeRef = useRef<DigitGlobeHandle>(null);
+  const boxRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const flightIdRef = useRef(0);
+
+  const handleDigitEntered = (index: number, digit: string) => {
+    const from = globeRef.current?.pickDigit(Number(digit));
+    const box = boxRefs.current[index];
+    if (!from || !box) return;
+    const rect = box.getBoundingClientRect();
+    const to = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    const id = flightIdRef.current++;
+    setFlights((prev) => [...prev, { id, digit, from, to }]);
+  };
+
+  const removeFlight = (id: number) => {
+    setFlights((prev) => prev.filter((f) => f.id !== id));
+  };
 
   useEffect(() => {
     if (secondsLeft <= 0) return;
@@ -105,10 +125,14 @@ export default function EmailOtpForm({
   if (step === "otp") {
     return (
       <div className={`flex flex-col ${gap}`}>
+        <DigitGlobe ref={globeRef} />
         <p className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}>
           Enter the 6-digit code sent to <strong className="text-ink">{email}</strong>.
         </p>
-        <OtpInput value={code} onChange={setCode} />
+        <OtpInput value={code} onChange={setCode} onDigitEntered={handleDigitEntered} boxRefs={boxRefs} />
+        {flights.map((f) => (
+          <FlyingDigit key={f.id} flight={f} onDone={() => removeFlight(f.id)} />
+        ))}
         {error && <p className="text-[12px] text-error">{error}</p>}
         <div className={size === "compact" ? "text-[13px] text-ink-mute" : "text-[14px] text-ink-mute"}>
           {secondsLeft > 0 ? (

@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { CalendarBlank, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useDismissable } from "../lib/useDismissable";
+import { withWeekday } from "../lib/formatIso";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -24,10 +25,12 @@ export default function DatePicker({
   id,
   value,
   onChange,
+  placeholder = "Select date",
 }: {
   id?: string;
   value: string;
   onChange: (value: string) => void;
+  placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => {
@@ -74,7 +77,7 @@ export default function DatePicker({
         onClick={() => (open ? setOpen(false) : openPicker())}
         className="flex h-[37px] w-full items-center justify-between rounded-sm border border-hairline-input bg-canvas px-[11px] text-left text-[14px] text-ink outline-none transition-colors focus:border-primary"
       >
-        {value || "Select date"}
+        {value ? withWeekday(value) : placeholder}
         <CalendarBlank size={14} weight="light" className="shrink-0 text-ink-mute" />
       </button>
 

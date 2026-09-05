@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { CaretDown } from "@phosphor-icons/react";
+import { withWeekday } from "../lib/formatIso";
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 type TimelineItem = {
   status: string;
@@ -54,7 +57,9 @@ export default function ChangelogTimeline({ items }: { items: TimelineItem[] }) 
               aria-expanded={isOpen}
               className="flex w-full items-center gap-[8px] py-[4px] text-left"
             >
-              <span className="tabular text-[13px] font-medium text-ink">{group.date}</span>
+              <span className="tabular text-[13px] font-medium text-ink">
+                {ISO_DATE_PATTERN.test(group.date) ? withWeekday(group.date) : group.date}
+              </span>
               <span className="text-[12px] text-ink-mute">
                 {group.items.length} {group.items.length === 1 ? "update" : "updates"}
               </span>

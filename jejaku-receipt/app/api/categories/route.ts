@@ -5,8 +5,9 @@ import { db } from "../../db";
 import { users } from "../../db/schema";
 import { EXPENSE_CATEGORIES, MAX_CATEGORY_LENGTH, MAX_CUSTOM_CATEGORIES } from "../../lib/expenses";
 import { AUDIT_ACTIONS, logAudit } from "../../lib/auditLog";
+import { withApiErrorHandling } from "../../lib/apiError";
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling(async (request: Request) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -42,4 +43,4 @@ export async function POST(request: Request) {
   await logAudit(user.id, AUDIT_ACTIONS.CATEGORY_CREATED, name);
 
   return NextResponse.json({ customCategories });
-}
+});

@@ -1,3 +1,7 @@
+// Ported from jejaku's landing-page project-card illustration (same file,
+// same animation) — every color here is a CSS variable, not a literal hex,
+// so it automatically picks up this app's own blue theme instead of
+// jejaku's teal without needing any changes.
 function sparklePath(cx: number, cy: number, r: number) {
   const k = r * 0.3;
   return `M${cx} ${cy - r}L${cx + k} ${cy - k}L${cx + r} ${cy}L${cx + k} ${cy + k}L${cx} ${cy + r}L${cx - k} ${cy + k}L${cx - r} ${cy}L${cx - k} ${cy - k}Z`;
@@ -25,19 +29,19 @@ export default function ReceiptIllustration() {
         <path
           d="M40 19h50a4 4 0 0 1 4 4v78l-7-5-7 5-7-5-7 5-7-5-7 5-7-5-7 5V23a4 4 0 0 1 4-4Z"
           fill="#ffffff"
-          stroke="#dbe4ef"
+          stroke="var(--color-hairline)"
           strokeWidth="1.5"
         />
         {/* Text lines */}
-        <line x1="48" y1="33" x2="86" y2="33" stroke="#5c6e7a" strokeWidth="2" strokeLinecap="round" />
-        <line x1="48" y1="41" x2="76" y2="41" stroke="#5c6e7a" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-        <line x1="48" y1="53" x2="80" y2="53" stroke="#5c6e7a" strokeWidth="2" strokeLinecap="round" />
-        <line x1="48" y1="61" x2="66" y2="61" stroke="#5c6e7a" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-        <line x1="48" y1="73" x2="84" y2="73" stroke="#1d4ed8" strokeWidth="2.5" strokeLinecap="round" />
-        <line x1="48" y1="81" x2="70" y2="81" stroke="#5c6e7a" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+        <line x1="48" y1="33" x2="86" y2="33" stroke="var(--color-ink-mute)" strokeWidth="2" strokeLinecap="round" />
+        <line x1="48" y1="41" x2="76" y2="41" stroke="var(--color-ink-mute)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+        <line x1="48" y1="53" x2="80" y2="53" stroke="var(--color-ink-mute)" strokeWidth="2" strokeLinecap="round" />
+        <line x1="48" y1="61" x2="66" y2="61" stroke="var(--color-ink-mute)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+        <line x1="48" y1="73" x2="84" y2="73" stroke="var(--color-primary)" strokeWidth="2.5" strokeLinecap="round" />
+        <line x1="48" y1="81" x2="70" y2="81" stroke="var(--color-ink-mute)" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
 
         {/* Scan beam sweeping across the receipt */}
-        <rect x="40" y="17" width="54" height="2.5" rx="1.25" fill="#3b82f6" opacity="0.35">
+        <rect x="40" y="17" width="54" height="2.5" rx="1.25" fill="var(--color-primary-soft)" opacity="0.35">
           <animate
             attributeName="y"
             values="15;103;15"
@@ -49,13 +53,13 @@ export default function ReceiptIllustration() {
         </rect>
 
         {/* Corner brackets, camera capture frame around the receipt */}
-        <path d="M26 25v-12a4 4 0 0 1 4-4h12" stroke="#0a1826" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        <path d="M108 25v-12a4 4 0 0 0-4-4h-12" stroke="#0a1826" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        <path d="M26 95v12a4 4 0 0 0 4 4h12" stroke="#0a1826" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-        <path d="M108 95v12a4 4 0 0 1-4 4h-12" stroke="#0a1826" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M26 25v-12a4 4 0 0 1 4-4h12" stroke="var(--color-ink)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M108 25v-12a4 4 0 0 0-4-4h-12" stroke="var(--color-ink)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M26 95v12a4 4 0 0 0 4 4h12" stroke="var(--color-ink)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M108 95v12a4 4 0 0 1-4 4h-12" stroke="var(--color-ink)" strokeWidth="1.5" strokeLinecap="round" fill="none" />
 
         {/* Sparkle accent */}
-        <path d="M120 62l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8Z" fill="#e8a33d">
+        <path d="M120 62l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8Z" fill="var(--color-amber)">
           <animate
             attributeName="opacity"
             values="1;0.15;1"
@@ -67,7 +71,7 @@ export default function ReceiptIllustration() {
 
         {/* Extra sparkle accents scattered around the frame, each blinking on its own beat */}
         {SPARKLES.map((s, i) => (
-          <path key={i} d={sparklePath(s.cx, s.cy, s.r)} fill="#e8a33d">
+          <path key={i} d={sparklePath(s.cx, s.cy, s.r)} fill="var(--color-amber)">
             <animate
               attributeName="opacity"
               values={`${s.opacity};${s.opacity * 0.15};${s.opacity}`}

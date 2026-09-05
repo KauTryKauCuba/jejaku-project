@@ -15,7 +15,7 @@ export default function MemberCard({
 
   return (
     <div
-      className="card-reveal relative flex aspect-[1.586/1] w-full flex-col overflow-hidden rounded-xl border border-hairline p-[23px] text-ink"
+      className="card-reveal relative flex aspect-[1.586/1] w-full flex-col overflow-hidden rounded-xl border border-hairline p-[19px] text-ink"
       style={{
         background:
           "linear-gradient(135deg, #f6f7f7 0%, #ffffff 30%, #dadde0 58%, #f1f2f3 80%, #e4e7e8 100%)",
@@ -76,20 +76,25 @@ export default function MemberCard({
         </p>
       </div>
 
-      <div className="flex-[3]" aria-hidden="true" />
+      <div className="flex-[2]" aria-hidden="true" />
 
-      <div className="relative flex items-end justify-between gap-[10px] text-[11px]">
+      {/* items-start, not items-end — the weekday-prefixed date can wrap to
+          two lines in the popover's narrow 280px card, and end-aligning a
+          wrapped value pushes it below the card's fixed aspect-ratio
+          height. leading-[1.35] keeps a wrapped pair tight enough to still
+          fit. */}
+      <div className="relative flex items-start justify-between gap-[10px] text-[10px]">
         <div className="min-w-0 text-left">
           <p className="uppercase tracking-[1px] text-ink-mute">
             Member since
           </p>
-          <p className="tabular mt-[2px] text-ink-secondary">{registered}</p>
+          <p className="tabular mt-[1px] leading-[1.35] text-ink-secondary">{registered}</p>
         </div>
         <div className="shrink-0 text-right">
           <p className="uppercase tracking-[1px] text-ink-mute">
             Last login
           </p>
-          <p className="tabular mt-[2px] text-ink-secondary">{lastSignIn}</p>
+          <p className="tabular mt-[1px] leading-[1.35] text-ink-secondary">{lastSignIn}</p>
         </div>
       </div>
     </div>

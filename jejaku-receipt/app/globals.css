@@ -231,6 +231,20 @@ body {
   to { opacity: var(--flow-target-opacity, 1); }
 }
 
+/* Rotating gradient behind a card's oversized watermark icon (Tax Records,
+   Warranty Claims) — the icon itself is a CSS mask-image tracing only its
+   stroke outline (see iconMaskPaths.ts's iconStrokeMaskDataUri), and this
+   is the conic-gradient ring spinning underneath it, so only a slowly
+   traveling band of color is visible along the icon's outline at any
+   moment rather than the whole outline lighting up at once. */
+.icon-outline-spin {
+  animation: icon-outline-spin 5s linear infinite;
+}
+
+@keyframes icon-outline-spin {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gradient-mesh::before,
   .gradient-mesh::after,
@@ -244,6 +258,10 @@ body {
   }
 
   .card-holo {
+    animation: none;
+  }
+
+  .icon-outline-spin {
     animation: none;
   }
 

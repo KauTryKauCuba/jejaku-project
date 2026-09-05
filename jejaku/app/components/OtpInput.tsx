@@ -1,13 +1,24 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type MutableRefObject } from "react";
 
 export default function OtpInput({
   value,
   onChange,
+  onDigitEntered,
+  boxRefs,
 }: {
   value: string;
   onChange: (value: string) => void;
+  /** Fired with the exact box index and digit whenever a single digit is
+   *  typed (not on backspace/paste) — lets a parent trigger a per-box effect
+   *  (e.g. DigitGlobe's fly-in animation) without re-deriving it from a diff
+   *  of the whole value string. */
+  onDigitEntered?: (index: number, digit: string) => void;
+  /** Lets a parent read each box's live DOM position (getBoundingClientRect)
+   *  for that same kind of effect — populated alongside the internal ref
+   *  used for focus management, not instead of it. */
+  boxRefs?: MutableRefObject<(HTMLInputElement | null)[]>;
 }) {
   const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? "");
   const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
@@ -17,8 +28,9 @@ export default function OtpInput({
     const next = [...digits];
     next[index] = digit;
     onChange(next.join(""));
-    if (digit && index < 5) {
-      inputsRef.current[index + 1]?.focus();
+    if (digit) {
+      onDigitEntered?.(index, digit);
+      if (index < 5) inputsRef.current[index + 1]?.focus();
     }
   };
 
@@ -45,6 +57,7 @@ export default function OtpInput({
           key={i}
           ref={(el) => {
             inputsRef.current[i] = el;
+            if (boxRefs) boxRefs.current[i] = el;
           }}
           type="text"
           inputMode="numeric"

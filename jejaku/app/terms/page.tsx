@@ -50,6 +50,14 @@ export default function TermsPage() {
           </div>
 
           <div>
+            <h2 className="text-[18px] font-medium text-ink">Eligibility</h2>
+            <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              You need to be old enough, under the law that applies to you, to agree to these
+              terms yourself. This isn&apos;t built or intended for children.
+            </p>
+          </div>
+
+          <div>
             <h2 className="text-[18px] font-medium text-ink">Accounts</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               You sign in with a one-time code sent to your email, or with a Google account —
@@ -65,8 +73,18 @@ export default function TermsPage() {
               company with an uptime guarantee. Features can change, break, or disappear without
               notice — the <Link href="/changelog" className="text-primary hover:underline">changelog</Link>{" "}
               is the closest thing to a running record of what&apos;s shipped. It&apos;s provided
-              as-is, with no warranty of any kind — use it at your own risk, and don&apos;t rely
-              on it for anything you can&apos;t afford to lose.
+              as-is, with no warranty of any kind, express or implied — use it at your own risk,
+              and don&apos;t rely on it for anything you can&apos;t afford to lose.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-[18px] font-medium text-ink">Limitation of liability</h2>
+            <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              To the fullest extent the law allows, this service is offered without liability for
+              any loss or damage arising from your use of it — direct, indirect, or otherwise —
+              including lost data or lost access. Nothing here limits liability that legally
+              cannot be limited.
             </p>
           </div>
 
@@ -80,12 +98,26 @@ export default function TermsPage() {
           </div>
 
           <div>
-            <h2 className="text-[18px] font-medium text-ink">Your content</h2>
+            <h2 className="text-[18px] font-medium text-ink">Your content, and this site&apos;s</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               Whatever you enter or scan — expenses, receipt photos, notes — is yours. It&apos;s
               stored so the app can show it back to you, not used for anything else. See the{" "}
               <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>{" "}
               for exactly what&apos;s collected and where it lives.
+            </p>
+            <p className="mt-[8px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              Everything else — the site itself, its design, and the Jejaku name — belongs to the
+              developer. Using the service doesn&apos;t give you any rights to that beyond using
+              it as intended.
+            </p>
+          </div>
+
+          <div>
+            <h2 className="text-[18px] font-medium text-ink">Suspension &amp; termination</h2>
+            <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
+              Access can be suspended or removed for a violation of these terms, or if the service
+              (or a part of it) is ever shut down. You can stop using it and walk away at any
+              time, no strings attached.
             </p>
           </div>
 
@@ -93,7 +125,7 @@ export default function TermsPage() {
             <h2 className="text-[18px] font-medium text-ink">Changes to these terms</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               This page may be updated as the project grows. Meaningful changes will show up in
-              the changelog.
+              the <Link href="/changelog" className="text-primary hover:underline">changelog</Link>.
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarBlank, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { formatCurrency } from "../lib/expenses";
+import { withWeekday } from "../lib/formatIso";
 import { useExpenses } from "./ExpensesProvider";
 import IconFlowBadge from "./IconFlowBadge";
 
@@ -128,7 +129,7 @@ export default function DashboardCalendar() {
       </div>
 
       <div className="mt-[19px] border-t border-hairline pt-[19px]">
-        <p className="text-[13px] font-medium text-ink">{selected}</p>
+        <p className="text-[13px] font-medium text-ink">{withWeekday(selected)}</p>
 
         {selectedExpenses.length === 0 ? (
           <p className="mt-[8px] text-[12px] text-ink-mute">
