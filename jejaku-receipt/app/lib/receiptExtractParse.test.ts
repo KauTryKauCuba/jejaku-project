@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseReceiptResponse, positionalItemsToObjects } from "./receiptExtractParse";
+import { parseReceiptResponse, itemEntriesToObjects } from "./receiptExtractParse";
 
 describe("parseReceiptResponse", () => {
   it("parses a complete, well-formed response", () => {
@@ -13,6 +13,12 @@ describe("parseReceiptResponse", () => {
       items: [["Kettle", 45.5, 1], ["Cable", 8]],
     });
     expect(result.itemsRaw).toEqual([["Kettle", 45.5, 1], ["Cable", 8]]);
+  });
+
+  it("parses a complete response with the primary named-object items shape", () => {
+    const text = '{"merchant":"IKEA","amount":68.5,"items":[{"name":"Kettle","price":45.5},{"name":"Cable","price":8,"quantity":2}]}';
+    const result = parseReceiptResponse(text, "stop");
+    expect(result.itemsRaw).toEqual([{ name: "Kettle", price: 45.5 }, { name: "Cable", price: 8, quantity: 2 }]);
   });
 
   it("reports truncated when finish_reason is length, even on a complete parse", () => {
@@ -46,6 +52,16 @@ describe("parseReceiptResponse", () => {
     expect(result.fields).toMatchObject({ merchant: "Village Grocer", amount: 79.4, date: "2026-08-03", category: "Groceries" });
     // The incomplete third entry is dropped, the two complete ones survive.
     expect(result.itemsRaw).toEqual([["Fresh produce", 34.5], ["Dairy & eggs", 22.9]]);
+  });
+
+  it("salvages complete named-object entries when cut off mid-item (the primary item shape now)", () => {
+    const text =
+      '{"merchant":"Village Grocer","amount":79.4,"date":"2026-08-03","category":"Groceries",' +
+      '"items":[{"name":"Fresh produce","price":34.5},{"name":"Dairy & eggs","price":22.9},{"name":"Snacks","price":1' /* cut off mid-number */;
+    const result = parseReceiptResponse(text, "length");
+    expect(result.truncated).toBe(true);
+    expect(result.fields).toMatchObject({ merchant: "Village Grocer", amount: 79.4 });
+    expect(result.itemsRaw).toEqual([{ name: "Fresh produce", price: 34.5 }, { name: "Dairy & eggs", price: 22.9 }]);
   });
 
   it("salvages scalar fields when items is cut off with zero complete entries", () => {
@@ -97,50 +113,76 @@ describe("parseReceiptResponse", () => {
   });
 });
 
-describe("positionalItemsToObjects", () => {
-  it("converts [name, price] tuples", () => {
-    expect(positionalItemsToObjects([["Bananas", 2.5]])).toEqual([{ name: "Bananas", price: 2.5 }]);
+describe("itemEntriesToObjects", () => {
+  describe("named-object entries (the primary shape the prompt asks for)", () => {
+    it("converts a {name, price} object", () => {
+      expect(itemEntriesToObjects([{ name: "Bananas", price: 2.5 }])).toEqual([{ name: "Bananas", price: 2.5 }]);
+    });
+
+    it("converts a {name, price, quantity} object", () => {
+      expect(itemEntriesToObjects([{ name: "Milk 1L", price: 6.9, quantity: 2 }])).toEqual([
+        { name: "Milk 1L", price: 6.9, quantity: 2 },
+      ]);
+    });
+
+    it("omits quantity when it's the default of 1", () => {
+      const result = itemEntriesToObjects([{ name: "Bananas", price: 2.5, quantity: 1 }]);
+      expect(result[0]).not.toHaveProperty("quantity");
+    });
+
+    it("drops an entry with a non-finite or nonsensical quantity, keeping name/price", () => {
+      expect(itemEntriesToObjects([{ name: "Bananas", price: 2.5, quantity: -1 }])).toEqual([{ name: "Bananas", price: 2.5 }]);
+      expect(itemEntriesToObjects([{ name: "Bananas", price: 2.5, quantity: NaN }])).toEqual([{ name: "Bananas", price: 2.5 }]);
+    });
+
+    it("drops an entry with a missing or non-string name", () => {
+      expect(itemEntriesToObjects([{ price: 2.5 }])).toEqual([]);
+      expect(itemEntriesToObjects([{ name: null, price: 2.5 }])).toEqual([]);
+    });
+
+    it("drops an entry with a missing or non-numeric price", () => {
+      expect(itemEntriesToObjects([{ name: "Bananas" }])).toEqual([]);
+      expect(itemEntriesToObjects([{ name: "Bananas", price: "2.50" }])).toEqual([]);
+      expect(itemEntriesToObjects([{ name: "Bananas", price: NaN }])).toEqual([]);
+    });
   });
 
-  it("converts [name, price, quantity] tuples", () => {
-    expect(positionalItemsToObjects([["Milk 1L", 6.9, 2]])).toEqual([{ name: "Milk 1L", price: 6.9, quantity: 2 }]);
+  describe("positional-array entries (tolerated, in case the model produces one anyway)", () => {
+    it("converts [name, price] and [name, price, quantity] tuples", () => {
+      expect(itemEntriesToObjects([["Bananas", 2.5]])).toEqual([{ name: "Bananas", price: 2.5 }]);
+      expect(itemEntriesToObjects([["Milk 1L", 6.9, 2]])).toEqual([{ name: "Milk 1L", price: 6.9, quantity: 2 }]);
+    });
+
+    it("omits quantity when it's the default of 1", () => {
+      expect(itemEntriesToObjects([["Bananas", 2.5, 1]])[0]).not.toHaveProperty("quantity");
+    });
+
+    it("drops an entry with a missing or non-string name, or missing/non-numeric price", () => {
+      expect(itemEntriesToObjects([[5, 2.5]])).toEqual([]);
+      expect(itemEntriesToObjects([["Bananas"]])).toEqual([]);
+      expect(itemEntriesToObjects([["Bananas", "2.50"]])).toEqual([]);
+    });
   });
 
-  it("omits quantity when it's the default of 1", () => {
-    const result = positionalItemsToObjects([["Bananas", 2.5, 1]]);
-    expect(result[0]).not.toHaveProperty("quantity");
+  it("drops an entry that's neither an object nor an array", () => {
+    expect(itemEntriesToObjects(["not an item", 42, null, undefined])).toEqual([]);
   });
 
-  it("drops an entry with a non-finite or nonsensical quantity, keeping name/price", () => {
-    expect(positionalItemsToObjects([["Bananas", 2.5, -1]])).toEqual([{ name: "Bananas", price: 2.5 }]);
-    expect(positionalItemsToObjects([["Bananas", 2.5, NaN]])).toEqual([{ name: "Bananas", price: 2.5 }]);
-  });
-
-  it("drops an entry with a missing or non-string name", () => {
-    expect(positionalItemsToObjects([[5, 2.5]])).toEqual([]);
-    expect(positionalItemsToObjects([[null, 2.5]])).toEqual([]);
-  });
-
-  it("drops an entry with a missing or non-numeric price", () => {
-    expect(positionalItemsToObjects([["Bananas"]])).toEqual([]);
-    expect(positionalItemsToObjects([["Bananas", "2.50"]])).toEqual([]);
-    expect(positionalItemsToObjects([["Bananas", NaN]])).toEqual([]);
-  });
-
-  it("drops an entry that isn't an array at all", () => {
-    expect(positionalItemsToObjects([{ name: "Bananas", price: 2.5 }, "not an item"])).toEqual([]);
-  });
-
-  it("keeps valid entries and drops invalid ones from the same list", () => {
-    const result = positionalItemsToObjects([
-      ["Good", 5],
-      ["Bad", "not a number"],
-      ["Also good", 7, 2],
+  it("keeps valid entries and drops invalid ones from a mixed list of both shapes", () => {
+    const result = itemEntriesToObjects([
+      { name: "Good object", price: 5 },
+      ["Good array", 7, 2],
+      { name: "Bad object", price: "not a number" },
+      ["Bad array"],
+      "not an item at all",
     ]);
-    expect(result).toEqual([{ name: "Good", price: 5 }, { name: "Also good", price: 7, quantity: 2 }]);
+    expect(result).toEqual([
+      { name: "Good object", price: 5 },
+      { name: "Good array", price: 7, quantity: 2 },
+    ]);
   });
 
   it("returns an empty array for empty input", () => {
-    expect(positionalItemsToObjects([])).toEqual([]);
+    expect(itemEntriesToObjects([])).toEqual([]);
   });
 });

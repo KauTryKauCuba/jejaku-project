@@ -507,6 +507,13 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan reads items more reliably again",
+    body: "A shorter, more compact format was tried for reading line items faster, but it made the scan less consistent — item lines would occasionally go missing that used to come through fine. Switched back to the sturdier format, and made the scanner accept either shape per line, so one line formatted differently than the rest doesn't cost you that item.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

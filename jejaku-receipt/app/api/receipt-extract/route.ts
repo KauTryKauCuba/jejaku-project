@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EXPENSE_CATEGORIES, normalizeItems, type ExpenseItem } from "../../lib/expenses";
 import { computeItemsMismatch } from "../../lib/receiptSanity";
-import { parseReceiptResponse, positionalItemsToObjects } from "../../lib/receiptExtractParse";
+import { parseReceiptResponse, itemEntriesToObjects } from "../../lib/receiptExtractParse";
 import { getCurrentUser } from "../../lib/currentUser";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../lib/uploads";
 
@@ -120,9 +120,18 @@ export async function POST(req: NextRequest) {
   // eligible to be served from cache instead of billed as fresh input on
   // every scan. The multi-image note is appended after that too, since it
   // only applies sometimes and would otherwise split the prefix itself.
+  // The items shape is a named object, not a compact positional array —
+  // a compact array format was tried here and reverted. It saved output
+  // tokens, but max_tokens (3000) already gives comfortable headroom over
+  // what a single image can legibly resolve anyway, so there was nothing
+  // real to gain from it, and a real cost: a positional array has no
+  // field-order anchor, so the model has to keep name/price/quantity
+  // position exactly right with nothing reminding it mid-generation what
+  // each slot means — self-documenting named keys are what it reliably
+  // produces instead.
   const instructions =
     "Read this receipt as ONLY a JSON object, no other text, in exactly this shape: " +
-    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[["name",0],["name",0,2]]} ' +
+    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0,"quantity":1}]} ' +
     "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
     "creases, fading), null rather than guessing. " +
     "amount: final total paid, plain number, no currency symbol. " +
@@ -134,13 +143,12 @@ export async function POST(req: NextRequest) {
     "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
     "store's address/language. " +
     "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
-    "items: each line as a [name, price] pair, or [name, price, quantity] when quantity is more than 1 — " +
-    "omit the third element entirely when quantity is 1, don't write it as 1. price is PER-UNIT: most " +
-    "receipts print only quantity + one price per line, and that price is the line's TOTAL — divide by " +
-    "quantity to get the per-unit price whenever quantity > 1 (skip dividing only if quantity is 1, or a " +
-    "separate unit/\"each\" price is shown). Combo/bundle lines may list included items indented below with " +
-    "no price of their own — skip those, keep only the parent line. quantity is an integer ≥1. Skip " +
-    "subtotal/tax/tip/total lines. Empty array if none readable. " +
+    "items: each line's name, quantity, and PER-UNIT price. Most receipts print only quantity + one " +
+    "price per line, and that price is the line's TOTAL — divide by quantity to get price whenever " +
+    "quantity > 1 (skip dividing only if quantity is 1, or a separate unit/\"each\" price is shown). " +
+    "Combo/bundle lines may list included items indented below with no price of their own — skip " +
+    "those, keep only the parent line. quantity is an integer ≥1. Skip subtotal/tax/tip/total lines. " +
+    "Empty array if none readable. " +
     "null for any field that truly can't be determined (items is always an array, never null).";
 
   const multiImageNote =
@@ -227,7 +235,7 @@ export async function POST(req: NextRequest) {
     typeof fields.currency === "string" && CURRENCY_CODE_PATTERN.test(fields.currency.toUpperCase())
       ? fields.currency.toUpperCase()
       : null;
-  const items = normalizeItems(positionalItemsToObjects(itemsRaw));
+  const items = normalizeItems(itemEntriesToObjects(itemsRaw));
   const itemsMismatch = computeItemsMismatch(items, tax, amount);
   return NextResponse.json({
     merchant,

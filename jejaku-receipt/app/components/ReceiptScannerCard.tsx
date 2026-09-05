@@ -16,7 +16,7 @@ import { useAddExpense, useExpenses } from "./ExpensesProvider";
 // Bump whenever receipt-extract's prompt, capture pipeline, or sanity
 // checks change meaningfully — a quick visible marker of how current the
 // scan quality is, without digging through the changelog.
-const SCAN_TUNING_DATE = "2026-09-04";
+const SCAN_TUNING_DATE = "2026-09-05";
 
 const TUTORIAL_DISMISSED_KEY: Record<TutorialKind, string> = {
   scan: "jejaku-receipt:hide-scan-tutorial",

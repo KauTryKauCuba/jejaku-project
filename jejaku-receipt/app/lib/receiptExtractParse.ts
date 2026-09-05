@@ -17,8 +17,10 @@ export type ParsedReceiptResponse = {
   // caller applies the same typeof/format checks either way, truncated or
   // not. Null only when nothing at all survived parsing.
   fields: Record<string, unknown> | null;
-  // Raw `items` entries, each expected to be a `[name, price, quantity?]`
-  // tuple — not yet validated, see positionalItemsToObjects below.
+  // Raw `items` entries — each expected to be a `{name, price, quantity?}`
+  // object (what the prompt asks for) but not yet validated as such, see
+  // itemEntriesToObjects below, which also tolerates a `[name, price,
+  // quantity?]` array per entry in case the model produces one anyway.
   itemsRaw: unknown[];
   // True when the response was cut off before finishing — either the API
   // told us directly (finish_reason "length") or a truncated items array
@@ -77,10 +79,12 @@ function salvageTruncatedResponse(blob: string): ParsedReceiptResponse {
   const itemsRaw: unknown[] = [];
   if (arrayStart !== -1) {
     const itemsBlob = afterItemsKey.slice(arrayStart);
-    // Item entries are flat arrays (no nesting), so a simple no-nested-
-    // bracket match reliably captures every *complete* entry and simply
-    // fails to match a trailing, cut-off one — exactly the split we want.
-    const entryMatches = itemsBlob.match(/\[[^[\]]*\]/g) ?? [];
+    // Item entries are flat — no nesting inside a single entry, whether
+    // it's a `{...}` object (the normal case) or a `[...]` array (still
+    // tolerated, see itemEntriesToObjects) — so a simple no-nested-
+    // bracket-or-brace match reliably captures every *complete* entry of
+    // either shape and simply fails to match a trailing, cut-off one.
+    const entryMatches = itemsBlob.match(/\{[^{}[\]]*\}|\[[^{}[\]]*\]/g) ?? [];
     for (const entry of entryMatches) {
       try {
         itemsRaw.push(JSON.parse(entry));
@@ -108,22 +112,37 @@ function salvageScalarPrefix(prefix: string): Record<string, unknown> | null {
   }
 }
 
-// Converts raw `[name, price, quantity?]` tuples (the compact shape the
-// prompt now asks for — see the prompt text in receipt-extract's route)
-// into the plain objects normalizeItems (lib/expenses.ts) already knows
-// how to validate, backfill an id onto, and turn into real ExpenseItems.
+// Converts raw item entries into the plain objects normalizeItems
+// (lib/expenses.ts) already knows how to validate, backfill an id onto,
+// and turn into real ExpenseItems.
+//
+// Accepts either shape per entry: the named `{name, price, quantity?}`
+// object the prompt asks for (self-documenting, and the format DeepSeek
+// reliably produces — see the note on receipt-extract's route about why
+// an earlier compact `[name, price, quantity?]` array format was tried
+// and reverted: positional arrays have no field-order anchor, and turned
+// out measurably less reliable in practice, not just "marginally" as
+// expected — the model would occasionally emit a named object anyway, or
+// get the position wrong, either of which silently dropped that item
+// under strict array-only parsing), or a `[name, price, quantity?]` array
+// for the same reason receipt-extract still mentions it's acceptable: no
+// reason to throw an entry away just because the model happened to
+// produce the other valid shape on a given call.
+//
 // Same tolerance normalizeItems itself has: an unusable entry is dropped,
 // not treated as a reason to fail the whole list.
-export function positionalItemsToObjects(itemsRaw: unknown[]): { name: string; price: number; quantity?: number }[] {
+export function itemEntriesToObjects(itemsRaw: unknown[]): { name: string; price: number; quantity?: number }[] {
   const result: { name: string; price: number; quantity?: number }[] = [];
   for (const entry of itemsRaw) {
-    if (!Array.isArray(entry) || entry.length < 2) continue;
-    const [name, price, quantity] = entry;
+    const [name, price, quantity] = Array.isArray(entry)
+      ? entry
+      : entry && typeof entry === "object"
+        ? [(entry as Record<string, unknown>).name, (entry as Record<string, unknown>).price, (entry as Record<string, unknown>).quantity]
+        : [undefined, undefined, undefined];
     if (typeof name !== "string" || typeof price !== "number" || !Number.isFinite(price)) continue;
     // Quantity 1 is the implicit default everywhere downstream (lineTotal,
-    // display, etc. already treat `quantity ?? 1` as equivalent) — leaving
-    // it off here for that common case is what the compact array format
-    // is actually for; keeping it whenever it's genuinely meaningful.
+    // display, etc. already treat `quantity ?? 1` as equivalent) — no
+    // need to store it explicitly for that common case.
     const hasRealQuantity = typeof quantity === "number" && Number.isFinite(quantity) && quantity > 0 && quantity !== 1;
     result.push(hasRealQuantity ? { name, price, quantity } : { name, price });
   }
