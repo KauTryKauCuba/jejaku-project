@@ -360,6 +360,13 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-04",
   },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Sign in with GitHub and Discord",
+    body: "Two more ways in alongside Google and email code — same rules apply either way: a quick email code still confirms the account afterward, and first sign-in still walks you through picking a name and photo.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

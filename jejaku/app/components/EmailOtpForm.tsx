@@ -34,7 +34,7 @@ export default function EmailOtpForm({
   onCancel,
 }: {
   size?: "default" | "compact";
-  /** Skips the email step and auto-sends a code to this address (e.g. after Google sign-in). */
+  /** Skips the email step and auto-sends a code to this address (e.g. after Google/GitHub sign-in). */
   initialEmail?: string;
   /** Called instead of the default onboarding/dashboard redirect once the code is verified. `profile` is the existing account for this email, if any. */
   onVerified?: (email: string, profile: VerifiedProfile | null) => void;

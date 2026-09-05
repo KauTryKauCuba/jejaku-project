@@ -5,7 +5,6 @@ import { useSession, signOut } from "next-auth/react";
 import { Fingerprint } from "@phosphor-icons/react";
 import GoogleButton from "./GoogleButton";
 import GithubButton from "./GithubButton";
-import MicrosoftButton from "./MicrosoftButton";
 import DiscordButton from "./DiscordButton";
 import EmailOtpForm from "./EmailOtpForm";
 
@@ -24,7 +23,7 @@ export default function HeroAuthCard() {
           One last step
         </p>
         <p className="mt-[8px] text-[13px] leading-relaxed text-ink-mute">
-          Confirm your Google account with a quick code by email.
+          Confirm your account with a quick code by email.
         </p>
 
         <div className="mt-[15px]">
@@ -63,7 +62,6 @@ export default function HeroAuthCard() {
       <div className="mt-[15px] flex flex-col gap-[8px]">
         <GoogleButton label="Continue with Google" />
         <GithubButton label="Continue with GitHub" />
-        <MicrosoftButton label="Continue with Microsoft" />
         <DiscordButton label="Continue with Discord" />
       </div>
 
