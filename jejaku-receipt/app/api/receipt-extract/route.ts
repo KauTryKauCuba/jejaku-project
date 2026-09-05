@@ -120,18 +120,23 @@ export async function POST(req: NextRequest) {
   // eligible to be served from cache instead of billed as fresh input on
   // every scan. The multi-image note is appended after that too, since it
   // only applies sometimes and would otherwise split the prefix itself.
-  // The items shape is a named object, not a compact positional array —
-  // a compact array format was tried here and reverted. It saved output
-  // tokens, but max_tokens (3000) already gives comfortable headroom over
-  // what a single image can legibly resolve anyway, so there was nothing
-  // real to gain from it, and a real cost: a positional array has no
-  // field-order anchor, so the model has to keep name/price/quantity
-  // position exactly right with nothing reminding it mid-generation what
-  // each slot means — self-documenting named keys are what it reliably
-  // produces instead.
+  //
+  // Items ask for raw `numbers` per line, not a computed price — a real
+  // scan against 5 receipts (all using the same "quantity, per-unit
+  // PRICE, separate AMOUNT" layout) showed the model correctly divide-vs-
+  // not for the first ~15 lines, then get 10 of the next 11 multi-
+  // quantity lines wrong, reporting the AMOUNT as if it were the price.
+  // That's not a comprehension gap (it read the rule right 15 times in a
+  // row) — it's a consistency-under-repetition problem, and rewording the
+  // rule doesn't fix a rule the model already demonstrably knows how to
+  // follow. What does: stop asking it to decide. Report the numbers as
+  // printed, in order, and let resolveLinePrice (lib/receiptExtractParse)
+  // do the division deterministically in code — and cross-check the two
+  // numbers against each other when both are present, catching exactly
+  // the failure this replaced (see priceUncertain there).
   const instructions =
     "Read this receipt as ONLY a JSON object, no other text, in exactly this shape: " +
-    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0,"quantity":1}]} ' +
+    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","quantity":1,"numbers":[0]}]} ' +
     "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
     "creases, fading), null rather than guessing. " +
     "amount: final total paid, plain number, no currency symbol. " +
@@ -143,12 +148,27 @@ export async function POST(req: NextRequest) {
     "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
     "store's address/language. " +
     "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
-    "items: each line's name, quantity, and PER-UNIT price. Most receipts print only quantity + one " +
-    "price per line, and that price is the line's TOTAL — divide by quantity to get price whenever " +
-    "quantity > 1 (skip dividing only if quantity is 1, or a separate unit/\"each\" price is shown). " +
-    "Combo/bundle lines may list included items indented below with no price of their own — skip " +
-    "those, keep only the parent line. quantity is an integer ≥1. Skip subtotal/tax/tip/total lines. " +
-    "Empty array if none readable. " +
+    "items: for each line, report its name, quantity (integer ≥1; use 1 for weight/measure-sold " +
+    "items, see below), and numbers: every price-like number printed on the line after quantity, IN " +
+    "THE ORDER PRINTED, as plain numbers. Do not compute or divide anything yourself — just transcribe " +
+    "what's printed. Most receipts print ONE number per line (the line's total) — report that single " +
+    "number. Some print TWO — a per-unit price AND a separate line total/amount — report both, price " +
+    "first then total, in that order. " +
+    "The FIRST item line is the one most likely to have its quantity and the number(s) after it run " +
+    "together, before you've settled into this receipt's column spacing — read it especially " +
+    "carefully; quantity and the price/total numbers are separate values even when printed close " +
+    "together. " +
+    "For items sold by weight/measure (e.g. \"0.85kg @ 2.99/kg\"), use quantity 1 and report the " +
+    "single number that's the actual amount paid, not the per-kg/per-unit rate. " +
+    "A number may have a trailing tax-code letter printed directly after it with no space (e.g. " +
+    "23.00Z, 8.60S) — that's a tax category code, not part of the number; report only the numeric " +
+    "value. A discount/rebate line (usually a negative amount tied to the item above it) is its own " +
+    "item — name it for what it is (e.g. \"Discount\"), quantity 1, numbers a single negative amount. " +
+    "An item's name may wrap across two printed lines before its numbers appear — read the full " +
+    "wrapped text as one item name. " +
+    "Combo/bundle lines may list included items indented below with no numbers of their own — skip " +
+    "those, keep only the parent line. Skip subtotal/tax/tip/total lines. Empty array if none " +
+    "readable. " +
     "null for any field that truly can't be determined (items is always an array, never null).";
 
   const multiImageNote =
@@ -235,8 +255,15 @@ export async function POST(req: NextRequest) {
     typeof fields.currency === "string" && CURRENCY_CODE_PATTERN.test(fields.currency.toUpperCase())
       ? fields.currency.toUpperCase()
       : null;
-  const items = normalizeItems(itemEntriesToObjects(itemsRaw));
-  const itemsMismatch = computeItemsMismatch(items, tax, amount);
+  const resolvedItems = itemEntriesToObjects(itemsRaw);
+  const items = normalizeItems(resolvedItems);
+  // Two independent signals, both folded into one flag the UI already
+  // knows how to show (see lib/receiptScanStatus.ts): the whole-receipt
+  // aggregate check (items + tax vs. the printed total), and now also a
+  // per-line check — any single item whose own printed numbers didn't
+  // reconcile with each other (see resolveLinePrice) trips this too, even
+  // when the aggregate happens to still look fine.
+  const itemsMismatch = computeItemsMismatch(items, tax, amount) || resolvedItems.some((i) => i.priceUncertain);
   return NextResponse.json({
     merchant,
     amount,

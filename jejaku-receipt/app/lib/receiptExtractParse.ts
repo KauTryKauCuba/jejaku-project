@@ -17,10 +17,9 @@ export type ParsedReceiptResponse = {
   // caller applies the same typeof/format checks either way, truncated or
   // not. Null only when nothing at all survived parsing.
   fields: Record<string, unknown> | null;
-  // Raw `items` entries — each expected to be a `{name, price, quantity?}`
-  // object (what the prompt asks for) but not yet validated as such, see
-  // itemEntriesToObjects below, which also tolerates a `[name, price,
-  // quantity?]` array per entry in case the model produces one anyway.
+  // Raw `items` entries — each expected to be a `{name, quantity, numbers}`
+  // object (see itemEntriesToObjects below for exactly what shape is
+  // expected and why), not yet validated as such.
   itemsRaw: unknown[];
   // True when the response was cut off before finishing — either the API
   // told us directly (finish_reason "length") or a truncated items array
@@ -78,25 +77,70 @@ function salvageTruncatedResponse(blob: string): ParsedReceiptResponse {
   const arrayStart = afterItemsKey.indexOf("[");
   const itemsRaw: unknown[] = [];
   if (arrayStart !== -1) {
-    const itemsBlob = afterItemsKey.slice(arrayStart);
-    // Item entries are flat — no nesting inside a single entry, whether
-    // it's a `{...}` object (the normal case) or a `[...]` array (still
-    // tolerated, see itemEntriesToObjects) — so a simple no-nested-
-    // bracket-or-brace match reliably captures every *complete* entry of
-    // either shape and simply fails to match a trailing, cut-off one.
-    const entryMatches = itemsBlob.match(/\{[^{}[\]]*\}|\[[^{}[\]]*\]/g) ?? [];
-    for (const entry of entryMatches) {
+    // +1 to start scanning at the array's *contents*, not the opening
+    // bracket itself — otherwise that bracket gets counted as depth and
+    // every real entry inside would be read one level too deep.
+    const itemsBlob = afterItemsKey.slice(arrayStart + 1);
+    for (const entry of extractCompleteJsonEntries(itemsBlob)) {
       try {
         itemsRaw.push(JSON.parse(entry));
       } catch {
-        // A bracket-shaped match that still isn't valid JSON (e.g. a
-        // stray `]` inside a quoted item name) — drop that one entry
-        // rather than losing the whole salvage over it.
+        // A bracket-balanced chunk that still isn't valid JSON (e.g. a
+        // trailing comma, or a stray bracket inside a quoted item name)
+        // — drop that one entry rather than losing the whole salvage.
       }
     }
   }
 
   return { fields, itemsRaw, truncated: true };
+}
+
+// Scans a sequence of top-level JSON entries (objects or arrays) that may
+// themselves be nested — an item entry now carries its own `numbers`
+// array (see itemEntriesToObjects), so entries are no longer flat and a
+// simple "no nested brackets" regex isn't enough. Tracks bracket depth and
+// quoted-string state (so a brace/bracket character inside a quoted item
+// name doesn't get miscounted) and yields only entries that fully closed
+// before the text ran out — a trailing entry cut off mid-way is silently
+// omitted, not yielded partially, which is exactly the split truncation
+// salvage needs.
+function extractCompleteJsonEntries(text: string): string[] {
+  const entries: string[] = [];
+  let depth = 0;
+  let start = -1;
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === "{" || ch === "[") {
+      if (depth === 0) start = i;
+      depth++;
+      continue;
+    }
+    if (ch === "}" || ch === "]") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        entries.push(text.slice(start, i + 1));
+        start = -1;
+      } else if (depth < 0) {
+        // The array's own closing bracket, or something similarly
+        // unbalanced — stop rather than let depth go permanently negative.
+        return entries;
+      }
+    }
+  }
+  return entries;
 }
 
 // Closes a truncated object prefix into valid JSON by trimming a trailing
@@ -112,39 +156,100 @@ function salvageScalarPrefix(prefix: string): Record<string, unknown> | null {
   }
 }
 
-// Converts raw item entries into the plain objects normalizeItems
-// (lib/expenses.ts) already knows how to validate, backfill an id onto,
-// and turn into real ExpenseItems.
+export type ResolvedItem = {
+  name: string;
+  price: number;
+  quantity?: number;
+  // True when this line's own printed numbers didn't reconcile with each
+  // other — see resolveLinePrice below. A per-line signal, sharper than
+  // the whole-receipt computeItemsMismatch check in receiptSanity.ts:
+  // this flags exactly which item looked wrong, not just "something on
+  // this receipt doesn't add up".
+  priceUncertain: boolean;
+};
+
+// Turns quantity + the RAW numbers printed on a line into a per-unit
+// price — this is deterministic app-side math, not something the model
+// is asked to decide. That's the point: asking the model to judge
+// "is this the total or the per-unit price, do I divide or not" turned
+// out to be an unreliable judgment call in practice — correct on a
+// receipt's first ~15 lines, then silently inconsistent for the rest (see
+// the comment on receipt-extract's route for the real scan that surfaced
+// this). Transcribing the numbers it sees, without having to decide what
+// they mean, is a plain read — a task models are much more consistently
+// accurate at, including late in a long list.
 //
-// Accepts either shape per entry: the named `{name, price, quantity?}`
-// object the prompt asks for (self-documenting, and the format DeepSeek
-// reliably produces — see the note on receipt-extract's route about why
-// an earlier compact `[name, price, quantity?]` array format was tried
-// and reverted: positional arrays have no field-order anchor, and turned
-// out measurably less reliable in practice, not just "marginally" as
-// expected — the model would occasionally emit a named object anyway, or
-// get the position wrong, either of which silently dropped that item
-// under strict array-only parsing), or a `[name, price, quantity?]` array
-// for the same reason receipt-extract still mentions it's acceptable: no
-// reason to throw an entry away just because the model happened to
-// produce the other valid shape on a given call.
+// One number on the line: that number IS the line's total (most
+// receipts). Two numbers: the first is claimed to be the per-unit price,
+// the last the line's total — cross-checked against each other, since
+// the model reporting both numbers accurately (even if it doesn't know
+// which is which) is far more reliable than it deciding whether to divide.
+export function resolveLinePrice(quantity: number, numbers: number[]): { price: number; reconciles: boolean } {
+  if (numbers.length === 0) return { price: 0, reconciles: false };
+  if (numbers.length === 1) {
+    // Nothing to cross-check a single number against — trust it.
+    return { price: Math.round((numbers[0] / quantity) * 100) / 100, reconciles: true };
+  }
+  const claimedPrice = numbers[0];
+  const claimedTotal = numbers[numbers.length - 1];
+  const expectedTotal = Math.round(claimedPrice * quantity * 100) / 100;
+  // A cent or two of tolerance for real-world rounding on the receipt
+  // itself, plus a proportional allowance for larger amounts.
+  const tolerance = Math.max(0.02, Math.abs(claimedTotal) * 0.02);
+  const reconciles = Math.abs(expectedTotal - claimedTotal) <= tolerance;
+  return { price: claimedPrice, reconciles };
+}
+
+// Converts raw item entries into ResolvedItems. Each entry is expected to
+// be a `{name, quantity, numbers}` object — see resolveLinePrice above for
+// why `numbers` (raw, undecided) replaced asking the model for a single
+// pre-computed `price`. Two older shapes are still tolerated defensively:
+// a `{name, price, quantity?}` object (in case the model reverts to
+// reporting a computed price despite the prompt) and a `[name, price,
+// quantity?]` positional array (an even older shape, tried and reverted —
+// see the note on receipt-extract's route). No reason to throw an entry
+// away just because the model produced a different valid-looking shape on
+// a given call than the one just asked for.
 //
-// Same tolerance normalizeItems itself has: an unusable entry is dropped,
-// not treated as a reason to fail the whole list.
-export function itemEntriesToObjects(itemsRaw: unknown[]): { name: string; price: number; quantity?: number }[] {
-  const result: { name: string; price: number; quantity?: number }[] = [];
+// Same tolerance normalizeItems (lib/expenses.ts) itself has downstream:
+// an unusable entry is dropped, not treated as a reason to fail the whole
+// list.
+export function itemEntriesToObjects(itemsRaw: unknown[]): ResolvedItem[] {
+  const result: ResolvedItem[] = [];
   for (const entry of itemsRaw) {
-    const [name, price, quantity] = Array.isArray(entry)
-      ? entry
-      : entry && typeof entry === "object"
-        ? [(entry as Record<string, unknown>).name, (entry as Record<string, unknown>).price, (entry as Record<string, unknown>).quantity]
-        : [undefined, undefined, undefined];
-    if (typeof name !== "string" || typeof price !== "number" || !Number.isFinite(price)) continue;
-    // Quantity 1 is the implicit default everywhere downstream (lineTotal,
-    // display, etc. already treat `quantity ?? 1` as equivalent) — no
-    // need to store it explicitly for that common case.
-    const hasRealQuantity = typeof quantity === "number" && Number.isFinite(quantity) && quantity > 0 && quantity !== 1;
-    result.push(hasRealQuantity ? { name, price, quantity } : { name, price });
+    if (Array.isArray(entry)) {
+      // Oldest tolerated shape: [name, price, quantity?].
+      const [name, price, quantity] = entry;
+      if (typeof name !== "string" || typeof price !== "number" || !Number.isFinite(price)) continue;
+      const q = typeof quantity === "number" && Number.isFinite(quantity) && quantity > 0 ? quantity : undefined;
+      result.push({ name, price, quantity: q !== 1 ? q : undefined, priceUncertain: false });
+      continue;
+    }
+    if (!entry || typeof entry !== "object") continue;
+
+    const obj = entry as Record<string, unknown>;
+    if (typeof obj.name !== "string") continue;
+    const name = obj.name;
+    const rawQuantity = obj.quantity;
+    const quantity = typeof rawQuantity === "number" && Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
+
+    if (Array.isArray(obj.numbers)) {
+      const numbers = obj.numbers.filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+      if (numbers.length === 0) continue;
+      const resolved = resolveLinePrice(quantity, numbers);
+      result.push({
+        name,
+        price: resolved.price,
+        quantity: quantity !== 1 ? quantity : undefined,
+        priceUncertain: !resolved.reconciles,
+      });
+      continue;
+    }
+
+    // Older tolerated shape: a direct, pre-computed `price` field.
+    if (typeof obj.price === "number" && Number.isFinite(obj.price)) {
+      result.push({ name, price: obj.price, quantity: quantity !== 1 ? quantity : undefined, priceUncertain: false });
+    }
   }
   return result;
 }

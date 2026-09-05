@@ -514,6 +514,20 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Item prices read correctly on receipts with a separate total column",
+    body: "Some receipts print a per-item price and a separate line total side by side; others print only one number per line. Quick Scan used to ask the AI to tell those apart and do the math itself — usually right, but it could quietly get it backwards partway through a long list, doubling or halving a price with nothing to show for it. It no longer has to decide: it now just reads the numbers as printed, and the app does the arithmetic and cross-checks the two numbers against each other. A line that doesn't add up now gets flagged instead of silently trusted.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "A \"Long receipt\" option in Quick Scan",
+    body: "A long grocery run still fits in one photo, but the scanner reads less detail per line the longer that photo gets. Quick Scan's camera screen now has a Long receipt toggle — off by default, one tap and shoot exactly as before — that splits the photo into a few overlapping slices before sending it off, giving each part its own full read instead of sharing one shrinking one.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

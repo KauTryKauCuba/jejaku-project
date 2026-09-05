@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Flashlight, X } from "@phosphor-icons/react";
+import { Camera, Flashlight, Rows, X } from "@phosphor-icons/react";
+import { sliceCanvas } from "../lib/sliceReceipt";
 
 // Torch control isn't part of the standard TS DOM types — it's a real but
 // non-standard capability (Chrome/Android only; no iOS Safari, no desktop).
@@ -20,7 +21,15 @@ export default function CameraCapture({
   onCapture,
   onCancel,
 }: {
-  onCapture: (file: File) => void;
+  // previewFile is always the single full captured photo — what gets
+  // stored/shown as the receipt's own photo, tiled or not. extractImages
+  // is that same single photo (as one data URL) when "Long receipt" isn't
+  // on, or several vertical tiles sliced from it when it is — already
+  // data URLs, ready to send straight to the extraction API, since
+  // that's the only thing they're ever used for. See lib/sliceReceipt.ts
+  // for why an explicit toggle, not the photo's own aspect ratio, is what
+  // decides whether tiling happens at all.
+  onCapture: (previewFile: File, extractImages: string[]) => void;
   onCancel: () => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -30,6 +39,7 @@ export default function CameraCapture({
   const [capturing, setCapturing] = useState(false);
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const [longReceipt, setLongReceipt] = useState(false);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -145,7 +155,12 @@ export default function CameraCapture({
       canvas.toBlob(
         (blob) => {
           if (!blob) return;
-          onCapture(new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" }));
+          const previewFile = new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" });
+          // Sliced from the same contrast-boosted canvas the preview photo
+          // came from — a single tile (this same photo, as a data URL)
+          // when longReceipt is off, matching today's behavior exactly.
+          const extractImages = sliceCanvas(canvas, longReceipt);
+          onCapture(previewFile, extractImages);
         },
         "image/jpeg",
         0.92
@@ -245,6 +260,24 @@ export default function CameraCapture({
             <p className="max-w-[30ch] text-center text-[12px] font-medium text-canvas">
               Lay it flat, keep the whole receipt in frame, and make sure it&apos;s well lit
             </p>
+            {/* Toggling this doesn't change how the photo is taken — one
+                normal shutter tap either way — only what happens to it
+                after capture (see CameraCapture's capture() and
+                lib/sliceReceipt.ts). Off by default so an ordinary scan
+                behaves exactly as before. */}
+            <button
+              type="button"
+              onClick={() => setLongReceipt((v) => !v)}
+              aria-pressed={longReceipt}
+              className={
+                longReceipt
+                  ? "flex h-[29px] items-center gap-[6px] rounded-pill bg-canvas px-[13px] text-[12px] font-medium text-ink transition-colors"
+                  : "flex h-[29px] items-center gap-[6px] rounded-pill border border-canvas/40 bg-canvas/10 px-[13px] text-[12px] font-medium text-canvas transition-colors hover:bg-canvas/20"
+              }
+            >
+              <Rows size={13} weight={longReceipt ? "fill" : "light"} />
+              Long receipt
+            </button>
             {/* The one AI call in this app that happens on a photo — sent
                 to DeepSeek to read it, not stored there. Anywhere else a
                 receipt image is added (import photo/PDF, manual entry) it

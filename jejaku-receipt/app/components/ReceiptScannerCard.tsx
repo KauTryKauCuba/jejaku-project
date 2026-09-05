@@ -148,21 +148,21 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   };
 
   // Shared by the camera and "Import photo" paths — both end up holding
-  // one or more image Files the same way, and extraction doesn't care
-  // where they came from. `files` is more than one entry only for a
-  // receipt long enough to need splitting into parts before capture —
-  // still one extraction request either way, just with more image blocks
-  // in it (see the route for how those get merged into a single result).
+  // one or more data-URL images the same way, and extraction doesn't care
+  // where they came from. `images` is more than one entry only when a
+  // receipt was flagged as long and sliced into tiles before capture (see
+  // CameraCapture and lib/sliceReceipt.ts) — still one extraction request
+  // either way, just with more image blocks in it (see the route for how
+  // those get merged into a single result).
   // PDF import deliberately doesn't call this: DeepSeek's vision model
   // can't read a PDF directly, so that would need a render-to-image step
   // this doesn't have yet.
-  const runExtraction = async (files: File[]) => {
+  const runExtraction = async (images: string[]) => {
     setExtracted(null);
     setExtractError(undefined);
-    setTileCount(files.length);
+    setTileCount(images.length);
     setExtracting(true);
     try {
-      const images = await Promise.all(files.map(fileToDataUrl));
       const res = await fetch("/api/receipt-extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,14 +192,14 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     }
   };
 
-  const handleCameraCapture = (file: File) => {
-    applyFile(file, "image");
-    runExtraction([file]);
+  const handleCameraCapture = (previewFile: File, extractImages: string[]) => {
+    applyFile(previewFile, "image");
+    runExtraction(extractImages);
   };
 
-  const handlePhotoImport = (file: File) => {
+  const handlePhotoImport = async (file: File) => {
     applyFile(file, "image");
-    runExtraction([file]);
+    runExtraction([await fileToDataUrl(file)]);
   };
 
   const reset = () => {
