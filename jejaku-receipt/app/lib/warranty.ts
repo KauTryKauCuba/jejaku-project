@@ -53,6 +53,28 @@ function isoDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+// The claim/coverage/expiry facts as exported data — deliberately not
+// time-relative (unlike WarrantyStatus's daysLeft), since an export is a
+// fixed record read at any later date, not a live screen. Shared by the
+// CSV and PDF exports so "what counts as tracked coverage" can't quietly
+// drift between the two the way it briefly did before this existed.
+export type WarrantyExportFields = {
+  isClaim: boolean;
+  months: number | undefined;
+  expiry: Date | undefined;
+};
+
+export function warrantyExportFields(expense: {
+  isWarrantyClaim?: boolean;
+  warrantyMonths?: number;
+  date: string;
+}): WarrantyExportFields {
+  const isClaim = expense.isWarrantyClaim === true;
+  const months = isClaim ? expense.warrantyMonths : undefined;
+  const expiry = months !== undefined ? warrantyExpiryDate(expense.date, months) : undefined;
+  return { isClaim, months, expiry };
+}
+
 // Short status label for a receipt row or tile — days close-in, weeks
 // further out, months beyond that, so the number stays small and readable
 // instead of "Expires in 187 days".

@@ -430,6 +430,34 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "The Receipt Scanner card gets an icon",
+    body: "Every dashboard tile has a badge icon above its title except this one. Added a matching camera badge so the scanner card looks like it belongs with the rest.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Click a receipt to preview it",
+    body: "The Receipts page list only ever led to editing — there was no quick way to just look at a receipt. Clicking a row now opens a preview with the photo, items, tax, and warranty/split details, while the split, edit, and delete buttons still work on their own without opening it.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Receipt rows highlight cleanly on hover",
+    body: "Hovering a row on the Receipts page now shows a consistent rounded highlight on every row, first and last included, without curving the hairline dividers between them.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan and Quick Split walk you through it, step by step",
+    body: "Tapping either button now opens a short animated tutorial first — one screen per step, illustrated with the actual receipt data moving through the flow, with Back/Next to move through it and \"Don't show this again\" to skip it from then on.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

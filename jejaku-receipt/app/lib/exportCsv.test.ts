@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { expensesToCsv } from "./exportCsv";
-import type { Expense } from "./expenses";
+import { formatCurrency, type Expense } from "./expenses";
 
 function baseExpense(overrides: Partial<Expense> = {}): Expense {
   return {
@@ -38,5 +38,33 @@ describe("expensesToCsv", () => {
     const csv = expensesToCsv([baseExpense({ isWarrantyClaim: false, warrantyMonths: 6 })]);
     const row = csv.split("\r\n")[1];
     expect(row).toContain(",,,,");
+  });
+
+  it("includes the Items column in the header", () => {
+    const csv = expensesToCsv([]);
+    const header = csv.replace(/^﻿/, "").split("\r\n")[0];
+    expect(header.split(",")).toContain("Items");
+  });
+
+  it("quotes a multi-item cell per RFC 4180, since the list is joined with newlines", () => {
+    const csv = expensesToCsv([
+      baseExpense({
+        items: [
+          { name: "Bananas", price: 2.5 },
+          { name: "Almond milk", price: 4 },
+        ],
+      }),
+    ]);
+    // Splitting on "\r\n" (the row separator) still isolates this row
+    // cleanly even though its Items cell contains a bare "\n" internally —
+    // rows are joined with the two-character sequence, items only with one.
+    const row = csv.split("\r\n")[1];
+    expect(row).toContain(`"Bananas — ${formatCurrency(2.5)}\nAlmond milk — ${formatCurrency(4)}"`);
+  });
+
+  it("leaves the Items cell empty for a receipt with no items", () => {
+    const csv = expensesToCsv([baseExpense()]);
+    const row = csv.split("\r\n")[1];
+    expect(row.endsWith(",")).toBe(true);
   });
 });

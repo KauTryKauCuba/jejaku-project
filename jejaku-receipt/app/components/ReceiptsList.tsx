@@ -14,6 +14,7 @@ import DatePicker from "./DatePicker";
 import Modal from "./Modal";
 import ExpenseForm from "./ExpenseForm";
 import SplitBillModal from "./SplitBillModal";
+import ReceiptPreviewModal from "./ReceiptPreviewModal";
 
 const PAGE_SIZE_OPTIONS = ["5", "10", "50", "100"];
 const ALL_CATEGORIES = "All categories";
@@ -46,6 +47,7 @@ export default function ReceiptsList({
   const [page, setPage] = useState(0);
   const [pageSizeText, setPageSizeText] = useState(defaultPageSize);
   const pageSize = Number(pageSizeText);
+  const [previewing, setPreviewing] = useState<Expense | null>(null);
   const [editing, setEditing] = useState<Expense | null>(null);
   const [splitting, setSplitting] = useState<Expense | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -277,10 +279,18 @@ export default function ReceiptsList({
       ) : (
         <ul className="mt-[15px] flex flex-col divide-y divide-hairline">
           {pageExpenses.map((e) => (
-            <li
-              key={e.id}
-              className="flex items-center gap-[11px] py-[11px] first:pt-0 last:pb-0"
-            >
+            <li key={e.id}>
+              {/* Padding and the rounded hover highlight live on this inner
+                  div, not the li, so the highlight can be rounded without
+                  also rounding the divide-y hairline above it — border-radius
+                  on the li itself would curve that border's corners too.
+                  Padding is uniform across rows (no first/last special-case)
+                  so the rounded corners look the same on every row instead
+                  of getting clipped flush against the card edge on the ends. */}
+              <div
+                onClick={() => setPreviewing(e)}
+                className="flex cursor-pointer items-center gap-[11px] rounded-md px-[11px] py-[11px] transition-colors hover:bg-canvas-soft"
+              >
               <div className="flex min-w-0 flex-1 items-center gap-[11px]">
                 <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas-soft text-ink-mute">
                   {e.photoUrl ? (
@@ -332,7 +342,7 @@ export default function ReceiptsList({
               </p>
 
               {editable && (confirmingDeleteId === e.id ? (
-                <div className="flex shrink-0 items-center gap-[6px]">
+                <div className="flex shrink-0 items-center gap-[6px]" onClick={(evt) => evt.stopPropagation()}>
                   <span className="text-[11px] text-ink-mute">Delete?</span>
                   <button
                     type="button"
@@ -354,7 +364,7 @@ export default function ReceiptsList({
                   </button>
                 </div>
               ) : (
-                <div className="flex shrink-0 items-center gap-[6px]">
+                <div className="flex shrink-0 items-center gap-[6px]" onClick={(evt) => evt.stopPropagation()}>
                   <button
                     type="button"
                     onClick={() => setSplitting(e)}
@@ -384,6 +394,7 @@ export default function ReceiptsList({
                   </button>
                 </div>
               ))}
+              </div>
             </li>
           ))}
         </ul>
@@ -471,6 +482,14 @@ export default function ReceiptsList({
       )}
 
       {splitting && <SplitBillModal expense={splitting} onClose={() => setSplitting(null)} />}
+
+      {previewing && (
+        <ReceiptPreviewModal
+          expense={previewing}
+          receiptNumber={receiptNumber(previewing.id)}
+          onClose={() => setPreviewing(null)}
+        />
+      )}
     </div>
   );
 }

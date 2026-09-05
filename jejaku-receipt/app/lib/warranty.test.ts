@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatWarrantyStatus, warrantyExpiryDate, warrantyStatus } from "./warranty";
+import { formatWarrantyStatus, warrantyExpiryDate, warrantyExportFields, warrantyStatus } from "./warranty";
 
 describe("warrantyExpiryDate", () => {
   it("adds the given number of months to the purchase date", () => {
@@ -44,6 +44,34 @@ describe("warrantyStatus", () => {
   it("is active on the expiry day itself (0 days left)", () => {
     const status = warrantyStatus({ isWarrantyClaim: true, warrantyMonths: 1, date: "2026-08-05" }, now);
     expect(status).toEqual(expect.objectContaining({ kind: "active", daysLeft: 0 }));
+  });
+});
+
+describe("warrantyExportFields", () => {
+  // Shared by the CSV and PDF exports — this is the one source of truth
+  // for "what counts as tracked coverage" so the two can't quietly
+  // disagree on it, which is exactly what happened before this existed.
+
+  it("is not a claim when isWarrantyClaim is false, even with warrantyMonths set", () => {
+    expect(warrantyExportFields({ isWarrantyClaim: false, warrantyMonths: 12, date: "2026-01-01" })).toEqual({
+      isClaim: false,
+      months: undefined,
+      expiry: undefined,
+    });
+  });
+
+  it("is a claim with no coverage when tagged but no length was picked", () => {
+    const result = warrantyExportFields({ isWarrantyClaim: true, date: "2026-01-01" });
+    expect(result.isClaim).toBe(true);
+    expect(result.months).toBeUndefined();
+    expect(result.expiry).toBeUndefined();
+  });
+
+  it("derives an expiry date when both the claim flag and coverage length are set", () => {
+    const result = warrantyExportFields({ isWarrantyClaim: true, warrantyMonths: 6, date: "2026-01-15" });
+    expect(result.isClaim).toBe(true);
+    expect(result.months).toBe(6);
+    expect(result.expiry).toEqual(warrantyExpiryDate("2026-01-15", 6));
   });
 });
 

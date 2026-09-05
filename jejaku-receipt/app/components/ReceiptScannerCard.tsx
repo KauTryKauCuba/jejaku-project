@@ -2,10 +2,12 @@
 
 import { useRef, useState } from "react";
 import { CaretLeft, Camera, FilePdf, Image as ImageIcon, PencilSimple, Users, X } from "@phosphor-icons/react";
+import IconFlowBadge from "./IconFlowBadge";
 import ReceiptIllustration from "./ReceiptIllustration";
 import ExpenseForm from "./ExpenseForm";
 import CameraCapture from "./CameraCapture";
 import SplitBillModal from "./SplitBillModal";
+import ScannerTutorialModal, { type TutorialKind } from "./ScannerTutorialModal";
 import { formatCurrency, type Expense, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
 import { useAddExpense, useExpenses } from "./ExpensesProvider";
@@ -14,6 +16,29 @@ import { useAddExpense, useExpenses } from "./ExpensesProvider";
 // checks change meaningfully — a quick visible marker of how current the
 // scan quality is, without digging through the changelog.
 const SCAN_TUNING_DATE = "2026-09-04";
+
+const TUTORIAL_DISMISSED_KEY: Record<TutorialKind, string> = {
+  scan: "jejaku-receipt:hide-scan-tutorial",
+  split: "jejaku-receipt:hide-split-tutorial",
+};
+
+function isTutorialDismissed(kind: TutorialKind): boolean {
+  try {
+    return localStorage.getItem(TUTORIAL_DISMISSED_KEY[kind]) === "1";
+  } catch {
+    // Private browsing / disabled storage — just show the tutorial every
+    // time rather than failing the button press.
+    return false;
+  }
+}
+
+function dismissTutorial(kind: TutorialKind) {
+  try {
+    localStorage.setItem(TUTORIAL_DISMISSED_KEY[kind], "1");
+  } catch {
+    // Nothing to do if storage isn't available — it'll just ask again.
+  }
+}
 
 type Mode = "idle" | "camera" | "details" | "split";
 type PreviewKind = "image" | "pdf" | null;
@@ -68,6 +93,30 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   // through silently to a blank form with no explanation.
   const [extractError, setExtractError] = useState<string | undefined>(undefined);
   const [splitTarget, setSplitTarget] = useState<Expense | null>(null);
+  const [tutorial, setTutorial] = useState<TutorialKind | null>(null);
+
+  const startQuickScan = () => {
+    if (isTutorialDismissed("scan")) {
+      setMode("camera");
+    } else {
+      setTutorial("scan");
+    }
+  };
+
+  const startQuickSplit = () => {
+    if (isTutorialDismissed("split")) {
+      setMode("split");
+    } else {
+      setTutorial("split");
+    }
+  };
+
+  const continueTutorial = (dontShowAgain: boolean) => {
+    if (!tutorial) return;
+    if (dontShowAgain) dismissTutorial(tutorial);
+    setMode(tutorial === "scan" ? "camera" : "split");
+    setTutorial(null);
+  };
 
   const revokePreview = () => {
     setPreviewUrl((prev) => {
@@ -186,7 +235,10 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
-      <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">
+      <IconFlowBadge size={40} seed={4}>
+        <Camera size={16} weight="light" />
+      </IconFlowBadge>
+      <h3 className="mt-[12px] text-[15px] font-light tracking-[-0.19px] text-ink">
         Receipt Scanner
       </h3>
       <p className="mt-[4px] max-w-md text-[12px] leading-relaxed text-ink-mute">
@@ -223,7 +275,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
           <div className="mt-[19px] flex items-center gap-[8px]">
             <button
               type="button"
-              onClick={() => setMode("camera")}
+              onClick={startQuickScan}
               className="flex h-[37px] flex-1 items-center justify-center gap-[8px] rounded-pill bg-primary px-[15px] text-[14px] font-medium text-on-primary transition-transform active:scale-[0.98]"
             >
               <Camera size={16} weight="light" />
@@ -231,7 +283,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
             </button>
             <button
               type="button"
-              onClick={() => setMode("split")}
+              onClick={startQuickSplit}
               className="flex h-[37px] flex-1 items-center justify-center gap-[8px] rounded-pill border border-hairline-input bg-canvas px-[15px] text-[14px] font-medium text-ink transition-colors hover:bg-canvas-soft"
             >
               <Users size={16} weight="light" />
@@ -327,6 +379,14 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
       )}
 
       {splitTarget && <SplitBillModal expense={splitTarget} onClose={() => setSplitTarget(null)} />}
+
+      {tutorial && (
+        <ScannerTutorialModal
+          kind={tutorial}
+          onContinue={continueTutorial}
+          onClose={() => setTutorial(null)}
+        />
+      )}
 
       {mode === "details" && (
         <div className="mt-[19px]">

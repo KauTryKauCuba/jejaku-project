@@ -1,6 +1,6 @@
-import type { Expense } from "./expenses";
+import { formatItemsList, type Expense } from "./expenses";
 import { formatIsoDate } from "./formatIso";
-import { warrantyExpiryDate } from "./warranty";
+import { warrantyExportFields } from "./warranty";
 
 const CSV_COLUMNS = [
   "Date",
@@ -16,6 +16,7 @@ const CSV_COLUMNS = [
   "State",
   "Country",
   "Note",
+  "Items",
 ] as const;
 
 // Quotes any field containing a comma, quote, or newline, per RFC 4180 —
@@ -29,13 +30,7 @@ function csvField(value: string | number | undefined): string {
 
 export function expensesToCsv(expenses: Expense[]): string {
   const rows = expenses.map((e) => {
-    // Coverage length is only meaningful alongside the claim flag — a
-    // claim tagged before this field existed (or with no length picked)
-    // has nothing to derive an expiry from, so both stay blank rather
-    // than showing a coverage number with no corresponding date.
-    const warrantyMonths = e.isWarrantyClaim ? e.warrantyMonths : undefined;
-    const warrantyExpiry =
-      warrantyMonths !== undefined ? formatIsoDate(warrantyExpiryDate(e.date, warrantyMonths)) : undefined;
+    const warranty = warrantyExportFields(e);
     return [
       e.date,
       e.merchant,
@@ -43,13 +38,14 @@ export function expensesToCsv(expenses: Expense[]): string {
       e.amount,
       e.currency ?? "",
       e.tax ?? "",
-      e.isWarrantyClaim ? "Yes" : "",
-      warrantyMonths ?? "",
-      warrantyExpiry ?? "",
+      warranty.isClaim ? "Yes" : "",
+      warranty.months ?? "",
+      warranty.expiry ? formatIsoDate(warranty.expiry) : "",
       e.city ?? "",
       e.state ?? "",
       e.country ?? "",
       e.note ?? "",
+      formatItemsList(e),
     ]
       .map(csvField)
       .join(",");

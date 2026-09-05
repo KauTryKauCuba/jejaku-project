@@ -64,65 +64,74 @@ export default function TotalSpentTile() {
         : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. the period before (${formatCurrency(previousTotal, defaultCurrency)}).`;
 
   return (
-    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-purple/25 via-canvas to-canvas p-[20px]">
-      {/* Rendered before the big watermark below, so it paints on top of
-          these — that's what puts them "behind" it, not a z-index. */}
-      {WATERMARK_SATELLITES.map((s, i) => (
-        <div
-          key={i}
-          className="icon-watermark-spin pointer-events-none absolute"
-          style={{
-            top: s.top,
-            right: s.right,
-            animationDuration: `${s.duration}s`,
-            animationDelay: `${s.delay}s`,
-          }}
-          aria-hidden="true"
-        >
-          <CurrencyDollar size={s.size} weight="light" color={`rgba(147,51,234,${s.opacity})`} />
-        </div>
-      ))}
-
-      {/* Wrapper carries the position/size and the spin — the two mask
-          layers inside just fill it (inset-0), so rotating this one
-          element spins the whole watermark icon as a unit, ring included. */}
-      <div className="icon-watermark-spin pointer-events-none absolute -right-[18.7px] -top-[22.1px] h-[112.2px] w-[112.2px]" aria-hidden="true">
-        <div
-          className="absolute inset-0"
-          style={{
-            WebkitMaskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-            maskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskSize: "contain",
-            maskSize: "contain",
-            WebkitMaskPosition: "center",
-            maskPosition: "center",
-            backgroundColor: "rgba(147,51,234,0.18)",
-          }}
-        />
-        <div
-          className="absolute inset-0 overflow-hidden"
-          style={{
-            WebkitMaskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-            maskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-            WebkitMaskRepeat: "no-repeat",
-            maskRepeat: "no-repeat",
-            WebkitMaskSize: "contain",
-            maskSize: "contain",
-            WebkitMaskPosition: "center",
-            maskPosition: "center",
-          }}
-        >
+    <div className="relative flex h-full min-w-0 flex-col rounded-lg border border-hairline bg-gradient-to-br from-purple/25 via-canvas to-canvas p-[20px]">
+      {/* Clipping lives on this decorative layer only, not the card itself —
+          the card used to carry overflow-hidden directly, which also
+          clipped the range Select's dropdown below whenever it opened
+          (the dropdown is a sibling of this layer, not a descendant, so
+          it isn't clipped by this div's own overflow-hidden). See
+          DESIGN.md's note on popovers inside an overflow-hidden wrapper —
+          same trap, same fix, just discovered again on a card outside the
+          gradient-mesh one that note was originally written for. */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg" aria-hidden="true">
+        {/* Rendered before the big watermark below, so it paints on top of
+            these — that's what puts them "behind" it, not a z-index. */}
+        {WATERMARK_SATELLITES.map((s, i) => (
           <div
-            className="icon-outline-spin absolute inset-[-50%]"
+            key={i}
+            className="icon-watermark-spin absolute"
             style={{
-              // Purple only — {colors.purple}, this card's dedicated accent;
-              // see DESIGN.md.
-              background:
-                "conic-gradient(from 0deg, rgba(147,51,234,1), rgba(147,51,234,0.3), rgba(147,51,234,1))",
+              top: s.top,
+              right: s.right,
+              animationDuration: `${s.duration}s`,
+              animationDelay: `${s.delay}s`,
+            }}
+          >
+            <CurrencyDollar size={s.size} weight="light" color={`rgba(147,51,234,${s.opacity})`} />
+          </div>
+        ))}
+
+        {/* Wrapper carries the position/size and the spin — the two mask
+            layers inside just fill it (inset-0), so rotating this one
+            element spins the whole watermark icon as a unit, ring included. */}
+        <div className="icon-watermark-spin absolute -right-[18.7px] -top-[22.1px] h-[112.2px] w-[112.2px]">
+          <div
+            className="absolute inset-0"
+            style={{
+              WebkitMaskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+              maskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskSize: "contain",
+              maskSize: "contain",
+              WebkitMaskPosition: "center",
+              maskPosition: "center",
+              backgroundColor: "rgba(147,51,234,0.18)",
             }}
           />
+          <div
+            className="absolute inset-0 overflow-hidden"
+            style={{
+              WebkitMaskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+              maskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+              WebkitMaskRepeat: "no-repeat",
+              maskRepeat: "no-repeat",
+              WebkitMaskSize: "contain",
+              maskSize: "contain",
+              WebkitMaskPosition: "center",
+              maskPosition: "center",
+            }}
+          >
+            <div
+              className="icon-outline-spin absolute inset-[-50%]"
+              style={{
+                // Purple only — {colors.purple}, this card's dedicated accent;
+                // see DESIGN.md.
+                background:
+                  "conic-gradient(from 0deg, rgba(147,51,234,1), rgba(147,51,234,0.3), rgba(147,51,234,1))",
+              }}
+            />
+          </div>
         </div>
       </div>
 

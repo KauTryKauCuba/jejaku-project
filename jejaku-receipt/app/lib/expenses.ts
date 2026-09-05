@@ -49,6 +49,24 @@ export function lineTotal(item: ExpenseItem): number {
   return Math.round(item.price * (item.quantity ?? 1) * 100) / 100;
 }
 
+// One line per item, quantity shown only when it's not the implicit
+// default of 1 (matches how the receipt form itself hides quantity for a
+// plain single item) — used by both exports (CSV and PDF) so a receipt's
+// line items read the same way in either one. Joined with "\n" rather
+// than a delimiter like "; " since both destinations render it as a
+// stacked list: autoTable turns "\n" into a real line break within a
+// cell, and csvField already quotes a field containing a newline per RFC
+// 4180, so it opens as a multi-line cell in Excel/Sheets too.
+export function formatItemsList(e: Pick<Expense, "items" | "currency">): string {
+  if (!e.items || e.items.length === 0) return "";
+  return e.items
+    .map((item) => {
+      const qty = item.quantity && item.quantity !== 1 ? ` ×${item.quantity}` : "";
+      return `${item.name}${qty} — ${formatCurrency(lineTotal(item), e.currency)}`;
+    })
+    .join("\n");
+}
+
 // Validates and normalizes an already-JSON-parsed items array (e.g. the
 // AI-extracted `items` field) — filters out anything not shaped like an
 // item, and drops a nonsensical quantity (non-finite or <= 0) rather than

@@ -14,6 +14,7 @@
   --color-orange: #ea580c;
   --color-purple: #9333ea;
   --color-pink: #db2777;
+  --color-green: #16a34a;
 
   /* Surface */
   --color-canvas: #ffffff;
@@ -46,6 +47,7 @@
   --color-orange: var(--color-orange);
   --color-purple: var(--color-purple);
   --color-pink: var(--color-pink);
+  --color-green: var(--color-green);
 
   --color-canvas: var(--color-canvas);
   --color-canvas-soft: var(--color-canvas-soft);

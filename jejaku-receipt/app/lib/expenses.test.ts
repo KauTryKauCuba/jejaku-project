@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { computeSplitTotals, lineTotal, normalizeItems, type ExpenseItem, type SplitData } from "./expenses";
+import {
+  computeSplitTotals,
+  formatCurrency,
+  formatItemsList,
+  lineTotal,
+  normalizeItems,
+  type ExpenseItem,
+  type SplitData,
+} from "./expenses";
 
 describe("lineTotal", () => {
   it("multiplies price by quantity", () => {
@@ -83,6 +91,38 @@ describe("computeSplitTotals", () => {
     const split: SplitData = { people: ["Alice"], assignments: [] };
     const totals = computeSplitTotals(items, 9, split);
     expect(totals.get("Alice")).toBe(0);
+  });
+});
+
+describe("formatItemsList", () => {
+  it("returns an empty string when there are no items", () => {
+    expect(formatItemsList({ items: undefined, currency: "USD" })).toBe("");
+    expect(formatItemsList({ items: [], currency: "USD" })).toBe("");
+  });
+
+  it("hides quantity when it's the implicit default of 1", () => {
+    const expected = `Coffee — ${formatCurrency(4.5, "USD")}`;
+    expect(formatItemsList({ items: [{ name: "Coffee", price: 4.5 }], currency: "USD" })).toBe(expected);
+    expect(
+      formatItemsList({ items: [{ name: "Coffee", price: 4.5, quantity: 1 }], currency: "USD" })
+    ).toBe(expected);
+  });
+
+  it("shows quantity when it's more than 1, using the item's line total", () => {
+    expect(
+      formatItemsList({ items: [{ name: "Iced tea", price: 4.5, quantity: 2 }], currency: "USD" })
+    ).toBe(`Iced tea ×2 — ${formatCurrency(9, "USD")}`);
+  });
+
+  it("joins multiple items with a newline, one per line", () => {
+    const result = formatItemsList({
+      items: [
+        { name: "Bananas", price: 2.5 },
+        { name: "Almond milk", price: 4 },
+      ],
+      currency: "USD",
+    });
+    expect(result).toBe(`Bananas — ${formatCurrency(2.5, "USD")}\nAlmond milk — ${formatCurrency(4, "USD")}`);
   });
 });
 

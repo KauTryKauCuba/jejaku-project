@@ -13,6 +13,19 @@ import { geoDistance, geoGraticule10, geoOrthographic, geoPath } from "d3-geo";
 import { useExpenses } from "./ExpensesProvider";
 import IconFlowBadge from "./IconFlowBadge";
 import worldCountries from "../lib/worldCountries.json";
+import { MAP_PIN_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
+
+// Same treatment as the four gradient-watermark stat cards (see
+// TotalSpentTile) — this card didn't have an accent color of its own
+// before, so it gets its own — green, distinct from the other cards'
+// purple/pink/blue/amber.
+const WATERMARK_SATELLITES = [
+  { top: 8, right: 96, size: 13, opacity: 0.14, duration: 10, delay: -2 },
+  { top: 58, right: 6, size: 17, opacity: 0.12, duration: 16, delay: -6 },
+  { top: -8, right: 46, size: 11, opacity: 0.16, duration: 12, delay: -4 },
+  { top: 92, right: 60, size: 15, opacity: 0.13, duration: 18, delay: -9 },
+  { top: 30, right: 132, size: 10, opacity: 0.15, duration: 9, delay: -1 },
+];
 
 type CountryFeature = { type: "Feature"; properties: { name: string }; geometry: unknown };
 const COUNTRIES = (worldCountries as { features: CountryFeature[] }).features;
@@ -213,131 +226,201 @@ export default function LocationHistoryCard() {
   }, []);
 
   return (
-    <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
-      <IconFlowBadge size={40} seed={8}>
-        <MapPin size={16} weight="light" />
-      </IconFlowBadge>
+    <div className="relative min-w-0 overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-green/25 via-canvas to-canvas p-[20px]">
+      {/* Rendered before the big watermark below, so it paints on top of
+          these — that's what puts them "behind" it, not a z-index. */}
+      {WATERMARK_SATELLITES.map((s, i) => (
+        <div
+          key={i}
+          className="icon-watermark-spin pointer-events-none absolute"
+          style={{
+            top: s.top,
+            right: s.right,
+            animationDuration: `${s.duration}s`,
+            animationDelay: `${s.delay}s`,
+          }}
+          aria-hidden="true"
+        >
+          <MapPin size={s.size} weight="light" color={`rgba(22,163,74,${s.opacity})`} />
+        </div>
+      ))}
 
-      <h3 className="mt-[15px] text-[15px] font-light tracking-[-0.19px] text-ink">
-        Receipt Locations
-      </h3>
-      <p className="mt-[4px] text-[12px] leading-relaxed text-ink-mute">
-        Drag the globe to look around.
-      </p>
+      {/* Wrapper carries the position/size and the spin — the two mask
+          layers inside just fill it (inset-0), so rotating this one
+          element spins the whole watermark icon as a unit, ring included. */}
+      <div className="icon-watermark-spin pointer-events-none absolute -right-[18.7px] -top-[22.1px] h-[112.2px] w-[112.2px]" aria-hidden="true">
+        <div
+          className="absolute inset-0"
+          style={{
+            WebkitMaskImage: iconFillMaskDataUri(MAP_PIN_LIGHT_PATH),
+            maskImage: iconFillMaskDataUri(MAP_PIN_LIGHT_PATH),
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            backgroundColor: "rgba(22,163,74,0.18)",
+          }}
+        />
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            WebkitMaskImage: iconStrokeMaskDataUri(MAP_PIN_LIGHT_PATH),
+            maskImage: iconStrokeMaskDataUri(MAP_PIN_LIGHT_PATH),
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        >
+          <div
+            className="icon-outline-spin absolute inset-[-50%]"
+            style={{
+              // Green only — {colors.green}, this card's dedicated accent;
+              // see DESIGN.md.
+              background:
+                "conic-gradient(from 0deg, rgba(22,163,74,1), rgba(22,163,74,0.3), rgba(22,163,74,1))",
+            }}
+          />
+        </div>
+      </div>
 
-      {groups.length === 0 ? (
-        <p className="mt-[19px] text-[12px] text-ink-mute">
-          No locations yet — add a city on a receipt to see it here.
+      {/* Everything below needs its own `relative` to land in the same
+          paint layer as the absolutely-positioned watermark above — a
+          plain static element would otherwise paint *behind* it despite
+          coming later in the DOM (CSS stacking: positioned elements with
+          z-index:auto paint after static in-flow content as a group,
+          regardless of source order between the two groups). Same reason
+          every content element in TotalSpentTile carries `relative`. */}
+      <div className="relative">
+        <IconFlowBadge size={40} seed={8}>
+          <MapPin size={16} weight="light" />
+        </IconFlowBadge>
+
+        <h3 className="mt-[15px] text-[15px] font-light tracking-[-0.19px] text-ink">
+          Receipt Locations
+        </h3>
+        <p className="mt-[4px] text-[12px] leading-relaxed text-ink-mute">
+          Drag the globe to look around.
         </p>
-      ) : (
-        <>
-          <div className="relative mt-[15px] w-full">
-            <svg
-              viewBox={`0 0 ${GLOBE_WIDTH} ${GLOBE_HEIGHT}`}
-              className="block w-full cursor-grab touch-none active:cursor-grabbing"
-              role="img"
-              aria-label="Draggable globe of receipt locations"
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              onWheel={handleWheel}
-            >
-              <path d={outlinePath} className="fill-canvas-soft stroke-hairline" strokeWidth={0.75} />
-              <path d={graticulePath} className="fill-none stroke-hairline" strokeWidth={0.3} />
-              {countryPaths.map((c) => (
-                <path
-                  key={c.name}
-                  d={c.d}
-                  className={
-                    c.hasValue
-                      ? "fill-primary/60 stroke-primary"
-                      : "fill-primary-subdued/70 stroke-primary-soft/50"
-                  }
-                  strokeWidth={0.35}
-                  strokeLinejoin="round"
-                />
-              ))}
-              {visibleGroups.map((g) => {
-                const { x, y } = positions.get(g.key) ?? { x: 0, y: 0 };
-                const isHovered = hovered === g.key;
-                return (
-                  <g
-                    key={g.key}
-                    className="cursor-pointer"
-                    onPointerEnter={() => setHovered(g.key)}
-                    onPointerLeave={() => setHovered((h) => (h === g.key ? null : h))}
-                  >
-                    <circle cx={x} cy={y} r={isHovered ? 9 : 6.5} className="fill-primary/15 transition-[r]" />
-                    <circle
-                      cx={x}
-                      cy={y}
-                      r={isHovered ? 4.5 : 3.5}
-                      className="fill-primary stroke-canvas transition-[r]"
-                      strokeWidth={1.3}
-                    />
-                  </g>
-                );
-              })}
-            </svg>
 
-            <div className="absolute bottom-[8px] right-[8px] flex flex-col overflow-hidden rounded-md border border-hairline bg-canvas shadow-sm">
-              <button
-                type="button"
-                onClick={zoomIn}
-                disabled={zoom >= MAX_ZOOM}
-                aria-label="Zoom in"
-                className="flex h-[26px] w-[26px] items-center justify-center text-ink-mute transition-colors hover:bg-canvas-soft disabled:opacity-30"
+        {groups.length === 0 ? (
+          <p className="mt-[19px] text-[12px] text-ink-mute">
+            No locations yet — add a city on a receipt to see it here.
+          </p>
+        ) : (
+          <>
+            <div className="relative mt-[15px] w-full">
+              <svg
+                viewBox={`0 0 ${GLOBE_WIDTH} ${GLOBE_HEIGHT}`}
+                className="block w-full cursor-grab touch-none active:cursor-grabbing"
+                role="img"
+                aria-label="Draggable globe of receipt locations"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                onWheel={handleWheel}
               >
-                <MagnifyingGlassPlus size={13} weight="light" />
-              </button>
-              <div className="h-px bg-hairline" />
-              <button
-                type="button"
-                onClick={zoomOut}
-                disabled={zoom <= MIN_ZOOM}
-                aria-label="Zoom out"
-                className="flex h-[26px] w-[26px] items-center justify-center text-ink-mute transition-colors hover:bg-canvas-soft disabled:opacity-30"
-              >
-                <MagnifyingGlassMinus size={13} weight="light" />
-              </button>
+                <path d={outlinePath} className="fill-canvas-soft stroke-hairline" strokeWidth={0.75} />
+                <path d={graticulePath} className="fill-none stroke-hairline" strokeWidth={0.3} />
+                {countryPaths.map((c) => (
+                  <path
+                    key={c.name}
+                    d={c.d}
+                    className={
+                      c.hasValue
+                        ? "fill-primary/60 stroke-primary"
+                        : "fill-primary-subdued/70 stroke-primary-soft/50"
+                    }
+                    strokeWidth={0.35}
+                    strokeLinejoin="round"
+                  />
+                ))}
+                {visibleGroups.map((g) => {
+                  const { x, y } = positions.get(g.key) ?? { x: 0, y: 0 };
+                  const isHovered = hovered === g.key;
+                  return (
+                    <g
+                      key={g.key}
+                      className="cursor-pointer"
+                      onPointerEnter={() => setHovered(g.key)}
+                      onPointerLeave={() => setHovered((h) => (h === g.key ? null : h))}
+                    >
+                      <circle cx={x} cy={y} r={isHovered ? 9 : 6.5} className="fill-primary/15 transition-[r]" />
+                      <circle
+                        cx={x}
+                        cy={y}
+                        r={isHovered ? 4.5 : 3.5}
+                        className="fill-primary stroke-canvas transition-[r]"
+                        strokeWidth={1.3}
+                      />
+                    </g>
+                  );
+                })}
+              </svg>
+
+              <div className="absolute bottom-[8px] right-[8px] flex flex-col overflow-hidden rounded-md border border-hairline bg-canvas shadow-sm">
+                <button
+                  type="button"
+                  onClick={zoomIn}
+                  disabled={zoom >= MAX_ZOOM}
+                  aria-label="Zoom in"
+                  className="flex h-[26px] w-[26px] items-center justify-center text-ink-mute transition-colors hover:bg-canvas-soft disabled:opacity-30"
+                >
+                  <MagnifyingGlassPlus size={13} weight="light" />
+                </button>
+                <div className="h-px bg-hairline" />
+                <button
+                  type="button"
+                  onClick={zoomOut}
+                  disabled={zoom <= MIN_ZOOM}
+                  aria-label="Zoom out"
+                  className="flex h-[26px] w-[26px] items-center justify-center text-ink-mute transition-colors hover:bg-canvas-soft disabled:opacity-30"
+                >
+                  <MagnifyingGlassMinus size={13} weight="light" />
+                </button>
+              </div>
+
+              {hovered && (
+                <div className="pointer-events-none absolute left-[8px] top-[8px] rounded-sm border border-hairline bg-canvas px-[9px] py-[6px] text-[11px] shadow-lg">
+                  {(() => {
+                    const g = groups.find((g) => g.key === hovered);
+                    if (!g) return null;
+                    return (
+                      <>
+                        <p className="font-medium text-ink">{g.key}</p>
+                        <p className="text-ink-mute">
+                          {g.count} receipt{g.count === 1 ? "" : "s"}
+                        </p>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
 
-            {hovered && (
-              <div className="pointer-events-none absolute left-[8px] top-[8px] rounded-sm border border-hairline bg-canvas px-[9px] py-[6px] text-[11px] shadow-lg">
-                {(() => {
-                  const g = groups.find((g) => g.key === hovered);
-                  if (!g) return null;
-                  return (
-                    <>
-                      <p className="font-medium text-ink">{g.key}</p>
-                      <p className="text-ink-mute">
-                        {g.count} receipt{g.count === 1 ? "" : "s"}
-                      </p>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-
-          <ul className="mt-[15px] flex flex-col divide-y divide-hairline">
-            {groups.map((g) => (
-              <li key={g.key} className="flex items-center justify-between gap-[11px] py-[8px] first:pt-0 last:pb-0">
-                <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium text-ink">{g.city || g.country || "Unknown"}</p>
-                  <p className="truncate text-[11px] text-ink-mute">
-                    {[g.state, g.country].filter(Boolean).join(", ") || " "}
+            <ul className="mt-[15px] flex flex-col divide-y divide-hairline">
+              {groups.map((g) => (
+                <li key={g.key} className="flex items-center justify-between gap-[11px] py-[8px] first:pt-0 last:pb-0">
+                  <div className="min-w-0">
+                    <p className="truncate text-[13px] font-medium text-ink">{g.city || g.country || "Unknown"}</p>
+                    <p className="truncate text-[11px] text-ink-mute">
+                      {[g.state, g.country].filter(Boolean).join(", ") || " "}
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-[11px] text-ink-mute">
+                    {g.count} receipt{g.count === 1 ? "" : "s"}
                   </p>
-                </div>
-                <p className="shrink-0 text-[11px] text-ink-mute">
-                  {g.count} receipt{g.count === 1 ? "" : "s"}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </div>
   );
 }
