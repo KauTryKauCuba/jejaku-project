@@ -155,21 +155,24 @@ export function computeSplitTotals(items: ExpenseItem[], tax: number | undefined
   if (!split) return totals;
   for (const person of split.people) totals.set(person, 0);
 
-  let assignedSubtotal = 0;
   for (const assignment of split.assignments) {
     const item = items[assignment.itemIndex];
     if (!item || assignment.people.length === 0) continue;
     const total = lineTotal(item);
     const share = total / assignment.people.length;
-    assignedSubtotal += total;
     for (const person of assignment.people) {
       totals.set(person, (totals.get(person) ?? 0) + share);
     }
   }
 
-  if (tax && assignedSubtotal > 0) {
+  // Tax is distributed relative to the whole receipt's item subtotal, not
+  // just the assigned portion — dividing by the assigned-only subtotal
+  // would dump an unassigned item's share of tax entirely onto whoever IS
+  // in the split, overcharging them for something nobody claimed.
+  const itemsSubtotal = items.reduce((sum, item) => sum + lineTotal(item), 0);
+  if (tax && itemsSubtotal > 0) {
     for (const [person, subtotal] of totals) {
-      totals.set(person, subtotal + tax * (subtotal / assignedSubtotal));
+      totals.set(person, subtotal + tax * (subtotal / itemsSubtotal));
     }
   }
 

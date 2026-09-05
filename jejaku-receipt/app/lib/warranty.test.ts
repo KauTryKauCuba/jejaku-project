@@ -15,6 +15,23 @@ describe("warrantyExpiryDate", () => {
     expect(expiry.getMonth()).toBe(8); // September
     expect(expiry.getDate()).toBe(5);
   });
+
+  it("clamps to the target month's last day instead of overflowing into the next one", () => {
+    // A regression test: `Date.setMonth` doesn't clamp, so Jan 31 + 1
+    // month used to land on Mar 3 (Feb only has 28 days in 2026) instead
+    // of the intended Feb 28.
+    const expiry = warrantyExpiryDate("2026-01-31", 1);
+    expect(expiry.getFullYear()).toBe(2026);
+    expect(expiry.getMonth()).toBe(1); // February
+    expect(expiry.getDate()).toBe(28);
+  });
+
+  it("clamps to Feb 29 in a leap year", () => {
+    const expiry = warrantyExpiryDate("2023-08-29", 6);
+    expect(expiry.getFullYear()).toBe(2024);
+    expect(expiry.getMonth()).toBe(1); // February
+    expect(expiry.getDate()).toBe(29); // 2024 is a leap year
+  });
 });
 
 describe("warrantyStatus", () => {

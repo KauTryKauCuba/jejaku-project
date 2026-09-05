@@ -29,9 +29,12 @@ export const WARRANTY_LENGTH_OPTIONS: readonly { label: string; months: number }
 // timezone.
 export function warrantyExpiryDate(purchaseDate: string, months: number): Date {
   const [y, m, d] = purchaseDate.slice(0, 10).split("-").map(Number);
-  const expiry = new Date(y, m - 1, d);
-  expiry.setMonth(expiry.getMonth() + months);
-  return expiry;
+  const targetMonthIndex = m - 1 + months;
+  // `Date`'s own month-overflow rollover doesn't clamp the day, so e.g.
+  // Jan 31 + 1 month lands on Mar 3 (Feb only has 28/29 days) instead of
+  // Feb 28 — clamp to the target month's actual last day ourselves.
+  const daysInTargetMonth = new Date(y, targetMonthIndex + 1, 0).getDate();
+  return new Date(y, targetMonthIndex, Math.min(d, daysInTargetMonth));
 }
 
 // `now` is injectable for tests; real callers always take the default.

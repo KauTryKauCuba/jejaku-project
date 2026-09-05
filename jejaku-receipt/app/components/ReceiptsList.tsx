@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
+import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
 import { formatWarrantyStatus, warrantyStatus } from "../lib/warranty";
@@ -9,6 +9,7 @@ import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
 import { downloadPdf } from "../lib/exportPdf";
 import { useCategories, useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
 import { useDismissable } from "../lib/useDismissable";
+import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
 import DatePicker from "./DatePicker";
 import Modal from "./Modal";
@@ -142,7 +143,11 @@ export default function ReceiptsList({
 
   return (
     <div className="min-w-0 rounded-lg border border-hairline bg-canvas p-[20px]">
-      <div className="flex flex-wrap items-start justify-between gap-[8px]">
+      <IconFlowBadge size={40} seed={7}>
+        <Receipt size={16} weight="light" />
+      </IconFlowBadge>
+
+      <div className="mt-[15px] flex flex-wrap items-start justify-between gap-[8px]">
         <div>
           <h3 className="text-[15px] font-light tracking-[-0.19px] text-ink">{title}</h3>
           <p className="mt-[4px] text-[12px] text-ink-mute">{description}</p>

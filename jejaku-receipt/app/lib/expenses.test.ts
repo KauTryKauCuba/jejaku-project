@@ -92,6 +92,21 @@ describe("computeSplitTotals", () => {
     const totals = computeSplitTotals(items, 9, split);
     expect(totals.get("Alice")).toBe(0);
   });
+
+  it("doesn't dump an unassigned item's tax share onto whoever IS assigned", () => {
+    // Pizza (20) goes to Alice, Salad (10) is left unassigned — maybe it
+    // was a shared side nobody tagged. A regression test for a bug where
+    // tax was divided by the *assigned* subtotal (20) instead of the full
+    // receipt subtotal (30), so Alice absorbed 100% of the tax instead of
+    // her fair 2/3 share.
+    const split: SplitData = {
+      people: ["Alice"],
+      assignments: [{ itemIndex: 0, people: ["Alice"] }],
+    };
+    const totals = computeSplitTotals(items, 9, split);
+    // 20 + 9 * (20/30) = 26, not 20 + 9 = 29.
+    expect(totals.get("Alice")).toBe(26);
+  });
 });
 
 describe("formatItemsList", () => {
