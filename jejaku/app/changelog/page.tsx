@@ -493,6 +493,20 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan can read a lot more of a long receipt",
+    body: "A receipt with more than around 35 items used to fail completely — the scan came back as if nothing was there at all, no explanation, even though the photo was perfectly readable. Quick Scan can now read several times that many items, and if a receipt is still too long to fully capture in one read, it keeps what it actually found instead of throwing the whole scan away — you'll see exactly how many items were read, with a note to check the rest and the total yourself.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "The captured photo preview shows the whole receipt",
+    body: "A tall receipt used to get cropped down to a small square after capture, showing only a middle slice of it. The preview now shows the entire photo, letterboxed instead of cropped, whatever its shape.",
+    dateLabel: "Shipped",
+    date: "2026-09-05",
+  },
 ];
 
 export default function ChangelogPage() {

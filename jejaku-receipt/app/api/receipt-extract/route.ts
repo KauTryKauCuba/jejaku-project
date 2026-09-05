@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { EXPENSE_CATEGORIES, normalizeItems, type ExpenseItem } from "../../lib/expenses";
 import { computeItemsMismatch } from "../../lib/receiptSanity";
+import { parseReceiptResponse, positionalItemsToObjects } from "../../lib/receiptExtractParse";
 import { getCurrentUser } from "../../lib/currentUser";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../lib/uploads";
 
@@ -52,9 +53,22 @@ type Extracted = {
   // True when the extracted items + tax don't reasonably add up to the
   // extracted amount — see computeItemsMismatch in lib/receiptSanity.ts.
   itemsMismatch: boolean;
+  // True when the model's response was cut off before finishing — a long
+  // item list is the case most likely to hit this, and it's a different
+  // situation from itemsMismatch: the numbers can't be expected to
+  // reconcile when part of the receipt was never actually read, rather
+  // than misread. See lib/receiptExtractParse.ts for how this is detected
+  // and what gets salvaged from a truncated response.
+  itemsTruncated: boolean;
 };
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
+
+// A ceiling on image parts per request — defense in depth so a modified
+// or compromised client can't send an arbitrarily large batch of images
+// through this route. Whatever client-side splitting eventually decides
+// how many parts a long receipt gets should stay under this.
+const MAX_IMAGES = 8;
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -62,22 +76,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { image } = (await req.json()) as { image?: string };
-  if (!image) {
+  const body = (await req.json()) as { images?: unknown };
+  const images = Array.isArray(body.images) ? body.images.filter((i): i is string => typeof i === "string") : [];
+  if (images.length === 0) {
     return NextResponse.json({ error: "Missing image" }, { status: 400 });
   }
+  if (images.length > MAX_IMAGES) {
+    return NextResponse.json({ error: "Too many image parts." }, { status: 400 });
+  }
 
-  // Rough decoded size from the base64 payload's own length (~4/3 the size
-  // of the bytes it encodes) rather than actually decoding it — cheap, and
-  // precise enough for a ceiling. Mirrors the size cap saveExpensePhoto
-  // enforces on an uploaded file, so this route can't be used to bill
-  // DeepSeek for an image far larger than anything the app would ever
-  // actually store.
-  const commaIndex = image.indexOf(",");
-  const base64Payload = commaIndex === -1 ? image : image.slice(commaIndex + 1);
-  const approxDecodedBytes = (base64Payload.length * 3) / 4;
-  if (approxDecodedBytes > MAX_UPLOAD_SIZE_BYTES) {
-    return NextResponse.json({ error: "Image is too large." }, { status: 413 });
+  // Rough decoded size from each base64 payload's own length (~4/3 the
+  // size of the bytes it encodes) rather than actually decoding it —
+  // cheap, and precise enough for a ceiling. Mirrors the size cap
+  // saveExpensePhoto enforces on an uploaded file, applied per image so a
+  // multi-tile request can't smuggle through anything larger, tile for
+  // tile, than a single scan ever could.
+  for (const image of images) {
+    const commaIndex = image.indexOf(",");
+    const base64Payload = commaIndex === -1 ? image : image.slice(commaIndex + 1);
+    const approxDecodedBytes = (base64Payload.length * 3) / 4;
+    if (approxDecodedBytes > MAX_UPLOAD_SIZE_BYTES) {
+      return NextResponse.json({ error: "Image is too large." }, { status: 413 });
+    }
   }
 
   if (!recordScanAndCheckLimit(user.id)) {
@@ -92,6 +112,46 @@ export async function POST(req: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
   const categoryList = EXPENSE_CATEGORIES.join(", ");
 
+  // The static instruction block is built to be byte-identical across
+  // every request regardless of image count, with the one value that
+  // actually changes daily (today's date) held until the very end —
+  // DeepSeek's prompt cache matches on a shared prefix, so keeping the
+  // whole rules block ahead of any per-request text is what makes it
+  // eligible to be served from cache instead of billed as fresh input on
+  // every scan. The multi-image note is appended after that too, since it
+  // only applies sometimes and would otherwise split the prefix itself.
+  const instructions =
+    "Read this receipt as ONLY a JSON object, no other text, in exactly this shape: " +
+    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[["name",0],["name",0,2]]} ' +
+    "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
+    "creases, fading), null rather than guessing. " +
+    "amount: final total paid, plain number, no currency symbol. " +
+    `category: single best fit from: ${categoryList}. ` +
+    "city: store's city from the address line, not a street address or branch number. " +
+    "state: only if printed; null rather than guess. " +
+    "country: infer from context (language, address/phone format, currency) if not printed; null " +
+    "only if there's no signal. " +
+    "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
+    "store's address/language. " +
+    "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
+    "items: each line as a [name, price] pair, or [name, price, quantity] when quantity is more than 1 — " +
+    "omit the third element entirely when quantity is 1, don't write it as 1. price is PER-UNIT: most " +
+    "receipts print only quantity + one price per line, and that price is the line's TOTAL — divide by " +
+    "quantity to get the per-unit price whenever quantity > 1 (skip dividing only if quantity is 1, or a " +
+    "separate unit/\"each\" price is shown). Combo/bundle lines may list included items indented below with " +
+    "no price of their own — skip those, keep only the parent line. quantity is an integer ≥1. Skip " +
+    "subtotal/tax/tip/total lines. Empty array if none readable. " +
+    "null for any field that truly can't be determined (items is always an array, never null).";
+
+  const multiImageNote =
+    images.length > 1
+      ? " These images are sequential top-to-bottom slices of ONE receipt, each slightly overlapping the " +
+        "next — read them as a single continuous receipt, not separate ones, and don't count a line that " +
+        "appears in the overlap between two slices twice."
+      : "";
+
+  const dateNote = ` date: YYYY-MM-DD; if none printed, use today, ${today}.`;
+
   const res = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: {
@@ -105,44 +165,19 @@ export async function POST(req: NextRequest) {
       // budget on reasoning_content before it ever writes the answer —
       // disable it, we just want a direct structured-extraction answer.
       thinking: { type: "disabled" },
-      // Bumped from 500: an itemized list is real extra output tokens on
-      // top of the four scalar fields, and a truncated response comes back
-      // as invalid JSON — see the earlier max_tokens bug on this route.
-      max_tokens: 900,
+      // Raised from 900: that ceiling truncated a response somewhere
+      // around 35 items, and a truncated response used to come back as
+      // invalid JSON and get thrown away entirely (see the earlier
+      // max_tokens bug this route already had). It's a ceiling, not a
+      // reservation — a normal 10-item receipt still only costs what it
+      // actually generates.
+      max_tokens: 3000,
       messages: [
         {
           role: "user",
           content: [
-            {
-              type: "text",
-              text:
-                "Read this receipt photo and extract its details as ONLY a JSON object, no other text, in " +
-                "exactly this shape: " +
-                '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","price":0,"quantity":1}]} ' +
-                "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
-                "creases, fading), null rather than guessing. " +
-                "amount: final total paid, plain number, no currency symbol. " +
-                `date: YYYY-MM-DD; if none printed, use today, ${today}. ` +
-                `category: single best fit from: ${categoryList}. ` +
-                "city: store's city from the address line, not a street address or branch number. " +
-                "state: only if printed; null rather than guess. " +
-                "country: infer from context (language, address/phone format, currency) if not printed; null " +
-                "only if there's no signal. " +
-                "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
-                "store's address/language. " +
-                "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
-                "items: each line's name, quantity, and PER-UNIT price. Most receipts print only quantity + one " +
-                "price per line, and that price is the line's TOTAL — divide by quantity to get price whenever " +
-                "quantity > 1 (skip dividing only if quantity is 1, or a separate unit/\"each\" price is shown). " +
-                "Combo/bundle lines may list included items indented below with no price of their own — skip " +
-                "those, keep only the parent line. quantity is an integer ≥1. Skip subtotal/tax/tip/total lines. " +
-                "Empty array if none readable. " +
-                "null for any field that truly can't be determined (items is always an array, never null).",
-            },
-            {
-              type: "image_url",
-              image_url: { url: image },
-            },
+            { type: "text", text: instructions + multiImageNote + dateNote },
+            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })),
           ],
         },
       ],
@@ -161,6 +196,7 @@ export async function POST(req: NextRequest) {
     tax: null,
     items: [],
     itemsMismatch: false,
+    itemsTruncated: false,
   };
 
   if (!res.ok) {
@@ -170,41 +206,41 @@ export async function POST(req: NextRequest) {
 
   const data = await res.json();
   const text: string = data?.choices?.[0]?.message?.content ?? "";
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    return NextResponse.json(empty);
+  const finishReason: string | undefined = data?.choices?.[0]?.finish_reason;
+  const { fields, itemsRaw, truncated } = parseReceiptResponse(text, finishReason);
+
+  if (!fields) {
+    return NextResponse.json({ ...empty, itemsTruncated: truncated } satisfies Extracted);
   }
 
-  try {
-    const parsed = JSON.parse(match[0]);
-    const merchant = typeof parsed.merchant === "string" ? parsed.merchant : null;
-    const amount = typeof parsed.amount === "number" && Number.isFinite(parsed.amount) ? parsed.amount : null;
-    const date = typeof parsed.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(parsed.date) ? parsed.date : null;
-    const category = EXPENSE_CATEGORIES.includes(parsed.category) ? parsed.category : null;
-    const city = typeof parsed.city === "string" ? parsed.city : null;
-    const state = typeof parsed.state === "string" ? parsed.state : null;
-    const country = typeof parsed.country === "string" ? parsed.country : null;
-    const tax = typeof parsed.tax === "number" && Number.isFinite(parsed.tax) ? parsed.tax : null;
-    const currency =
-      typeof parsed.currency === "string" && CURRENCY_CODE_PATTERN.test(parsed.currency.toUpperCase())
-        ? parsed.currency.toUpperCase()
-        : null;
-    const items = normalizeItems(parsed.items);
-    const itemsMismatch = computeItemsMismatch(items, tax, amount);
-    return NextResponse.json({
-      merchant,
-      amount,
-      date,
-      category,
-      city,
-      state,
-      country,
-      currency,
-      tax,
-      items,
-      itemsMismatch,
-    } satisfies Extracted);
-  } catch {
-    return NextResponse.json(empty);
-  }
+  const merchant = typeof fields.merchant === "string" ? fields.merchant : null;
+  const amount = typeof fields.amount === "number" && Number.isFinite(fields.amount) ? fields.amount : null;
+  const date = typeof fields.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(fields.date) ? fields.date : null;
+  const category = EXPENSE_CATEGORIES.includes(fields.category as (typeof EXPENSE_CATEGORIES)[number])
+    ? (fields.category as (typeof EXPENSE_CATEGORIES)[number])
+    : null;
+  const city = typeof fields.city === "string" ? fields.city : null;
+  const state = typeof fields.state === "string" ? fields.state : null;
+  const country = typeof fields.country === "string" ? fields.country : null;
+  const tax = typeof fields.tax === "number" && Number.isFinite(fields.tax) ? fields.tax : null;
+  const currency =
+    typeof fields.currency === "string" && CURRENCY_CODE_PATTERN.test(fields.currency.toUpperCase())
+      ? fields.currency.toUpperCase()
+      : null;
+  const items = normalizeItems(positionalItemsToObjects(itemsRaw));
+  const itemsMismatch = computeItemsMismatch(items, tax, amount);
+  return NextResponse.json({
+    merchant,
+    amount,
+    date,
+    category,
+    city,
+    state,
+    country,
+    currency,
+    tax,
+    items,
+    itemsMismatch,
+    itemsTruncated: truncated,
+  } satisfies Extracted);
 }

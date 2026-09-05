@@ -10,6 +10,7 @@ import SplitBillModal from "./SplitBillModal";
 import ScannerTutorialModal, { type TutorialKind } from "./ScannerTutorialModal";
 import { formatCurrency, type Expense, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
+import { describeScanStatus, scanStatusIsError, scanStatusText } from "../lib/receiptScanStatus";
 import { useAddExpense, useExpenses } from "./ExpensesProvider";
 
 // Bump whenever receipt-extract's prompt, capture pipeline, or sanity
@@ -54,14 +55,13 @@ type Extracted = {
   tax: number | null;
   items: ExpenseItem[];
   itemsMismatch: boolean;
+  // See lib/receiptExtractParse.ts — true when the model's response was
+  // cut off before finishing (a long item list is the likely cause), in
+  // which case itemsMismatch shouldn't be trusted the same way: the
+  // numbers can't be expected to reconcile when part of the receipt was
+  // never read at all, not just misread.
+  itemsTruncated: boolean;
 };
-
-// The model still returns a well-formed (mostly-null) response for a photo
-// that isn't a receipt at all — nothing throws, so this is the only signal
-// that extraction actually found nothing worth pre-filling.
-function extractionFoundNothing(extracted: Extracted): boolean {
-  return !extracted.merchant && !extracted.amount && extracted.items.length === 0;
-}
 
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -88,10 +88,15 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
   const [extracted, setExtracted] = useState<Extracted | null>(null);
   // Set when the extraction request itself didn't succeed (blocked, or
   // never reached the server) — distinct from `extracted` coming back
-  // well-formed but low-confidence (extractionFoundNothing/itemsMismatch
-  // below), which is a different message. Previously this case fell
-  // through silently to a blank form with no explanation.
+  // well-formed but low-confidence (found-nothing/itemsMismatch, see
+  // lib/receiptScanStatus.ts), which is a different message. Previously
+  // this case fell through silently to a blank form with no explanation.
   const [extractError, setExtractError] = useState<string | undefined>(undefined);
+  // How many image parts the last extraction request was made of — 1 for
+  // an ordinary scan. Read by the status line both while extracting
+  // ("reading it in N parts…") and after ("found N items across M
+  // parts"), see lib/receiptScanStatus.ts.
+  const [tileCount, setTileCount] = useState(1);
   const [splitTarget, setSplitTarget] = useState<Expense | null>(null);
   const [tutorial, setTutorial] = useState<TutorialKind | null>(null);
 
@@ -142,21 +147,26 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     setMode("details");
   };
 
-  // Shared by the camera and "Import photo" paths — both end up holding a
-  // File the same way, and extraction doesn't care where it came from.
+  // Shared by the camera and "Import photo" paths — both end up holding
+  // one or more image Files the same way, and extraction doesn't care
+  // where they came from. `files` is more than one entry only for a
+  // receipt long enough to need splitting into parts before capture —
+  // still one extraction request either way, just with more image blocks
+  // in it (see the route for how those get merged into a single result).
   // PDF import deliberately doesn't call this: DeepSeek's vision model
   // can't read a PDF directly, so that would need a render-to-image step
   // this doesn't have yet.
-  const runExtraction = async (file: File) => {
+  const runExtraction = async (files: File[]) => {
     setExtracted(null);
     setExtractError(undefined);
+    setTileCount(files.length);
     setExtracting(true);
     try {
-      const dataUrl = await fileToDataUrl(file);
+      const images = await Promise.all(files.map(fileToDataUrl));
       const res = await fetch("/api/receipt-extract", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl }),
+        body: JSON.stringify({ images }),
       });
       if (res.ok) {
         setExtracted((await res.json()) as Extracted);
@@ -184,12 +194,12 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
   const handleCameraCapture = (file: File) => {
     applyFile(file, "image");
-    runExtraction(file);
+    runExtraction([file]);
   };
 
   const handlePhotoImport = (file: File) => {
     applyFile(file, "image");
-    runExtraction(file);
+    runExtraction([file]);
   };
 
   const reset = () => {
@@ -199,6 +209,7 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
     setExtracted(null);
     setExtractError(undefined);
     setExtracting(false);
+    setTileCount(1);
     setMode("idle");
     if (photoInputRef.current) photoInputRef.current.value = "";
     if (pdfInputRef.current) pdfInputRef.current.value = "";
@@ -392,11 +403,17 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
         <div className="mt-[19px]">
           {previewKind === "image" && previewUrl && (
             <div className="w-full overflow-hidden rounded-lg border border-hairline">
+              {/* object-contain, not object-cover — a long receipt is much
+                  taller than it is wide, and cropping to fill a fixed box
+                  would only ever show a middle slice of it. Letterboxed
+                  against the canvas-soft background instead, so the whole
+                  captured photo is actually visible regardless of its
+                  aspect ratio. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Captured receipt"
-                className="max-h-[240px] w-full object-cover"
+                className="max-h-[320px] w-full bg-canvas-soft object-contain"
               />
               <div className="flex items-center justify-end border-t border-hairline p-[11px]">
                 <button
@@ -428,28 +445,20 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
             </div>
           )}
 
-          <p
-            className={
-              !extracting &&
-              (extractError || (extracted && (extractionFoundNothing(extracted) || extracted.itemsMismatch)))
-                ? "mt-[15px] text-[12px] text-error"
-                : "mt-[15px] text-[12px] text-ink-mute"
-            }
-          >
-            {extracting
-              ? "Reading the receipt…"
-              : extractError
-                ? extractError
-                : extracted
-                  ? extractionFoundNothing(extracted)
-                    ? "Couldn't read this as a receipt — try again with a clearer photo, or fill in the details yourself below."
-                    : extracted.itemsMismatch
-                      ? "Item prices don't quite add up to the total — double-check quantities and prices below before saving."
-                      : "Details auto-filled from the receipt — check them before saving."
-                  : previewKind
-                    ? "Fill in the details below."
-                    : "Enter the expense details below."}
-          </p>
+          {(() => {
+            const status = describeScanStatus({
+              extracting,
+              tileCount,
+              extractError,
+              extracted,
+              hasPreview: previewKind !== null,
+            });
+            return (
+              <p className={scanStatusIsError(status) ? "mt-[15px] text-[12px] text-error" : "mt-[15px] text-[12px] text-ink-mute"}>
+                {scanStatusText(status)}
+              </p>
+            );
+          })()}
           <div className="mt-[8px]">
             {error && <p className="mb-[8px] text-[12px] text-error">{error}</p>}
             {extracting ? (
