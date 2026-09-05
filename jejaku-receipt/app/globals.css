@@ -11,6 +11,9 @@
   --color-amber: #e8a33d;
   --color-seafoam: #7fc0e0;
   --color-citrine: #c9a227;
+  --color-orange: #ea580c;
+  --color-purple: #9333ea;
+  --color-pink: #db2777;
 
   /* Surface */
   --color-canvas: #ffffff;
@@ -40,6 +43,9 @@
   --color-amber: var(--color-amber);
   --color-seafoam: var(--color-seafoam);
   --color-citrine: var(--color-citrine);
+  --color-orange: var(--color-orange);
+  --color-purple: var(--color-purple);
+  --color-pink: var(--color-pink);
 
   --color-canvas: var(--color-canvas);
   --color-canvas-soft: var(--color-canvas-soft);
@@ -245,6 +251,25 @@ body {
   to { transform: rotate(360deg); }
 }
 
+/* Spins the whole watermark icon (both the fill silhouette and the
+   outline layer riding on top of it) as one unit, rotating around its
+   vertical axis rather than in-plane — a globe/coin turn, not a clock
+   hand — on all four gradient-watermark stat cards. The `perspective()`
+   stays fixed across the keyframe so only the turn itself animates; the
+   icon foreshortens toward the edge-on middle of the turn and widens
+   back out, same as a spinning coin. Slower than icon-outline-spin's
+   5s: this turns the entire 132px icon rather than just a highlight
+   band along its outline, so a faster pace would read as busy behind
+   body text rather than ambient. */
+.icon-watermark-spin {
+  animation: icon-globe-spin 14s linear infinite;
+}
+
+@keyframes icon-globe-spin {
+  from { transform: perspective(600px) rotateY(0deg); }
+  to { transform: perspective(600px) rotateY(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gradient-mesh::before,
   .gradient-mesh::after,
@@ -262,6 +287,10 @@ body {
   }
 
   .icon-outline-spin {
+    animation: none;
+  }
+
+  .icon-watermark-spin {
     animation: none;
   }
 

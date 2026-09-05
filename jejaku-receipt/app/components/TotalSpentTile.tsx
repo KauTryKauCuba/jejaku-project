@@ -9,6 +9,22 @@ import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
 import { CURRENCY_DOLLAR_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
 
+// EXPERIMENT (Total Spent only, for now): a handful of small copies of the
+// same icon scattered behind the big watermark, each also doing the globe
+// turn. Negative `delay` values start each one mid-turn rather than at
+// frame zero — with five instances all sharing the exact same keyframe,
+// starting them in sync would read as one wobbling blob instead of
+// independent icons; different durations keep them from ever re-syncing
+// later, either. Sizes/opacities stay low so they read as background
+// texture, not competing with the real watermark for attention.
+const WATERMARK_SATELLITES = [
+  { top: 8, right: 96, size: 13, opacity: 0.14, duration: 10, delay: -2 },
+  { top: 58, right: 6, size: 17, opacity: 0.12, duration: 16, delay: -6 },
+  { top: -8, right: 46, size: 11, opacity: 0.16, duration: 12, delay: -4 },
+  { top: 92, right: 60, size: 15, opacity: 0.13, duration: 18, delay: -9 },
+  { top: 30, right: 132, size: 10, opacity: 0.15, duration: 9, delay: -1 },
+];
+
 export default function TotalSpentTile() {
   const expenses = useExpenses();
   const defaultCurrency = useDefaultCurrency();
@@ -48,46 +64,66 @@ export default function TotalSpentTile() {
         : `${isUp ? "Up" : "Down"} ${Math.abs(percent).toFixed(0)}% vs. the period before (${formatCurrency(previousTotal, defaultCurrency)}).`;
 
   return (
-    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-citrine/25 via-canvas to-canvas p-[20px]">
-      <div
-        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px]"
-        style={{
-          WebkitMaskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-          maskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
-          backgroundColor: "rgba(201,162,39,0.18)",
-        }}
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute -right-[22px] -top-[26px] h-[132px] w-[132px] overflow-hidden"
-        style={{
-          WebkitMaskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-          maskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
-          WebkitMaskRepeat: "no-repeat",
-          maskRepeat: "no-repeat",
-          WebkitMaskSize: "contain",
-          maskSize: "contain",
-          WebkitMaskPosition: "center",
-          maskPosition: "center",
-        }}
-        aria-hidden="true"
-      >
+    <div className="relative flex h-full min-w-0 flex-col overflow-hidden rounded-lg border border-hairline bg-gradient-to-br from-purple/25 via-canvas to-canvas p-[20px]">
+      {/* Rendered before the big watermark below, so it paints on top of
+          these — that's what puts them "behind" it, not a z-index. */}
+      {WATERMARK_SATELLITES.map((s, i) => (
         <div
-          className="icon-outline-spin absolute inset-[-50%]"
+          key={i}
+          className="icon-watermark-spin pointer-events-none absolute"
           style={{
-            // Citrine only — {colors.citrine}, previously a reserved token
-            // with no shipped surface; this dashboard-card watermark is
-            // that surface, documented in DESIGN.md.
-            background:
-              "conic-gradient(from 0deg, rgba(201,162,39,1), rgba(201,162,39,0.3), rgba(201,162,39,1))",
+            top: s.top,
+            right: s.right,
+            animationDuration: `${s.duration}s`,
+            animationDelay: `${s.delay}s`,
+          }}
+          aria-hidden="true"
+        >
+          <CurrencyDollar size={s.size} weight="light" color={`rgba(147,51,234,${s.opacity})`} />
+        </div>
+      ))}
+
+      {/* Wrapper carries the position/size and the spin — the two mask
+          layers inside just fill it (inset-0), so rotating this one
+          element spins the whole watermark icon as a unit, ring included. */}
+      <div className="icon-watermark-spin pointer-events-none absolute -right-[18.7px] -top-[22.1px] h-[112.2px] w-[112.2px]" aria-hidden="true">
+        <div
+          className="absolute inset-0"
+          style={{
+            WebkitMaskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+            maskImage: iconFillMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            backgroundColor: "rgba(147,51,234,0.18)",
           }}
         />
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{
+            WebkitMaskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+            maskImage: iconStrokeMaskDataUri(CURRENCY_DOLLAR_LIGHT_PATH),
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+          }}
+        >
+          <div
+            className="icon-outline-spin absolute inset-[-50%]"
+            style={{
+              // Purple only — {colors.purple}, this card's dedicated accent;
+              // see DESIGN.md.
+              background:
+                "conic-gradient(from 0deg, rgba(147,51,234,1), rgba(147,51,234,0.3), rgba(147,51,234,1))",
+            }}
+          />
+        </div>
       </div>
 
       <div className="relative flex flex-wrap items-start justify-between gap-[8px]">
