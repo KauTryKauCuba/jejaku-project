@@ -11,6 +11,7 @@ export function toExpense(row: typeof expenses.$inferSelect): Expense {
     tax: row.tax ?? undefined,
     isDemo: row.isDemo,
     isWarrantyClaim: row.isWarrantyClaim,
+    warrantyMonths: row.warrantyMonths ?? undefined,
     note: row.note ?? undefined,
     photoUrl: row.photoUrl ?? undefined,
     location: row.location ?? undefined,

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean, integer } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -33,6 +33,12 @@ export const expenses = pgTable("expenses", {
   // something they'll need for a warranty claim later, so it can be
   // filtered for and found quickly instead of scrolling every receipt.
   isWarrantyClaim: boolean("is_warranty_claim").notNull().default(false),
+  // How many months of coverage from `date` (the purchase date) — null
+  // means "tagged, but no coverage length set" (e.g. a claim tagged before
+  // this field existed, or a warranty of unknown length). Only meaningful
+  // alongside isWarrantyClaim; lets the expiry be derived (date + months)
+  // instead of storing a second date that could drift out of sync with it.
+  warrantyMonths: integer("warranty_months"),
   note: text("note"),
   photoUrl: text("photo_url"),
   location: text("location"),

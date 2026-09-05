@@ -48,6 +48,9 @@ export const POST = withApiErrorHandling(async (request: Request) => {
   const taxRaw = form.get("tax");
   const tax = typeof taxRaw === "string" && taxRaw ? Number(taxRaw) : null;
   const isWarrantyClaim = form.get("isWarrantyClaim") === "true";
+  const warrantyMonthsRaw = form.get("warrantyMonths");
+  const warrantyMonths =
+    isWarrantyClaim && typeof warrantyMonthsRaw === "string" && warrantyMonthsRaw ? Number(warrantyMonthsRaw) : null;
   const noteRaw = form.get("note");
   const note = typeof noteRaw === "string" ? noteRaw.trim() : "";
   const cityRaw = form.get("city");
@@ -74,7 +77,8 @@ export const POST = withApiErrorHandling(async (request: Request) => {
     amount < 0 ||
     !DATE_PATTERN.test(date) ||
     !((EXPENSE_CATEGORIES as readonly string[]).includes(category) || user.customCategories.includes(category)) ||
-    (tax !== null && (!Number.isFinite(tax) || tax < 0))
+    (tax !== null && (!Number.isFinite(tax) || tax < 0)) ||
+    (warrantyMonths !== null && (!Number.isInteger(warrantyMonths) || warrantyMonths <= 0))
   ) {
     return NextResponse.json({ error: "Invalid expense data." }, { status: 400 });
   }
@@ -113,6 +117,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
       category,
       tax,
       isWarrantyClaim,
+      warrantyMonths,
       note: note || null,
       photoUrl,
       city: city || null,

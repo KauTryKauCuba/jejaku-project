@@ -4,6 +4,18 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Check, Plus, Shield, X } from "@phosphor-icons/react";
 import { EXPENSE_CATEGORIES, lineTotal, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
 import { SUPPORTED_CURRENCIES, type SupportedCurrency } from "../lib/currencies";
+import { WARRANTY_LENGTH_OPTIONS } from "../lib/warranty";
+
+const WARRANTY_NO_LENGTH = "No expiry tracked";
+const WARRANTY_LABEL_OPTIONS = [WARRANTY_NO_LENGTH, ...WARRANTY_LENGTH_OPTIONS.map((o) => o.label)] as const;
+
+function warrantyMonthsToLabel(months: number | undefined): (typeof WARRANTY_LABEL_OPTIONS)[number] {
+  return WARRANTY_LENGTH_OPTIONS.find((o) => o.months === months)?.label ?? WARRANTY_NO_LENGTH;
+}
+
+function warrantyLabelToMonths(label: string): number | undefined {
+  return WARRANTY_LENGTH_OPTIONS.find((o) => o.label === label)?.months;
+}
 
 // Falls back to USD for a currency outside the app's supported/convertible
 // list (e.g. AI-inferred from a receipt, or a user's account default) — the
@@ -34,6 +46,7 @@ export default function ExpenseForm({
   initialCurrency,
   initialTax,
   initialWarrantyClaim,
+  initialWarrantyMonths,
   initialSplit,
   categorySource,
   disabled = false,
@@ -45,6 +58,7 @@ export default function ExpenseForm({
     category: ExpenseCategory;
     tax?: number;
     isWarrantyClaim?: boolean;
+    warrantyMonths?: number;
     note?: string;
     city?: string;
     state?: string;
@@ -65,6 +79,7 @@ export default function ExpenseForm({
   initialCurrency?: string;
   initialTax?: number;
   initialWarrantyClaim?: boolean;
+  initialWarrantyMonths?: number;
   /** Not editable here — Quick Split lives in its own dedicated flow so it
    * doesn't get mixed up with regular receipt entry/editing. Carried
    * through unchanged (and reindexed if an item is deleted) so editing
@@ -92,6 +107,7 @@ export default function ExpenseForm({
   const [split, setSplit] = useState<SplitData | undefined>(initialSplit);
   const [tax, setTax] = useState(initialTax !== undefined ? String(initialTax) : "");
   const [isWarrantyClaim, setIsWarrantyClaim] = useState(initialWarrantyClaim ?? false);
+  const [warrantyMonths, setWarrantyMonths] = useState<number | undefined>(initialWarrantyMonths);
   const [note, setNote] = useState("");
   const [dateError, setDateError] = useState<string | undefined>(undefined);
   const [taxError, setTaxError] = useState<string | undefined>(undefined);
@@ -186,6 +202,7 @@ export default function ExpenseForm({
       category,
       tax: parsedTax,
       isWarrantyClaim,
+      warrantyMonths: isWarrantyClaim ? warrantyMonths : undefined,
       note: note.trim() || undefined,
       city: city.trim() || undefined,
       state: state.trim() || undefined,
@@ -443,26 +460,42 @@ export default function ExpenseForm({
         />
       </div>
 
-      <button
-        type="button"
-        onClick={() => setIsWarrantyClaim((v) => !v)}
-        aria-pressed={isWarrantyClaim}
-        className="flex items-center gap-[8px] rounded-md border border-hairline-input bg-canvas px-[11px] py-[9px] text-left transition-colors hover:bg-canvas-soft"
-      >
-        <span
-          className={
-            isWarrantyClaim
-              ? "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-sm bg-primary"
-              : "h-[16px] w-[16px] shrink-0 rounded-sm border border-hairline-input"
-          }
+      <div className="flex flex-col gap-[8px]">
+        <button
+          type="button"
+          onClick={() => setIsWarrantyClaim((v) => !v)}
+          aria-pressed={isWarrantyClaim}
+          className="flex items-center gap-[8px] rounded-md border border-hairline-input bg-canvas px-[11px] py-[9px] text-left transition-colors hover:bg-canvas-soft"
         >
-          {isWarrantyClaim && <Check size={11} weight="bold" className="text-on-primary" />}
-        </span>
-        <Shield size={15} weight="light" className="shrink-0 text-ink-mute" />
-        <span className="text-[13px] font-medium text-ink">
-          Tag as Warranty Claim
-        </span>
-      </button>
+          <span
+            className={
+              isWarrantyClaim
+                ? "flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-sm bg-primary"
+                : "h-[16px] w-[16px] shrink-0 rounded-sm border border-hairline-input"
+            }
+          >
+            {isWarrantyClaim && <Check size={11} weight="bold" className="text-on-primary" />}
+          </span>
+          <Shield size={15} weight="light" className="shrink-0 text-ink-mute" />
+          <span className="text-[13px] font-medium text-ink">
+            Tag as Warranty Claim
+          </span>
+        </button>
+
+        {isWarrantyClaim && (
+          <div className="flex flex-col gap-[4px] pl-[24px]">
+            <label className="text-[12px] font-medium text-ink-mute" htmlFor="expense-warranty-length">
+              Coverage length <span className="font-normal">(optional)</span>
+            </label>
+            <Select
+              id="expense-warranty-length"
+              value={warrantyMonthsToLabel(warrantyMonths)}
+              options={WARRANTY_LABEL_OPTIONS}
+              onChange={(label) => setWarrantyMonths(warrantyLabelToMonths(label))}
+            />
+          </div>
+        )}
+      </div>
 
       <div className="mt-[4px] flex items-center gap-[8px]">
         <button

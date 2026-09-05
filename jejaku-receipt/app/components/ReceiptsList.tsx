@@ -4,6 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
+import { formatWarrantyStatus, warrantyStatus } from "../lib/warranty";
 import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
 import { downloadPdf } from "../lib/exportPdf";
 import { useCategories, useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
@@ -73,14 +74,32 @@ export default function ReceiptsList({
   }, [expenses]);
   const receiptNumber = (id: string) => `#${String(receiptNumbers.get(id) ?? 0).padStart(4, "0")}`;
 
+  // Newest receipt date first, not insertion order — `expenses` arrives
+  // sorted by createdAt (when it was scanned/entered), which drifts from
+  // the receipt's own date the moment someone backfills an older purchase
+  // or seeds demo data out of date order. Ties (rare: same day) fall back
+  // to createdAt so same-day receipts still land most-recently-added-first.
+  const sortedExpenses = useMemo(
+    () =>
+      [...expenses].sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+        return a.createdAt < b.createdAt ? 1 : -1;
+      }),
+    [expenses]
+  );
+
   const hasWarrantyClaims = expenses.some((e) => e.isWarrantyClaim);
   const trimmedSearch = search.trim().toLowerCase();
   const hasActiveFilters =
     filterable && (trimmedSearch !== "" || categoryFilter !== ALL_CATEGORIES || dateFrom !== "" || dateTo !== "");
-  const visibleExpenses = expenses.filter((e) => {
+  const visibleExpenses = sortedExpenses.filter((e) => {
     if (warrantyOnly && !e.isWarrantyClaim) return false;
     if (!filterable) return true;
-    if (trimmedSearch && !e.merchant.toLowerCase().includes(trimmedSearch)) return false;
+    if (trimmedSearch) {
+      const matchesMerchant = e.merchant.toLowerCase().includes(trimmedSearch);
+      const matchesItem = e.items?.some((item) => item.name.toLowerCase().includes(trimmedSearch)) ?? false;
+      if (!matchesMerchant && !matchesItem) return false;
+    }
     if (categoryFilter !== ALL_CATEGORIES && e.category !== categoryFilter) return false;
     if (dateFrom && e.date < dateFrom) return false;
     if (dateTo && e.date > dateTo) return false;
@@ -206,7 +225,7 @@ export default function ReceiptsList({
                 setSearch(e.target.value);
                 setPage(0);
               }}
-              placeholder="Search merchant"
+              placeholder="Search merchant or item"
               className="h-[37px] w-full rounded-sm border border-hairline-input bg-canvas pl-[29px] pr-[11px] text-[14px] text-ink outline-none transition-colors focus:border-primary"
             />
           </div>
@@ -294,6 +313,17 @@ export default function ReceiptsList({
                   <p className="text-[11px] text-ink-mute">
                     {e.category} · {withWeekday(e.date)} · <span className="tabular">{receiptNumber(e.id)}</span>
                     {e.split && e.split.people.length > 0 && ` · Split ${e.split.people.length} ways`}
+                    {(() => {
+                      const status = warrantyStatus(e);
+                      const label = formatWarrantyStatus(status);
+                      if (!label) return null;
+                      return (
+                        <>
+                          {" · "}
+                          <span className={status.kind === "expired" ? "text-error" : undefined}>{label}</span>
+                        </>
+                      );
+                    })()}
                   </p>
                 </div>
               </div>
@@ -422,6 +452,7 @@ export default function ReceiptsList({
             initialCurrency={editing.currency}
             initialTax={editing.tax}
             initialWarrantyClaim={editing.isWarrantyClaim}
+            initialWarrantyMonths={editing.warrantyMonths}
             onCancel={() => setEditing(null)}
             onSubmit={async (data) => {
               setSavingEdit(true);

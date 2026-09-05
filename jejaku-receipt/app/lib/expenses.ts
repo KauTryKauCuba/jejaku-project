@@ -167,6 +167,7 @@ export type Expense = {
   tax?: number;
   isDemo?: boolean;
   isWarrantyClaim?: boolean;
+  warrantyMonths?: number;
   note?: string;
   photoUrl?: string;
   location?: string;
