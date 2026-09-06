@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
               What&apos;s collected, why, and who else ever sees it.
             </p>
-            <p className="mt-[8px] text-[12px] text-ink-mute">Last updated 2026-09-04.</p>
+            <p className="mt-[8px] text-[12px] text-ink-mute">Last updated 2026-09-06.</p>
           </section>
         </div>
       </div>
@@ -81,6 +81,14 @@ export default function PrivacyPage() {
               <li className="flex items-center gap-[8px]">
                 <TechLogo slug="google" label="Google" size={18} />
                 <span className="text-[14px] font-medium text-ink">Google</span>
+              </li>
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="github" label="GitHub" size={18} />
+                <span className="text-[14px] font-medium text-ink">GitHub</span>
+              </li>
+              <li className="flex items-center gap-[8px]">
+                <TechLogo slug="discord" label="Discord" size={18} />
+                <span className="text-[14px] font-medium text-ink">Discord</span>
               </li>
               <li className="flex items-center gap-[8px]">
                 <TechLogo slug="resend" label="Resend" size={18} />
@@ -131,7 +139,9 @@ export default function PrivacyPage() {
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               Your data is kept for as long as your account exists. In Jejaku Receipt, Settings
               lets you permanently delete all of your expenses yourself, at any time, and that
-              happens immediately. There&apos;s no self-serve full account deletion yet.
+              happens immediately. Settings also lets you delete your account entirely — behind
+              an emailed verification code — which removes your Jejaku profile and everything in
+              Jejaku Receipt (expenses, receipt photos included).
             </p>
             <p className="mt-[8px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
               You can also ask to see what&apos;s stored about you, or have it corrected, the same

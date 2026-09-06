@@ -577,6 +577,27 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-06",
   },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "The sign-in code sphere no longer laggy on mobile",
+    body: "The rotating digit sphere on the sign-in code screen animated by re-rendering hundreds of elements through React on every frame — smooth on desktop, visibly janky on phones. It's now drawn directly on a canvas instead, so the animation never touches React at all.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "The PDF export looks like a report now, not a spreadsheet printout",
+    body: "Switched the Export PDF from landscape to A4 portrait, with the Jejaku logo at the top of the page.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Terms and Privacy Policy, caught up",
+    body: "Both pages still described sign-in as email code or Google only, and said full account deletion wasn't self-serve yet — both had already shipped. Terms now lists GitHub and Discord alongside Google, and Privacy now covers self-serve account deletion and lists GitHub/Discord among the third parties involved in sign-in.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
 ];
 
 export default function ChangelogPage() {

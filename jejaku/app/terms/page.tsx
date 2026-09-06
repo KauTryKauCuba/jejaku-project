@@ -33,7 +33,7 @@ export default function TermsPage() {
             <p className="mt-[19px] max-w-[52ch] text-[16px] leading-relaxed text-ink-secondary">
               The short version: this is a free personal project — use it, but there&apos;s no promise it&apos;ll always be here.
             </p>
-            <p className="mt-[8px] text-[12px] text-ink-mute">Last updated 2026-09-04.</p>
+            <p className="mt-[8px] text-[12px] text-ink-mute">Last updated 2026-09-06.</p>
           </section>
         </div>
       </div>
@@ -60,9 +60,9 @@ export default function TermsPage() {
           <div>
             <h2 className="text-[18px] font-medium text-ink">Accounts</h2>
             <p className="mt-[11px] max-w-[65ch] text-[14px] leading-relaxed text-ink-mute">
-              You sign in with a one-time code sent to your email, or with a Google account —
-              whichever you use, you&apos;re responsible for keeping access to it secure, since
-              that&apos;s what controls access to your Jejaku account too.
+              You sign in with a one-time code sent to your email, or with a Google, GitHub, or
+              Discord account — whichever you use, you&apos;re responsible for keeping access to
+              it secure, since that&apos;s what controls access to your Jejaku account too.
             </p>
           </div>
 
