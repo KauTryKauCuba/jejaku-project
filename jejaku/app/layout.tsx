@@ -1,12 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "./components/Providers";
 
-const inter = Inter({
+// Self-hosted (fonts/inter-*.woff2, latin subset, static weights 300-600
+// pulled straight from Google Fonts' own CDN) rather than next/font/google
+// — that fetches over the network at *build* time, which fails the whole
+// Docker build outright if the build environment can't reach
+// fonts.googleapis.com even momentarily. Self-hosting removes that
+// dependency entirely; the font never changes, so there's nothing to stay
+// "in sync" with by fetching it fresh each build.
+const inter = localFont({
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  src: [
+    { path: "./fonts/inter-300.woff2", weight: "300", style: "normal" },
+    { path: "./fonts/inter-400.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/inter-500.woff2", weight: "500", style: "normal" },
+    { path: "./fonts/inter-600.woff2", weight: "600", style: "normal" },
+  ],
 });
 
 export const metadata: Metadata = {
