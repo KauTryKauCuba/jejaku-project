@@ -17,13 +17,20 @@ const isDev = process.env.NODE_ENV === "development";
 // and DeleteAccountCard.tsx both fetch() it directly, cross-origin, from
 // the browser (shared session cookie, not a proxy) — without this, CSP
 // would silently break the default-currency save and account deletion.
+// img-src needs blob:: the avatar picker in OnboardingForm and SettingsForm
+// does URL.createObjectURL(file) and hands that blob: URL to AvatarCropModal,
+// which passes it to react-easy-crop as an <img> source — and cropImage.ts
+// loads the same URL into a canvas. Without blob: the cropper renders
+// nothing and the crop itself fails, breaking avatar upload in Settings and
+// in the onboarding flow every new user goes through. data: stays for
+// Next.js's own inlined images; cdn.simpleicons.org is TechLogo on /privacy.
 const receiptOrigin = (process.env.NEXT_PUBLIC_RECEIPT_URL ?? "").replace(/\/+$/, "");
 
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: https://cdn.simpleicons.org;
+  img-src 'self' data: blob: https://cdn.simpleicons.org;
   font-src 'self';
   connect-src 'self'${receiptOrigin ? ` ${receiptOrigin}` : ""};
   object-src 'none';
