@@ -104,8 +104,19 @@ export const PATCH = withApiErrorHandling(async (request: Request, { params }: {
       items: items && items.length > 0 ? items : null,
       split,
     })
-    .where(eq(expenses.id, id))
+    .where(and(eq(expenses.id, id), eq(expenses.userId, user.id)))
     .returning();
+
+  // The `existing` lookup above already confirmed this row exists and
+  // belongs to this user, but that's a separate read from this write —
+  // if it was deleted in between (e.g. a concurrent request in another
+  // tab), this update matches nothing and `row` is undefined. Handled
+  // explicitly here the same way DELETE below already does, rather than
+  // falling through to toExpense(row) throwing on a missing row and
+  // surfacing as a generic 500.
+  if (!row) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   await logAudit(
     user.id,

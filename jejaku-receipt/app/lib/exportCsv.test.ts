@@ -94,4 +94,20 @@ describe("expensesToCsv", () => {
     const row = csv.split("\r\n")[1];
     expect(row.endsWith(",")).toBe(true);
   });
+
+  it("neutralizes a merchant/note starting with =, +, -, or @ so it can't open as a formula in Excel/Sheets", () => {
+    for (const trigger of ["=", "+", "-", "@"]) {
+      const csv = expensesToCsv([baseExpense({ merchant: `${trigger}cmd|'/C calc'!A1`, note: `${trigger}SUM(A1:A9)` })]);
+      const row = csv.split("\r\n")[1];
+      expect(row).toContain(`'${trigger}cmd`);
+      expect(row).toContain(`'${trigger}SUM`);
+    }
+  });
+
+  it("doesn't touch a merchant/note that merely contains one of those characters mid-string", () => {
+    const csv = expensesToCsv([baseExpense({ merchant: "Buy-More", note: "Tax = included" })]);
+    const row = csv.split("\r\n")[1];
+    expect(row).toContain("Buy-More");
+    expect(row).toContain("Tax = included");
+  });
 });

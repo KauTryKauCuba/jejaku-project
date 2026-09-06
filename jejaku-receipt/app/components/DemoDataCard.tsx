@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkle } from "@phosphor-icons/react";
-import { DEMO_EXPENSES } from "../lib/demoExpenses";
+import { getSeedExpenses } from "../lib/demoExpenses";
 
 export default function DemoDataCard({ demoCount }: { demoCount: number }) {
   const router = useRouter();
@@ -40,8 +40,8 @@ export default function DemoDataCard({ demoCount }: { demoCount: number }) {
       </div>
       <p className="mt-[8px] max-w-md text-[12px] leading-relaxed text-ink-mute">
         {hasDemo
-          ? `You currently have ${demoCount} sample receipts (spread across March–August) mixed in — remove just those, and anything you've entered yourself stays untouched.`
-          : `Load ${DEMO_EXPENSES.length} sample receipts spread across March–August so the dashboard charts have something to show. Safe to add even if you already have real expenses.`}
+          ? `You currently have ${demoCount} sample receipts (spread across several months) mixed in — remove just those, and anything you've entered yourself stays untouched.`
+          : `Load ${getSeedExpenses().length} sample receipts spread across several months so the dashboard charts have something to show. Safe to add even if you already have real expenses.`}
       </p>
       {error && <p className="mt-[8px] text-[12px] text-error">{error}</p>}
       <button

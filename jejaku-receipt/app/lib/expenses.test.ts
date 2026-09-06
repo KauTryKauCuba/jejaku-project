@@ -107,6 +107,20 @@ describe("computeSplitTotals", () => {
     // 20 + 9 * (20/30) = 26, not 20 + 9 = 29.
     expect(totals.get("Alice")).toBe(26);
   });
+
+  it("rounds a 3-way split so the shares still sum exactly to the total", () => {
+    // $10 / 3 = 3.3333... — naive per-person rounding gives 3.33 x 3 =
+    // 9.99, a cent short of the real total.
+    const split: SplitData = {
+      people: ["Alice", "Bob", "Carol"],
+      assignments: [{ itemIndex: 1, people: ["Alice", "Bob", "Carol"] }],
+    };
+    const tenDollarItem: ExpenseItem[] = [{ name: "Pizza", price: 20 }, { name: "Salad", price: 10 }];
+    const totals = computeSplitTotals(tenDollarItem, undefined, split);
+    const values = [...totals.values()];
+    expect(values.reduce((sum, v) => sum + v, 0)).toBeCloseTo(10, 5);
+    for (const v of values) expect(v === 3.33 || v === 3.34).toBe(true);
+  });
 });
 
 describe("formatItemsList", () => {

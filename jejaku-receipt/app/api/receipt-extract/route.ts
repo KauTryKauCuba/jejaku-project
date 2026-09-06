@@ -25,9 +25,17 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Returns false once a user has hit today's cap; otherwise records this
-// scan against their count and returns true.
-function recordScanAndCheckLimit(userId: string): boolean {
+// Reserve-then-refund, not a plain check-and-increment split across the
+// await below: checking and incrementing have to happen in the same
+// synchronous tick (no await in between) or several concurrent requests
+// can all read the same under-the-cap count before any of them writes
+// back, letting a user blow well past DAILY_SCAN_LIMIT by firing requests
+// in parallel. Reserving a slot atomically up front (still synchronous,
+// still race-free) and releasing it back on any failure path below keeps
+// both properties: the cap can't be raced, and a request that never
+// actually reached (or was rejected by) DeepSeek doesn't cost the user a
+// scan.
+function reserveScanSlot(userId: string): boolean {
   const day = todayKey();
   const entry = scanCountsByUser.get(userId);
   if (!entry || entry.day !== day) {
@@ -37,6 +45,13 @@ function recordScanAndCheckLimit(userId: string): boolean {
   if (entry.count >= DAILY_SCAN_LIMIT) return false;
   entry.count += 1;
   return true;
+}
+
+function releaseScanSlot(userId: string): void {
+  const entry = scanCountsByUser.get(userId);
+  if (entry && entry.day === todayKey() && entry.count > 0) {
+    entry.count -= 1;
+  }
 }
 
 type Extracted = {
@@ -100,7 +115,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (!recordScanAndCheckLimit(user.id)) {
+  if (!reserveScanSlot(user.id)) {
     return NextResponse.json({ error: "Daily scan limit reached. Try again tomorrow." }, { status: 429 });
   }
 
@@ -178,37 +193,46 @@ export async function POST(req: NextRequest) {
 
   const dateNote = ` date: YYYY-MM-DD; if none printed, use today, ${today}.`;
 
-  const res = await fetch("https://api.deepseek.com/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "deepseek-v4-flash-vision-exp",
-      temperature: 0,
-      // Thinking mode is on by default for this model and burns the token
-      // budget on reasoning_content before it ever writes the answer —
-      // disable it, we just want a direct structured-extraction answer.
-      thinking: { type: "disabled" },
-      // Raised from 900: that ceiling truncated a response somewhere
-      // around 35 items, and a truncated response used to come back as
-      // invalid JSON and get thrown away entirely (see the earlier
-      // max_tokens bug this route already had). It's a ceiling, not a
-      // reservation — a normal 10-item receipt still only costs what it
-      // actually generates.
-      max_tokens: 3000,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: instructions + multiImageNote + dateNote },
-            ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })),
-          ],
-        },
-      ],
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-v4-flash-vision-exp",
+        temperature: 0,
+        // Thinking mode is on by default for this model and burns the token
+        // budget on reasoning_content before it ever writes the answer —
+        // disable it, we just want a direct structured-extraction answer.
+        thinking: { type: "disabled" },
+        // Raised from 900: that ceiling truncated a response somewhere
+        // around 35 items, and a truncated response used to come back as
+        // invalid JSON and get thrown away entirely (see the earlier
+        // max_tokens bug this route already had). It's a ceiling, not a
+        // reservation — a normal 10-item receipt still only costs what it
+        // actually generates.
+        max_tokens: 3000,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: instructions + multiImageNote + dateNote },
+              ...images.map((image) => ({ type: "image_url" as const, image_url: { url: image } })),
+            ],
+          },
+        ],
+      }),
+    });
+  } catch (err) {
+    // Never reached DeepSeek at all — refund the reservation from
+    // reserveScanSlot above, same as the !res.ok path below.
+    releaseScanSlot(user.id);
+    console.error("[receipt-extract] DeepSeek request threw", err);
+    return NextResponse.json({ error: "Extraction request failed" }, { status: 502 });
+  }
 
   const empty: Extracted = {
     merchant: null,
@@ -226,6 +250,9 @@ export async function POST(req: NextRequest) {
   };
 
   if (!res.ok) {
+    // DeepSeek rejected the request (e.g. a transient 5xx) — refund the
+    // reservation, since nothing was actually billed.
+    releaseScanSlot(user.id);
     console.error("[receipt-extract] DeepSeek request failed", res.status, await res.text());
     return NextResponse.json({ error: "Extraction request failed" }, { status: 502 });
   }

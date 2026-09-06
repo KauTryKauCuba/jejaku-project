@@ -3,16 +3,19 @@ import { db } from "../db";
 import { expenses, users } from "../db/schema";
 import { convertCurrency } from "./exchangeRates";
 import { lookupCoordinates } from "./cityCoordinates";
-import { DEMO_EXPENSES } from "./demoExpenses";
+import { DEMO_EXPENSES, getSeedExpenses } from "./demoExpenses";
 import { AUDIT_ACTIONS, logAudit } from "./auditLog";
 
 export { DEMO_EXPENSES };
 
-// Inserts DEMO_EXPENSES for the given user. Caller is responsible for
-// checking whether the user already has expenses first, if "don't
-// duplicate" matters for that call site.
+// Inserts getSeedExpenses() (DEMO_EXPENSES plus one warranty-tagged item
+// dated relative to today, so a fresh signup can always see the "expiring
+// soon" warranty feature demoed) for the given user. Caller is
+// responsible for checking whether the user already has expenses first,
+// if "don't duplicate" matters for that call site.
 export async function seedDemoExpenses(userId: string, homeCurrency: string) {
-  for (const d of DEMO_EXPENSES) {
+  const allDemoExpenses = getSeedExpenses();
+  for (const d of allDemoExpenses) {
     const homeCurrencyAmount = await convertCurrency(d.amount, d.currency, homeCurrency);
     const coords = lookupCoordinates(d.city, d.state, d.country);
     await db.insert(expenses).values({
@@ -35,8 +38,8 @@ export async function seedDemoExpenses(userId: string, homeCurrency: string) {
       items: d.items ?? null,
     });
   }
-  await logAudit(userId, AUDIT_ACTIONS.DEMO_SEEDED, `${DEMO_EXPENSES.length} sample receipts`);
-  return DEMO_EXPENSES.length;
+  await logAudit(userId, AUDIT_ACTIONS.DEMO_SEEDED, `${allDemoExpenses.length} sample receipts`);
+  return allDemoExpenses.length;
 }
 
 // Seeds demo data exactly once per account, on whichever request first

@@ -59,8 +59,6 @@ export async function POST(request: Request) {
   const newCurrency = currency.toUpperCase();
 
   try {
-    await db.update(users).set({ defaultCurrency: newCurrency }).where(eq(users.id, user.id));
-
     // Re-snapshot every existing expense into the new home currency so
     // aggregate totals stay consistent — otherwise old rows would keep their
     // homeCurrencyAmount in the *previous* home currency and summing them
@@ -69,6 +67,9 @@ export async function POST(request: Request) {
       where: eq(expenses.userId, user.id),
     });
 
+    // Rate lookups are network calls (exchangeRates.ts) — done before the
+    // transaction below, not inside it, so a slow/failed external request
+    // never holds a DB transaction (and its row locks) open.
     const distinctCurrencies = [...new Set(userExpenses.map((e) => e.currency ?? DEFAULT_CURRENCY))];
     const rateByCurrency = new Map<string, number | null>();
     await Promise.all(
@@ -77,24 +78,34 @@ export async function POST(request: Request) {
       })
     );
 
+    // All the writes below happen in one transaction — previously each
+    // expense row was updated independently via Promise.all with no
+    // wrapping transaction, so a crash or DB hiccup partway through left
+    // some rows re-converted to the new currency and others still in the
+    // old one, silently corrupting aggregate totals (summing two
+    // currencies as if they were one) with no way to detect or repair it.
     let failedCount = 0;
-    await Promise.all(
-      userExpenses.map(async (expense) => {
-        const originalCurrency = expense.currency ?? DEFAULT_CURRENCY;
-        const rate = rateByCurrency.get(originalCurrency) ?? null;
-        if (rate === null) {
-          failedCount += 1;
-          return db
+    await db.transaction(async (tx) => {
+      await tx.update(users).set({ defaultCurrency: newCurrency }).where(eq(users.id, user.id));
+
+      await Promise.all(
+        userExpenses.map(async (expense) => {
+          const originalCurrency = expense.currency ?? DEFAULT_CURRENCY;
+          const rate = rateByCurrency.get(originalCurrency) ?? null;
+          if (rate === null) {
+            failedCount += 1;
+            return tx
+              .update(expenses)
+              .set({ homeCurrencyAmount: null, homeCurrencyCode: null })
+              .where(eq(expenses.id, expense.id));
+          }
+          return tx
             .update(expenses)
-            .set({ homeCurrencyAmount: null, homeCurrencyCode: null })
+            .set({ homeCurrencyAmount: expense.amount * rate, homeCurrencyCode: newCurrency })
             .where(eq(expenses.id, expense.id));
-        }
-        return db
-          .update(expenses)
-          .set({ homeCurrencyAmount: expense.amount * rate, homeCurrencyCode: newCurrency })
-          .where(eq(expenses.id, expense.id));
-      })
-    );
+        })
+      );
+    });
 
     return NextResponse.json(
       {

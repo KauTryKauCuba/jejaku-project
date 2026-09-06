@@ -19,11 +19,23 @@ const CSV_COLUMNS = [
   "Items",
 ] as const;
 
+// A leading =, +, -, or @ opens a field as a live formula when the CSV is
+// opened in Excel/Sheets (CSV injection, CWE-1236) — merchant/note/item
+// names are free text (AI-extracted or user-typed) that could start with
+// one. Neutralized by prefixing with a single quote, the standard
+// spreadsheet convention for "treat this literally as text," before the
+// normal RFC 4180 quoting below. Applied uniformly across every column
+// (including the numeric ones) rather than special-casing which columns
+// are "safe" — amount/tax are always non-negative here anyway, so this
+// never touches them in practice.
+const FORMULA_TRIGGER_PATTERN = /^[=+\-@]/;
+
 // Quotes any field containing a comma, quote, or newline, per RFC 4180 —
 // escaping is required even for currency-formatted numbers here since
 // merchant/note/location are free text that can contain commas.
 function csvField(value: string | number | undefined): string {
-  const text = value === undefined ? "" : String(value);
+  let text = value === undefined ? "" : String(value);
+  if (FORMULA_TRIGGER_PATTERN.test(text)) text = `'${text}`;
   if (/[",\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
   return text;
 }

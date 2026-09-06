@@ -224,6 +224,28 @@ export function computeSplitTotals(items: ExpenseItem[], tax: number | undefined
     }
   }
 
+  // Round every share to the cent, then hand any leftover cent(s) left
+  // over from that rounding to whoever's raw (pre-rounded) share was
+  // closest to rounding up (the standard largest-remainder method) —
+  // otherwise, e.g., splitting a $10 item three ways rounds each share
+  // down to $3.33, and the three shown amounts visibly fall a cent short
+  // of the real $10.00 total instead of reconciling exactly.
+  const rawTotal = [...totals.values()].reduce((sum, v) => sum + v, 0);
+  const targetCents = Math.round(rawTotal * 100);
+  const shares = [...totals.entries()].map(([person, raw]) => {
+    const cents = Math.floor(raw * 100 + 1e-9);
+    return { person, cents, remainder: raw * 100 - cents };
+  });
+  const leftoverCents = targetCents - shares.reduce((sum, s) => sum + s.cents, 0);
+  shares
+    .slice()
+    .sort((a, b) => b.remainder - a.remainder)
+    .slice(0, Math.max(0, leftoverCents))
+    .forEach((s) => {
+      s.cents += 1;
+    });
+  for (const s of shares) totals.set(s.person, s.cents / 100);
+
   return totals;
 }
 

@@ -145,3 +145,39 @@ export const DEMO_EXPENSES: DemoExpense[] = [
   { merchant: "MPH Bookstore", amount: 62.5, currency: "MYR", date: "2026-03-19", category: "Shopping", tax: 3.5, city: "Kuala Lumpur", country: "Malaysia", items: [{ name: "Novel", price: 37.67 }, { name: "Notebook", price: 21.33 }] },
   { merchant: "GNC", amount: 88, currency: "MYR", date: "2026-03-25", category: "Health", tax: 5, city: "Kuala Lumpur", country: "Malaysia", note: "Vitamins", items: [{ name: "Multivitamin bottle", price: 54.71 }, { name: "Protein bar", price: 9.43, quantity: 3 }] },
 ];
+
+// A warranty-tagged item dated relative to *now*, unlike every entry
+// above (which use fixed historical dates for a stable demo narrative) —
+// purchased 15 days ago with a 1-month warranty, so its expiry always
+// lands inside the "expiring soon" 30-day window (WarrantyClaimsTile.tsx
+// / WarrantyBell.tsx) regardless of when an account actually signs up.
+// Every fixed-date item above drifts out of that window as real time
+// passes — this exists so a fresh signup can always actually see that
+// feature demoed, not just on whatever day this file happened to be
+// written. Generated fresh at seed time (seedDemoExpenses appends it to
+// DEMO_EXPENSES), not a static entry in the array itself.
+function recentWarrantyDemoExpense(): DemoExpense {
+  const purchaseDate = new Date();
+  purchaseDate.setDate(purchaseDate.getDate() - 15);
+  return {
+    merchant: "Best Denki",
+    amount: 35,
+    currency: "MYR",
+    date: purchaseDate.toISOString().slice(0, 10),
+    category: "Home & Furniture",
+    city: "Petaling Jaya",
+    state: "Selangor",
+    country: "Malaysia",
+    note: "USB-C charging cable",
+    items: [{ name: "USB-C fast charge cable", price: 35, isWarrantyClaim: true, warrantyMonths: 1 }],
+  };
+}
+
+// The actual list a seed inserts — DEMO_EXPENSES plus the one generated
+// above. Both seedDemoExpenses (demoData.ts) and DemoDataCard's displayed
+// count call this one function rather than each reconstructing the
+// concatenation (or a hardcoded "+1") separately, so they can't drift out
+// of sync about how many receipts a seed actually produces.
+export function getSeedExpenses(): DemoExpense[] {
+  return [...DEMO_EXPENSES, recentWarrantyDemoExpense()];
+}
