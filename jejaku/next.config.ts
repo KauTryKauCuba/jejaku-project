@@ -24,13 +24,23 @@ const isDev = process.env.NODE_ENV === "development";
 // nothing and the crop itself fails, breaking avatar upload in Settings and
 // in the onboarding flow every new user goes through. data: stays for
 // Next.js's own inlined images; cdn.simpleicons.org is TechLogo on /privacy.
+//
+// Also needs each OAuth provider's own avatar CDN: OnboardingForm.tsx
+// prefills avatarUrl straight from the provider's profile picture URL
+// (Google/GitHub/Discord's `?avatar=` param, see OnboardingCard.tsx), and
+// unless the user actively crops a new photo — which re-points avatarUrl at
+// a same-origin /uploads/avatars/... URL — that external URL is what gets
+// saved and rendered from then on. Hit in production 2026-09-06: a Google
+// sign-in's avatar silently 404'd/blocked because lh3.googleusercontent.com
+// wasn't allow-listed. *.googleusercontent.com (Google rotates lh3/lh4/...
+// subdomains) is broader than the other two by necessity, not carelessness.
 const receiptOrigin = (process.env.NEXT_PUBLIC_RECEIPT_URL ?? "").replace(/\/+$/, "");
 
 const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob: https://cdn.simpleicons.org;
+  img-src 'self' data: blob: https://cdn.simpleicons.org https://*.googleusercontent.com https://avatars.githubusercontent.com https://cdn.discordapp.com;
   font-src 'self';
   connect-src 'self'${receiptOrigin ? ` ${receiptOrigin}` : ""};
   object-src 'none';

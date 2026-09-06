@@ -17,12 +17,18 @@ const isDev = process.env.NODE_ENV === "development";
 // blob: (ReceiptScannerCard's URL.createObjectURL for an imported photo
 // preview) — both real, checked usages, not defensive over-allowance.
 //
-// It also needs jejaku's origin: a user's avatarUrl is stored as an
-// absolute URL on jejaku (see jejaku's lib/uploads.ts, which does that
-// deliberately *because* this app renders the same avatar from its own
-// origin), and UserBadge/MemberCard here display it. Without this the
-// browser blocks every avatar on this app — which is exactly what the
-// first version of this policy did.
+// It also needs jejaku's origin: a user's avatarUrl is *usually* an
+// absolute jejaku-hosted URL (see jejaku's lib/uploads.ts), and
+// UserBadge/MemberCard here display it. Without this the browser blocks
+// every avatar on this app — which is exactly what the first version of
+// this policy did.
+//
+// Same OAuth-provider CDN hosts as jejaku's next.config.ts, for the same
+// reason: jejaku's OnboardingForm can save avatarUrl as the raw Google/
+// GitHub/Discord profile picture URL rather than a jejaku-hosted one (only
+// changed if the user actively crops a new photo), and this app renders
+// that same avatarUrl value from the shared DB. Hit in production
+// 2026-09-06 — see jejaku's next.config.ts for the full story.
 //
 // connect-src stays 'self' only: unlike jejaku, nothing here fetches
 // jejaku's origin cross-origin from the browser (the shared session works
@@ -33,7 +39,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""};
   style-src 'self' 'unsafe-inline';
-  img-src 'self' data: blob:${jejakuOrigin ? ` ${jejakuOrigin}` : ""};
+  img-src 'self' data: blob: https://*.googleusercontent.com https://avatars.githubusercontent.com https://cdn.discordapp.com${jejakuOrigin ? ` ${jejakuOrigin}` : ""};
   font-src 'self';
   connect-src 'self';
   object-src 'none';
