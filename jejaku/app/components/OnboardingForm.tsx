@@ -65,7 +65,7 @@ export default function OnboardingForm({
             const res = await fetch("/api/users/register", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ email, fullName: trimmedName, avatarUrl }),
+              body: JSON.stringify({ fullName: trimmedName, avatarUrl }),
             });
             if (!res.ok) {
               const data = await res.json().catch(() => ({}));
