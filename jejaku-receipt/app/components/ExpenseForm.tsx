@@ -157,8 +157,54 @@ export default function ExpenseForm({
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, name } : item)));
   };
 
+  // Raw, exactly-as-typed text for the numeric item fields, keyed by item
+  // id — the same thing `amount` and `tax` do by holding e.target.value
+  // verbatim in state, and for the same reason.
+  //
+  // An <input type="number"> reports value "" for any partially-typed
+  // number that isn't yet valid ("1." is not a valid floating-point number
+  // per the HTML value-sanitization algorithm). Feeding that through
+  // Number() and rendering the result back means React wants "0" while the
+  // DOM reads "", so React writes "0" over what the user typed and the
+  // decimal point is lost mid-keystroke — typing "1.5" lands on 5. Holding
+  // the raw text means React's desired value matches what the input
+  // already reports, so it never clobbers and the browser keeps the
+  // in-progress text visible, exactly as Amount/Tax already behave.
+  const [itemDrafts, setItemDrafts] = useState<Record<string, { price?: string; quantity?: string }>>({});
+
+  const setItemDraft = (id: string | undefined, patch: { price?: string; quantity?: string }) => {
+    if (!id) return;
+    setItemDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  };
+
+  // Dropped on blur so the field falls back to rendering the stored number.
+  // Without this, clearing a box and clicking away leaves it looking empty
+  // while the item actually holds 1 (quantity) or 0 (price) — the raw text
+  // only needs to survive while the field is actively being typed in.
+  const clearItemDraft = (id: string | undefined, field: "price" | "quantity") => {
+    if (!id) return;
+    setItemDrafts((prev) => {
+      if (prev[id]?.[field] === undefined) return prev;
+      const next = { ...prev, [id]: { ...prev[id], [field]: undefined } };
+      return next;
+    });
+  };
+
+  // Shows the draft only while it still agrees with the stored value (or is
+  // empty, i.e. the field is being cleared to retype). If the item's value
+  // changed from anywhere else — a re-scan refilling the list, say — the
+  // draft no longer matches and the stored number wins, so a stale draft
+  // can't pin the field to something the item no longer holds.
+  const draftOrValue = (item: ExpenseItem, field: "price" | "quantity", stored: number): string => {
+    const draft = item.id ? itemDrafts[item.id]?.[field] : undefined;
+    if (draft === "") return "";
+    if (draft !== undefined && Number(draft) === stored) return draft;
+    return String(stored);
+  };
+
   const updateItemPrice = (index: number, priceText: string) => {
     const price = Number(priceText);
+    setItemDraft(items[index]?.id, { price: priceText });
     setItems((prev) =>
       prev.map((item, i) => (i === index ? { ...item, price: Number.isFinite(price) ? price : 0 } : item))
     );
@@ -167,6 +213,7 @@ export default function ExpenseForm({
 
   const updateItemQuantity = (index: number, quantityText: string) => {
     const quantity = Number(quantityText);
+    setItemDraft(items[index]?.id, { quantity: quantityText });
     setItems((prev) =>
       prev.map((item, i) =>
         i === index ? { ...item, quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1 } : item
@@ -345,8 +392,9 @@ export default function ExpenseForm({
                         inputMode="numeric"
                         step="1"
                         min="1"
-                        value={item.quantity ?? 1}
+                        value={draftOrValue(item, "quantity", item.quantity ?? 1)}
                         onChange={(e) => updateItemQuantity(i, e.target.value)}
+                        onBlur={() => clearItemDraft(item.id, "quantity")}
                         aria-label={`Item ${i + 1} quantity`}
                         className={`${inputClass} text-center`}
                       />
@@ -357,8 +405,9 @@ export default function ExpenseForm({
                         inputMode="decimal"
                         step="0.01"
                         min="0"
-                        value={item.price}
+                        value={draftOrValue(item, "price", item.price)}
                         onChange={(e) => updateItemPrice(i, e.target.value)}
+                        onBlur={() => clearItemDraft(item.id, "price")}
                         placeholder="0.00"
                         aria-label={`Item ${i + 1} unit price`}
                         className={inputClass}
