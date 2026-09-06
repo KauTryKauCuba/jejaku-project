@@ -11,6 +11,7 @@ export type ExtractedForStatus = {
   items: { length: number };
   itemsMismatch: boolean;
   itemsTruncated: boolean;
+  legibilityWarning: boolean;
 };
 
 export type ScanStatus =
@@ -20,8 +21,8 @@ export type ScanStatus =
   | { kind: "truncated-empty" }
   | { kind: "found-nothing" }
   | { kind: "items-mismatch" }
-  | { kind: "success-multi-tile"; itemCount: number; tileCount: number }
-  | { kind: "success" }
+  | { kind: "success-multi-tile"; itemCount: number; tileCount: number; legibilityWarning: boolean }
+  | { kind: "success"; legibilityWarning: boolean }
   | { kind: "fill-in"; hasPreview: boolean };
 
 // Mirrors the same check ReceiptScannerCard already made inline — the
@@ -59,12 +60,21 @@ export function describeScanStatus(input: {
     if (foundNothing(extracted)) return { kind: "found-nothing" };
     if (extracted.itemsMismatch) return { kind: "items-mismatch" };
     return tileCount > 1
-      ? { kind: "success-multi-tile", itemCount: extracted.items.length, tileCount }
-      : { kind: "success" };
+      ? { kind: "success-multi-tile", itemCount: extracted.items.length, tileCount, legibilityWarning: extracted.legibilityWarning }
+      : { kind: "success", legibilityWarning: extracted.legibilityWarning };
   }
 
   return { kind: "fill-in", hasPreview };
 }
+
+// Appended to the success text rather than given its own ScanStatus kind —
+// it's a heads-up about the physical receipt aging, not a data problem to
+// review, so it only ever rides along with a result that otherwise came
+// back clean (see describeScanStatus: truncated/found-nothing/mismatch
+// already have their own, higher-priority, actionable text and aren't
+// worth cluttering further with this on top).
+const LEGIBILITY_WARNING_SUFFIX =
+  " This receipt looks faint or partially faded — keep a photo backup in case the paper becomes unreadable later.";
 
 export function scanStatusText(status: ScanStatus): string {
   switch (status.kind) {
@@ -81,9 +91,12 @@ export function scanStatusText(status: ScanStatus): string {
     case "items-mismatch":
       return "Item prices don't quite add up to the total — double-check quantities and prices below before saving.";
     case "success-multi-tile":
-      return `Found ${status.itemCount} item${status.itemCount === 1 ? "" : "s"} across ${status.tileCount} parts — check them before saving.`;
+      return (
+        `Found ${status.itemCount} item${status.itemCount === 1 ? "" : "s"} across ${status.tileCount} parts — check them before saving.` +
+        (status.legibilityWarning ? LEGIBILITY_WARNING_SUFFIX : "")
+      );
     case "success":
-      return "Details auto-filled from the receipt — check them before saving.";
+      return "Details auto-filled from the receipt — check them before saving." + (status.legibilityWarning ? LEGIBILITY_WARNING_SUFFIX : "");
     case "fill-in":
       return status.hasPreview ? "Fill in the details below." : "Enter the expense details below.";
   }

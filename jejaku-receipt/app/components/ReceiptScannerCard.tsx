@@ -61,6 +61,10 @@ type Extracted = {
   // numbers can't be expected to reconcile when part of the receipt was
   // never read at all, not just misread.
   itemsTruncated: boolean;
+  // See lib/receiptScanStatus.ts — true when DeepSeek judged the
+  // receipt's own print as faint/faded, piggybacked on this same vision
+  // call.
+  legibilityWarning: boolean;
 };
 
 function fileToDataUrl(file: File): Promise<string> {

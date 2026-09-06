@@ -76,6 +76,14 @@ type Extracted = {
   // than misread. See lib/receiptExtractParse.ts for how this is detected
   // and what gets salvaged from a truncated response.
   itemsTruncated: boolean;
+  // True when DeepSeek judged the receipt's own print as faint, low-
+  // contrast, or partially faded — the same thing that makes thermal
+  // receipts unreadable a few months after purchase. Piggybacks the
+  // existing vision call (the model is already looking at the image) so
+  // there's no second request or extra cost — see the `legible` field in
+  // the prompt below. Purely a heads-up to keep a backup; unlike
+  // itemsMismatch it doesn't imply anything extracted above is wrong.
+  legibilityWarning: boolean;
 };
 
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
@@ -157,7 +165,7 @@ export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req
   // the failure this replaced (see priceUncertain there).
   const instructions =
     "Read this receipt as ONLY a JSON object, no other text, in exactly this shape: " +
-    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"items":[{"name":"...","quantity":1,"numbers":[0]}]} ' +
+    '{"merchant":"...","amount":0,"date":"YYYY-MM-DD","category":"...","city":"...","state":"...","country":"...","currency":"...","tax":0,"legible":true,"items":[{"name":"...","quantity":1,"numbers":[0]}]} ' +
     "merchant: real business name as printed, never a bare number/code/ID — if illegible (glare, " +
     "creases, fading), null rather than guessing. " +
     "amount: final total paid, plain number, no currency symbol. " +
@@ -169,6 +177,11 @@ export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req
     "currency: 3-letter ISO 4217 code (USD, MYR, EUR, ...), inferred from symbol/code or the " +
     "store's address/language. " +
     "tax: printed sales tax/GST/VAT as a plain number if broken out; null if none. " +
+    "legible: false only if the receipt's own print is noticeably faint, low-contrast, blurry, or " +
+    "partially faded — as thermal receipts do with age — such that parts of it are hard to read even " +
+    "where you did your best to extract them; true if the print is crisp and dark throughout. Judge " +
+    "the physical print quality itself, not just whether you personally managed to fill in the fields " +
+    "above. " +
     "items: for each line, report its name, quantity (integer ≥1; use 1 for weight/measure-sold " +
     "items, see below), and numbers: every price-like number printed on the line after quantity, IN " +
     "THE ORDER PRINTED, as plain numbers. Do not compute or divide anything yourself — just transcribe " +
@@ -253,6 +266,7 @@ export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req
     items: [],
     itemsMismatch: false,
     itemsTruncated: false,
+    legibilityWarning: false,
   };
 
   if (!res.ok) {
@@ -295,6 +309,10 @@ export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req
   // reconcile with each other (see resolveLinePrice) trips this too, even
   // when the aggregate happens to still look fine.
   const itemsMismatch = computeItemsMismatch(items, tax, amount) || resolvedItems.some((i) => i.priceUncertain);
+  // Defaults to "legible" (no warning) unless the model explicitly said
+  // otherwise — an omitted or malformed field shouldn't read as a
+  // false-positive warning about the user's receipt.
+  const legibilityWarning = fields.legible === false;
   return NextResponse.json({
     merchant,
     amount,
@@ -308,5 +326,6 @@ export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req
     items,
     itemsMismatch,
     itemsTruncated: truncated,
+    legibilityWarning,
   } satisfies Extracted);
 });

@@ -8,6 +8,7 @@ function extracted(overrides: Partial<ExtractedForStatus> = {}): ExtractedForSta
     items: { length: 2 },
     itemsMismatch: false,
     itemsTruncated: false,
+    legibilityWarning: false,
     ...overrides,
   };
 }
@@ -123,7 +124,7 @@ describe("describeScanStatus", () => {
       extracted: extracted(),
       hasPreview: true,
     });
-    expect(status).toEqual({ kind: "success-multi-tile", itemCount: 2, tileCount: 3 });
+    expect(status).toEqual({ kind: "success-multi-tile", itemCount: 2, tileCount: 3, legibilityWarning: false });
   });
 
   it("reports plain success for a single-tile clean result", () => {
@@ -134,7 +135,29 @@ describe("describeScanStatus", () => {
       extracted: extracted(),
       hasPreview: true,
     });
-    expect(status.kind).toBe("success");
+    expect(status).toEqual({ kind: "success", legibilityWarning: false });
+  });
+
+  it("carries the legibility warning through to a success result", () => {
+    const status = describeScanStatus({
+      extracting: false,
+      tileCount: 1,
+      extractError: undefined,
+      extracted: extracted({ legibilityWarning: true }),
+      hasPreview: true,
+    });
+    expect(status).toEqual({ kind: "success", legibilityWarning: true });
+  });
+
+  it("doesn't let a legibility warning override a higher-priority status", () => {
+    const status = describeScanStatus({
+      extracting: false,
+      tileCount: 1,
+      extractError: undefined,
+      extracted: extracted({ legibilityWarning: true, itemsMismatch: true }),
+      hasPreview: true,
+    });
+    expect(status.kind).toBe("items-mismatch");
   });
 
   it("falls back to fill-in when there's no extraction result at all", () => {
@@ -150,8 +173,16 @@ describe("scanStatusText", () => {
   it("singularizes the item count correctly at exactly one item", () => {
     expect(scanStatusText({ kind: "truncated-with-items", itemCount: 1 })).toContain("first 1 item.");
     expect(scanStatusText({ kind: "truncated-with-items", itemCount: 2 })).toContain("first 2 items.");
-    expect(scanStatusText({ kind: "success-multi-tile", itemCount: 1, tileCount: 2 })).toContain("Found 1 item ");
-    expect(scanStatusText({ kind: "success-multi-tile", itemCount: 5, tileCount: 2 })).toContain("Found 5 items ");
+    expect(scanStatusText({ kind: "success-multi-tile", itemCount: 1, tileCount: 2, legibilityWarning: false })).toContain("Found 1 item ");
+    expect(scanStatusText({ kind: "success-multi-tile", itemCount: 5, tileCount: 2, legibilityWarning: false })).toContain("Found 5 items ");
+  });
+
+  it("appends the legibility warning to a success message, and omits it when not flagged", () => {
+    expect(scanStatusText({ kind: "success", legibilityWarning: true })).toContain("faint or partially faded");
+    expect(scanStatusText({ kind: "success", legibilityWarning: false })).not.toContain("faint");
+    expect(scanStatusText({ kind: "success-multi-tile", itemCount: 3, tileCount: 2, legibilityWarning: true })).toContain(
+      "faint or partially faded"
+    );
   });
 
   it("mentions the tile count while extracting a multi-part scan, and omits it for a single part", () => {
@@ -175,8 +206,9 @@ describe("scanStatusIsError", () => {
 
   it("treats extracting, success, success-multi-tile, and fill-in as routine, not error-styled", () => {
     expect(scanStatusIsError({ kind: "extracting", tileCount: 1 })).toBe(false);
-    expect(scanStatusIsError({ kind: "success" })).toBe(false);
-    expect(scanStatusIsError({ kind: "success-multi-tile", itemCount: 5, tileCount: 2 })).toBe(false);
+    expect(scanStatusIsError({ kind: "success", legibilityWarning: false })).toBe(false);
+    expect(scanStatusIsError({ kind: "success", legibilityWarning: true })).toBe(false);
+    expect(scanStatusIsError({ kind: "success-multi-tile", itemCount: 5, tileCount: 2, legibilityWarning: false })).toBe(false);
     expect(scanStatusIsError({ kind: "fill-in", hasPreview: true })).toBe(false);
   });
 });
