@@ -542,6 +542,41 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-06",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan's shutter responds instantly",
+    body: "Tapping the shutter used to leave the camera looking frozen for a moment while the real photo processed behind the scenes. It now freezes the frame on screen right away with a small spinner, so the tap itself always feels instant — the actual capture and scan still work exactly the same as before.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Discount lines no longer show up as a strange extra item",
+    body: "A discount or rebate printed on a receipt used to get pulled into the itemized list as its own line with a negative price — confusing, since the total and tax were already correct on their own. It's now skipped entirely, the same way subtotal/tax/tip lines already were. Also reordered the review form so Date sits right after Location and Tax comes before Amount, closer to the order you'd fill one in by hand.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "A smaller receipt photo on the review screen, and when it was taken",
+    body: "The captured photo used to take up a large letterboxed block above the form. It's now a small thumbnail instead, with a timestamp underneath showing exactly when the photo was taken.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A clearer heads-up before your account gets deleted",
+    body: "The verification code emailed before deleting your account used to say \"sign-in code,\" the same wording used everywhere else — easy to misread as routine. That email now says plainly what the code actually authorizes, with a stronger warning if you didn't request it.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "A round of account-security hardening, behind the scenes",
+    body: "A batch of fixes to how account registration, sign-in codes, receipt exports, and account deletion are verified server-side — closing a few edge cases around concurrent requests and cross-account access, and making receipt CSV exports safe to open in Excel/Sheets. Nothing you'd notice day-to-day, but worth logging.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
 ];
 
 export default function ChangelogPage() {

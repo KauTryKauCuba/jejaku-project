@@ -44,7 +44,7 @@ export default function DeleteAccountCard({ email }: { email: string }) {
       const res = await fetch("/api/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, purpose: "delete-account" }),
       });
       const data = await res.json();
       if (!res.ok) {
