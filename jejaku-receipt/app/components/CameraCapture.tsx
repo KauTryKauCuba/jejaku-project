@@ -40,6 +40,7 @@ export default function CameraCapture({
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [longReceipt, setLongReceipt] = useState(false);
+  const [frozenFrameUrl, setFrozenFrameUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -108,6 +109,24 @@ export default function CameraCapture({
     if (!video || capturing) return;
     setCapturing(true);
 
+    // Freeze the current frame instantly — a cheap snapshot with no camera
+    // hardware round-trip, shown over the live feed while the real, slower
+    // pipeline below runs (ImageCapture.takePhoto() can take a real moment
+    // for the camera to focus/expose and capture a full-res still). Tapping
+    // the shutter now reads as an immediate response instead of a
+    // frozen-looking live view with no feedback at all. Replaced by the
+    // actual review/edit screen once onCapture fires below — this
+    // component stays mounted (and the stream alive) the whole time, since
+    // ImageCapture needs that same live track to get the sharper photo.
+    const freezeCanvas = document.createElement("canvas");
+    freezeCanvas.width = video.videoWidth;
+    freezeCanvas.height = video.videoHeight;
+    const freezeCtx = freezeCanvas.getContext("2d");
+    if (freezeCtx) {
+      freezeCtx.drawImage(video, 0, 0, freezeCanvas.width, freezeCanvas.height);
+      setFrozenFrameUrl(freezeCanvas.toDataURL("image/jpeg", 0.8));
+    }
+
     try {
       // Prefer the browser's still-photo capture API over the live video
       // frame — on most phone cameras it can serve a meaningfully higher
@@ -140,12 +159,23 @@ export default function CameraCapture({
       canvas.width = Math.round(sourceWidth * scale);
       canvas.height = Math.round(sourceHeight * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+      if (!ctx) {
+        setCapturing(false);
+        setFrozenFrameUrl(null);
+        return;
+      }
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
 
       canvas.toBlob(
         (blob) => {
-          if (!blob) return;
+          // toBlob's callback fires asynchronously — capturing (and the
+          // frozen-frame overlay) stay up until it actually does, instead
+          // of resetting the instant this synchronous call returns.
+          setCapturing(false);
+          if (!blob) {
+            setFrozenFrameUrl(null);
+            return;
+          }
           const previewFile = new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" });
           // Sliced from the same canvas the preview photo came from — a
           // single tile (this same photo, as a data URL)
@@ -156,8 +186,9 @@ export default function CameraCapture({
         "image/jpeg",
         0.92
       );
-    } finally {
+    } catch {
       setCapturing(false);
+      setFrozenFrameUrl(null);
     }
   };
 
@@ -205,6 +236,16 @@ export default function CameraCapture({
             // gets captured.
             className="absolute inset-0 h-full w-full object-contain"
           />
+
+          {frozenFrameUrl && (
+            <div className="absolute inset-0 flex items-center justify-center bg-ink">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={frozenFrameUrl} alt="" className="h-full w-full object-contain" />
+              <div className="absolute inset-0 flex items-center justify-center bg-ink/40">
+                <div className="h-[28px] w-[28px] animate-spin rounded-full border-2 border-canvas border-t-transparent" />
+              </div>
+            </div>
+          )}
 
           <div
             // No box-shadow, per DESIGN.md — the site is shadow-free

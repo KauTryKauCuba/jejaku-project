@@ -162,13 +162,11 @@ export async function POST(req: NextRequest) {
     "single number that's the actual amount paid, not the per-kg/per-unit rate. " +
     "A number may have a trailing tax-code letter printed directly after it with no space (e.g. " +
     "23.00Z, 8.60S) — that's a tax category code, not part of the number; report only the numeric " +
-    "value. A discount/rebate line (usually a negative amount tied to the item above it) is its own " +
-    "item — name it for what it is (e.g. \"Discount\"), quantity 1, numbers a single negative amount. " +
-    "An item's name may wrap across two printed lines before its numbers appear — read the full " +
-    "wrapped text as one item name. " +
+    "value. An item's name may wrap across two printed lines before its numbers appear — read the " +
+    "full wrapped text as one item name. " +
     "Combo/bundle lines may list included items indented below with no numbers of their own — skip " +
-    "those, keep only the parent line. Skip subtotal/tax/tip/total lines. Empty array if none " +
-    "readable. " +
+    "those, keep only the parent line. Skip subtotal/tax/tip/total lines, and skip any " +
+    "discount/rebate line too — don't report it as an item of its own. Empty array if none readable. " +
     "null for any field that truly can't be determined (items is always an array, never null).";
 
   const multiImageNote =

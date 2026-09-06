@@ -293,6 +293,21 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-date">
+          Date
+        </label>
+        <DatePicker
+          id="expense-date"
+          value={date}
+          onChange={(value) => {
+            setDate(value);
+            if (dateError) setDateError(undefined);
+          }}
+        />
+        {dateError && <p className="text-[12px] text-error">{dateError}</p>}
+      </div>
+
+      <div className="flex flex-col gap-[4px]">
         <div className="flex items-center gap-[8px]">
           <label className={`flex-1 ${labelClass}`}>
             Items <span className="font-normal text-ink-mute">(optional)</span>
@@ -421,6 +436,27 @@ export default function ExpenseForm({
       </div>
 
       <div className="flex flex-col gap-[4px]">
+        <label className={labelClass} htmlFor="expense-tax">
+          Tax <span className="font-normal text-ink-mute">(optional)</span>
+        </label>
+        <input
+          id="expense-tax"
+          type="number"
+          inputMode="decimal"
+          step="0.01"
+          min="0"
+          value={tax}
+          onChange={(e) => {
+            setTax(e.target.value);
+            if (taxError) setTaxError(undefined);
+          }}
+          placeholder="0.00"
+          className={inputClass}
+        />
+        {taxError && <p className="text-[12px] text-error">{taxError}</p>}
+      </div>
+
+      <div className="flex flex-col gap-[4px]">
         <div className="flex items-center justify-between gap-[8px]">
           <label className={labelClass} htmlFor="expense-amount">
             Amount
@@ -459,42 +495,6 @@ export default function ExpenseForm({
             />
           </div>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-[4px]">
-        <label className={labelClass} htmlFor="expense-tax">
-          Tax <span className="font-normal text-ink-mute">(optional)</span>
-        </label>
-        <input
-          id="expense-tax"
-          type="number"
-          inputMode="decimal"
-          step="0.01"
-          min="0"
-          value={tax}
-          onChange={(e) => {
-            setTax(e.target.value);
-            if (taxError) setTaxError(undefined);
-          }}
-          placeholder="0.00"
-          className={inputClass}
-        />
-        {taxError && <p className="text-[12px] text-error">{taxError}</p>}
-      </div>
-
-      <div className="flex flex-col gap-[4px]">
-        <label className={labelClass} htmlFor="expense-date">
-          Date
-        </label>
-        <DatePicker
-          id="expense-date"
-          value={date}
-          onChange={(value) => {
-            setDate(value);
-            if (dateError) setDateError(undefined);
-          }}
-        />
-        {dateError && <p className="text-[12px] text-error">{dateError}</p>}
       </div>
 
       <div className="flex flex-col gap-[4px]">

@@ -16,7 +16,7 @@ import { useAddExpense, useExpenses } from "./ExpensesProvider";
 // Bump whenever receipt-extract's prompt, capture pipeline, or sanity
 // checks change meaningfully — a quick visible marker of how current the
 // scan quality is, without digging through the changelog.
-const SCAN_TUNING_DATE = "2026-09-05";
+const SCAN_TUNING_DATE = "2026-09-06";
 
 const TUTORIAL_DISMISSED_KEY: Record<TutorialKind, string> = {
   scan: "jejaku-receipt:hide-scan-tutorial",
@@ -256,10 +256,6 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
         Snap a receipt, import a file, or enter it yourself.
       </p>
 
-      <div className="mt-[15px]">
-        <ReceiptIllustration />
-      </div>
-
       <input
         ref={photoInputRef}
         type="file"
@@ -283,6 +279,10 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
       {mode === "idle" && (
         <>
+          <div className="mt-[15px]">
+            <ReceiptIllustration />
+          </div>
+
           <div className="mt-[19px] flex items-center gap-[8px]">
             <button
               type="button"
