@@ -52,11 +52,35 @@ export const { handlers, auth } = NextAuth({
   trustHost: true,
   session: { strategy: "jwt" },
   callbacks: {
+    // Compares parsed origins, never string prefixes. `url.startsWith(
+    // jejakuOrigin)` was an open redirect: with NEXT_PUBLIC_JEJAKU_URL set
+    // to "https://jejaku.my" (no trailing slash, as .env.example has it),
+    // "https://jejaku.my.evil.com/phishing" also starts with it, so an
+    // attacker-supplied callbackUrl could send a user straight off-site
+    // after sign-in/sign-out. Parsing to an origin makes the sibling-app
+    // allowance exact instead of prefix-shaped.
     async redirect({ url, baseUrl }) {
-      const jejakuOrigin = process.env.NEXT_PUBLIC_JEJAKU_URL;
-      if (jejakuOrigin && url.startsWith(jejakuOrigin)) return url;
+      // Relative paths are always same-origin by construction.
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      if (new URL(url).origin === baseUrl) return url;
+
+      let allowedSiblingOrigin: string | null = null;
+      try {
+        const configured = process.env.NEXT_PUBLIC_JEJAKU_URL;
+        allowedSiblingOrigin = configured ? new URL(configured).origin : null;
+      } catch {
+        allowedSiblingOrigin = null;
+      }
+
+      try {
+        // Also guards the previously-unguarded `new URL(url)` below it —
+        // a malformed url would have thrown straight out of this callback.
+        const { origin } = new URL(url);
+        if (origin === baseUrl) return url;
+        if (allowedSiblingOrigin && origin === allowedSiblingOrigin) return url;
+      } catch {
+        // Not a parseable absolute URL — fall through to baseUrl.
+      }
+
       return baseUrl;
     },
     async jwt({ token }) {
