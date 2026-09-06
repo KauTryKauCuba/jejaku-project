@@ -33,17 +33,45 @@ function warrantyOf(e: Expense): string {
     .join("; ");
 }
 
-export function downloadPdf(filename: string, expenses: Expense[]) {
-  // Landscape, not portrait — nine columns (up from the original six)
-  // once Warranty and Note joined Items in bringing this in line with the
-  // CSV export's field set. Portrait was already tight before that.
-  const doc = new jsPDF({ orientation: "landscape", unit: "pt" });
+// Static asset, not user content — fetched fresh each export rather than
+// bundled as a data URL constant so the source PNG (rasterized from
+// public/jk-logo.svg via sharp; jsPDF's addImage doesn't take SVG) can be
+// swapped without touching this file. Failure just means no logo, not a
+// broken export — the report is still useful without it.
+function loadLogoDataUrl(): Promise<string | null> {
+  return fetch("/jk-logo.png")
+    .then((res) => (res.ok ? res.blob() : null))
+    .then(
+      (blob) =>
+        blob &&
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        })
+    )
+    .catch(() => null);
+}
 
+export async function downloadPdf(filename: string, expenses: Expense[]) {
+  // Portrait — nine columns (up from the original six, once Warranty and
+  // Note joined Items to match the CSV export's field set) means every
+  // column below is narrower and the font smaller than a portrait table
+  // would otherwise use, trading a bit of density for the page shape a
+  // printed report is expected to have.
+  const doc = new jsPDF({ orientation: "portrait", unit: "pt" });
+  const logo = await loadLogoDataUrl();
+
+  const textX = logo ? 84 : 40;
+  if (logo) {
+    doc.addImage(logo, "PNG", 40, 24, 32, 32);
+  }
   doc.setFontSize(14);
-  doc.text("Jejaku Receipt — Expense Report", 40, 40);
+  doc.text("Jejaku Receipt — Expense Report", textX, 40);
   doc.setFontSize(9);
   doc.setTextColor(120);
-  doc.text(`Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · ${expenses.length} receipt${expenses.length === 1 ? "" : "s"}`, 40, 56);
+  doc.text(`Generated ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })} · ${expenses.length} receipt${expenses.length === 1 ? "" : "s"}`, textX, 54);
 
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
   // Only meaningful when every row shares one currency — mixed-currency
@@ -51,11 +79,11 @@ export function downloadPdf(filename: string, expenses: Expense[]) {
   const currencies = new Set(expenses.map((e) => e.currency ?? "USD"));
   const totalLabel = currencies.size === 1 ? `Total: ${formatCurrency(total, [...currencies][0])}` : undefined;
   if (totalLabel) {
-    doc.text(totalLabel, 40, 70);
+    doc.text(totalLabel, 40, 74);
   }
 
   autoTable(doc, {
-    startY: totalLabel ? 84 : 70,
+    startY: totalLabel ? 90 : 76,
     head: [[...PDF_COLUMNS]],
     body: expenses.map((e) => [
       e.date,
@@ -68,7 +96,7 @@ export function downloadPdf(filename: string, expenses: Expense[]) {
       e.note ?? "",
       formatItemsList(e),
     ]),
-    styles: { fontSize: 8, cellPadding: 5 },
+    styles: { fontSize: 7, cellPadding: 4 },
     headStyles: { fillColor: [15, 118, 110] },
     // Amount and Tax (3, 4) are left unset on purpose, not given a fixed
     // width like the rest — a formatted amount's digit count swings a lot
@@ -78,13 +106,17 @@ export function downloadPdf(filename: string, expenses: Expense[]) {
     // its own content instead. Items is also left unset so it gets
     // whatever's left over — the right default since it's the one column
     // that can run to several stacked lines and most needs the room.
+    // Narrower than the old landscape widths across the board — portrait's
+    // ~515pt usable width (vs. landscape's ~762pt) has to fit the same nine
+    // columns, so more rows will wrap to multiple lines than before; that's
+    // expected, not a bug.
     columnStyles: {
-      0: { cellWidth: 55 },
-      1: { cellWidth: 85 },
-      2: { cellWidth: 65 },
-      5: { cellWidth: 110 },
-      6: { cellWidth: 90 },
-      7: { cellWidth: 90 },
+      0: { cellWidth: 40 },
+      1: { cellWidth: 68 },
+      2: { cellWidth: 48 },
+      5: { cellWidth: 65 },
+      6: { cellWidth: 55 },
+      7: { cellWidth: 50 },
     },
     margin: { left: 40, right: 40 },
   });
