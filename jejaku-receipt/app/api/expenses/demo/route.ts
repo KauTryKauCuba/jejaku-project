@@ -10,7 +10,7 @@ import { withApiErrorHandling } from "../../../lib/apiError";
 // anything they entered themselves untouched — unlike the Danger Zone's
 // full wipe. Demo rows never carry an uploaded photo, so there's no file
 // cleanup needed here (contrast with DELETE /api/expenses).
-export const DELETE = withApiErrorHandling(async () => {
+export const DELETE = withApiErrorHandling("DELETE /api/expenses/demo", async () => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

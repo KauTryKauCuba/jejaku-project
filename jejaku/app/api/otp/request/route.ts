@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { createOtp } from "../../../lib/otp";
 import { sendOtpEmail, type OtpPurpose } from "../../../lib/email";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_PURPOSES: OtpPurpose[] = ["sign-in", "delete-account"];
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling("POST /api/otp/request", async (request: Request) => {
   const { email, purpose } = await request.json();
 
   if (typeof email !== "string" || !EMAIL_PATTERN.test(email)) {
@@ -31,4 +32,4 @@ export async function POST(request: Request) {
   await sendOtpEmail(email, result.code, resolvedPurpose);
 
   return NextResponse.json({ ok: true });
-}
+});

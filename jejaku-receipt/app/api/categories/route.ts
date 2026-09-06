@@ -7,7 +7,7 @@ import { EXPENSE_CATEGORIES, MAX_CATEGORY_LENGTH, MAX_CUSTOM_CATEGORIES } from "
 import { AUDIT_ACTIONS, logAudit } from "../../lib/auditLog";
 import { withApiErrorHandling } from "../../lib/apiError";
 
-export const POST = withApiErrorHandling(async (request: Request) => {
+export const POST = withApiErrorHandling("POST /api/categories", async (request: Request) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

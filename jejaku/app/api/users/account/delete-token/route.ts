@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "../../../../lib/auth";
 import { verifyOtp } from "../../../../lib/otp";
 import { issueDeleteToken } from "../../../../lib/deleteToken";
+import { withApiErrorHandling } from "../../../../lib/apiError";
 
 const REASON_TO_ERROR: Record<string, string> = {
   expired: "otp_expired",
@@ -16,7 +17,7 @@ const REASON_TO_ERROR: Record<string, string> = {
 // owner just entered a valid code" — is exactly what the delete
 // endpoints need before they'll act, checked server-side by them rather
 // than trusted from the client's own gating.
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling("POST /api/users/account/delete-token", async (request: Request) => {
   const session = await auth();
   const email = session?.dbProfile?.email ?? session?.user?.email;
   if (!email) {
@@ -34,4 +35,4 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ token: issueDeleteToken(email) });
-}
+});

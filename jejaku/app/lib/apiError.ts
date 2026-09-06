@@ -15,9 +15,9 @@ async function logError(route: string, err: unknown): Promise<void> {
 // query throwing, etc.) returns a clean 500 JSON response instead of
 // Next's raw crash page — the routes' own explicit 400/401/404/409
 // responses for expected, validated cases are unaffected since those
-// return before ever throwing.
+// return before ever throwing. Mirrors jejaku-receipt's identical wrapper.
 //
-// `route` (e.g. "POST /api/expenses") is passed explicitly rather than
+// `route` (e.g. "POST /api/otp/request") is passed explicitly rather than
 // derived from the request, since several call sites' handlers take no
 // arguments at all — the caller already knows this string statically, so
 // there's nothing to actually derive it from at the call site anyway.

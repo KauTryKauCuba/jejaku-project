@@ -4,6 +4,7 @@ import { computeItemsMismatch } from "../../lib/receiptSanity";
 import { parseReceiptResponse, itemEntriesToObjects } from "../../lib/receiptExtractParse";
 import { getCurrentUser } from "../../lib/currentUser";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../lib/uploads";
+import { withApiErrorHandling } from "../../lib/apiError";
 
 // This is the one route in the app that bills a real per-call cost
 // (DeepSeek vision) and — unlike every other mutating route — had no auth
@@ -85,7 +86,12 @@ const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 // how many parts a long receipt gets should stay under this.
 const MAX_IMAGES = 8;
 
-export async function POST(req: NextRequest) {
+// Wrapped in withApiErrorHandling (added alongside error-log persistence
+// for this route) mainly to catch req.json() throwing on malformed JSON —
+// previously uncaught here, so a bad request body would have crashed
+// straight past every explicit error response below instead of getting a
+// clean 500.
+export const POST = withApiErrorHandling("POST /api/receipt-extract", async (req: NextRequest) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -303,4 +309,4 @@ export async function POST(req: NextRequest) {
     itemsMismatch,
     itemsTruncated: truncated,
   } satisfies Extracted);
-}
+});

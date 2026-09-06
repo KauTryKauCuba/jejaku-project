@@ -4,8 +4,9 @@ import { auth } from "../../../lib/auth";
 import { verifyDeleteToken } from "../../../lib/deleteToken";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = withApiErrorHandling("DELETE /api/users/account", async (request: NextRequest) => {
   const session = await auth();
   const email = session?.dbProfile?.email ?? session?.user?.email;
   if (!email) {
@@ -25,4 +26,4 @@ export async function DELETE(request: NextRequest) {
   await db.delete(users).where(eq(users.email, email));
 
   return NextResponse.json({ ok: true });
-}
+});

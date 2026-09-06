@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean, integer } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean, integer, index } from "drizzle-orm/pg-core";
 import type { ExpenseItem } from "../lib/expenses";
 
 export const users = pgTable("users", {
@@ -75,7 +75,17 @@ export const expenses = pgTable("expenses", {
   // whole, alongside the same expense, so a join buys nothing here.
   split: jsonb("split").$type<{ people: string[]; assignments: { itemIndex: number; people: string[] }[] }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Every query in this app filters on userId — without this, Postgres
+  // sequentially scans the whole table on every dashboard/receipts-page
+  // load, invisible at today's row counts but real once accounts grow.
+  index("expenses_user_id_idx").on(table.userId),
+  // Additionally covers the receipt-date sort every list/dashboard query
+  // already does (see ReceiptsList's sortedExpenses, the dashboard tiles'
+  // month bucketing) — a composite index serves both the plain userId
+  // filter and the userId+date ordering from one index.
+  index("expenses_user_id_date_idx").on(table.userId, table.date),
+]);
 
 // A running log of account-level actions — every expense created, edited,
 // or deleted, categories added, demo data seeded/removed, and the Danger
@@ -91,4 +101,33 @@ export const auditLogs = pgTable("audit_logs", {
   action: text("action").notNull(),
   detail: text("detail"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Settings' audit trail query filters on userId and orders by
+  // createdAt (capped at 500 rows) — this is the fastest-growing table in
+  // the app (a row on every expense create/edit/delete), so it's the one
+  // most worth indexing even before expenses is.
+  index("audit_logs_user_id_created_at_idx").on(table.userId, table.createdAt),
+]);
+
+// A durable, queryable record of unexpected server errors — see
+// withApiErrorHandling in lib/apiError.ts, the one place this gets
+// written. Self-hosted (a table in this app's own database) rather than a
+// third-party error-tracking service on purpose: this project's Privacy
+// Policy states no analytics or third-party scripts run at all, and
+// sending exception data (which can carry request specifics) to an
+// external service would mean disclosing and depending on one. `psql`
+// against this table is the intended way to check it — no admin UI exists
+// for it, and none is planned; this is meant to answer "did anything
+// break" after a deploy, not to be a product feature.
+export const errorLogs = pgTable("error_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // Not a foreign key to users — an error can happen before
+  // getCurrentUser() ever resolves (a malformed request, a DB outage), so
+  // this can't assume an authenticated user exists yet.
+  route: text("route").notNull(),
+  message: text("message").notNull(),
+  stack: text("stack"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("error_logs_created_at_idx").on(table.createdAt),
+]);

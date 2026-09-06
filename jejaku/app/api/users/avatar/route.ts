@@ -4,8 +4,9 @@ import { auth } from "../../../lib/auth";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
 import { saveAvatarPhoto } from "../../../lib/uploads";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling("POST /api/users/avatar", async (request: Request) => {
   const session = await auth();
   // dbProfile only exists once a users row has been created (post-onboarding).
   // Fall back to the raw session email so this also works during onboarding,
@@ -32,4 +33,4 @@ export async function POST(request: Request) {
   await db.update(users).set({ avatarUrl }).where(eq(users.email, email));
 
   return NextResponse.json({ avatarUrl });
-}
+});

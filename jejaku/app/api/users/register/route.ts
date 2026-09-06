@@ -3,8 +3,9 @@ import { auth } from "../../../lib/auth";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
 import { wasRecentlyVerified } from "../../../lib/otp";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling("POST /api/users/register", async (request: Request) => {
   // The target email always comes from the caller's own session, never
   // from the request body — otherwise anyone who knows a victim's email
   // could race their own onboarding request during the same
@@ -35,4 +36,4 @@ export async function POST(request: Request) {
     .onConflictDoNothing({ target: users.email });
 
   return NextResponse.json({ ok: true });
-}
+});

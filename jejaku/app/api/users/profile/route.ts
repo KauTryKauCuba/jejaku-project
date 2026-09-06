@@ -3,8 +3,9 @@ import { eq } from "drizzle-orm";
 import { auth } from "../../../lib/auth";
 import { db } from "../../../db";
 import { users } from "../../../db/schema";
+import { withApiErrorHandling } from "../../../lib/apiError";
 
-export async function POST(request: Request) {
+export const POST = withApiErrorHandling("POST /api/users/profile", async (request: Request) => {
   const session = await auth();
   const email = session?.dbProfile?.email ?? session?.user?.email;
   if (!email) {
@@ -19,4 +20,4 @@ export async function POST(request: Request) {
   await db.update(users).set({ fullName: fullName.trim() }).where(eq(users.email, email));
 
   return NextResponse.json({ ok: true });
-}
+});

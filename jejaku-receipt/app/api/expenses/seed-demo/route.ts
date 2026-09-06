@@ -6,7 +6,7 @@ import { expenses } from "../../../db/schema";
 import { seedDemoExpenses } from "../../../lib/demoData";
 import { withApiErrorHandling } from "../../../lib/apiError";
 
-export const POST = withApiErrorHandling(async () => {
+export const POST = withApiErrorHandling("POST /api/expenses/seed-demo", async () => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
