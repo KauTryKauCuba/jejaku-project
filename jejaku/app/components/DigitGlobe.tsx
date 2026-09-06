@@ -7,7 +7,6 @@ import {
   useImperativeHandle,
   useMemo,
   useRef,
-  useState,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { geoDistance, geoOrthographic } from "d3-geo";
@@ -26,16 +25,20 @@ const AUTO_ROTATE_DEG_PER_SEC = 6;
 const PICK_PAUSE_MS = 900;
 const POINT_COUNT = 640;
 const SEED = 42;
-// Size/opacity aren't fixed per point — they're recomputed every render from
+// Size/opacity aren't fixed per point — they're recomputed every frame from
 // how close a point currently sits to dead-center of the visible hemisphere
-// (see visiblePoints below), so as the sphere rotates the "large and bright"
-// zone sweeps across whichever digits are passing through it, the same way
-// the reference animation reads as a moving highlight band rather than a
-// static scatter.
+// (see draw() below), so as the sphere rotates the "large and bright" zone
+// sweeps across whichever digits are passing through it, the same way the
+// reference animation reads as a moving highlight band rather than a static
+// scatter.
 const MIN_FONT = 5;
 const MAX_FONT = 15;
 const MIN_OPACITY = 0.12;
 const MAX_OPACITY = 1;
+// Retina rendering past 2x buys no visible sharpness here (the globe tops
+// out at 220px on screen) but quadruples the pixels the browser has to
+// rasterize every frame — capped so high-dpr phones don't pay for it.
+const MAX_DEVICE_PIXEL_RATIO = 2;
 
 // Deterministic PRNG (mulberry32) — Math.random() would render a different
 // digit-per-point assignment on the server vs. the client and break
@@ -86,32 +89,127 @@ export type DigitGlobeHandle = {
   pickDigit(digit: number): { x: number; y: number } | null;
 };
 
+// Rendered on <canvas> rather than as one SVG <text> per point: rotation
+// used to live in React state, so every rAF tick re-rendered ~320 visible
+// digits through React's reconciler at 60fps — fine on desktop, visibly
+// janky on mobile. Rotation, drag state, and picked ids now live in refs and
+// the rAF loop paints directly onto the canvas, so the animation never
+// touches React at all (only pickDigit's one-time mutation does, to redraw
+// the frame a digit was just consumed on).
 const DigitGlobe = forwardRef<DigitGlobeHandle>(function DigitGlobe(_props, ref) {
   const points = useMemo(() => generatePoints(POINT_COUNT), []);
-  const [rotation, setRotation] = useState<[number, number]>([20, -12]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rotationRef = useRef<[number, number]>([20, -12]);
+  const pickedIdsRef = useRef<Set<number>>(new Set());
+  const draggingRef = useRef(false);
   const dragState = useRef<{ startX: number; startY: number; startRotation: [number, number] } | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [pickedIds, setPickedIds] = useState<Set<number>>(new Set());
   const rafRef = useRef<number | undefined>(undefined);
   const lastTsRef = useRef<number | undefined>(undefined);
   const pausedUntilRef = useRef(0);
-  const svgRef = useRef<SVGSVGElement>(null);
-  // Always-current mirrors of state the imperative pickDigit() needs to read
-  // without becoming a dependency that would tear down/rebuild the rAF loop.
-  const rotationRef = useRef(rotation);
-  rotationRef.current = rotation;
-  const pickedIdsRef = useRef(pickedIds);
-  pickedIdsRef.current = pickedIds;
+  const styleRef = useRef({ canvasFill: "#fff", textFill: "#888", fontFamily: "sans-serif" });
+
+  const readStyles = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const computed = getComputedStyle(canvas);
+    styleRef.current = {
+      canvasFill: computed.getPropertyValue("--color-canvas").trim() || "#fff",
+      textFill: computed.getPropertyValue("--color-ink-mute").trim() || "#888",
+      fontFamily: computed.fontFamily || "sans-serif",
+    };
+  }, []);
+
+  const draw = useCallback(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    const rotation = rotationRef.current;
+    const projection = geoOrthographic()
+      .rotate(rotation)
+      .translate([GLOBE_WIDTH / 2, GLOBE_HEIGHT / 2])
+      .scale(GLOBE_HEIGHT / 2 - 3)
+      .clipAngle(90);
+    const center: [number, number] = [-rotation[0], -rotation[1]];
+    const { canvasFill, textFill, fontFamily } = styleRef.current;
+
+    ctx.clearRect(0, 0, GLOBE_WIDTH, GLOBE_HEIGHT);
+    ctx.fillStyle = canvasFill;
+    ctx.beginPath();
+    ctx.arc(GLOBE_WIDTH / 2, GLOBE_HEIGHT / 2, GLOBE_HEIGHT / 2 - 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = textFill;
+
+    const pickedIds = pickedIdsRef.current;
+    for (const p of points) {
+      if (pickedIds.has(p.id)) continue;
+      const dist = geoDistance([p.lng, p.lat], center);
+      if (dist >= Math.PI / 2) continue;
+      const projected = projection([p.lng, p.lat]);
+      if (!projected) continue;
+      // 1 at dead-center of the visible hemisphere, 0 at the silhouette
+      // edge — squared so the "large and bright" zone stays a tight, punchy
+      // core rather than a gradual fade across the whole face.
+      const t = 1 - dist / (Math.PI / 2);
+      const eased = t * t;
+      const size = MIN_FONT + eased * (MAX_FONT - MIN_FONT);
+      const opacity = MIN_OPACITY + eased * (MAX_OPACITY - MIN_OPACITY);
+      ctx.globalAlpha = opacity;
+      ctx.font = `${size}px ${fontFamily}`;
+      ctx.fillText(String(p.digit), projected[0], projected[1]);
+    }
+    ctx.globalAlpha = 1;
+  }, [points]);
+
+  const resizeCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, MAX_DEVICE_PIXEL_RATIO);
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const ctx = canvas.getContext("2d");
+    // Logical drawing space stays GLOBE_WIDTH x GLOBE_HEIGHT regardless of
+    // the canvas's actual displayed size or device pixel ratio — the same
+    // role the SVG's viewBox used to play.
+    ctx?.setTransform(
+      (rect.width / GLOBE_WIDTH) * dpr,
+      0,
+      0,
+      (rect.height / GLOBE_HEIGHT) * dpr,
+      0,
+      0
+    );
+    readStyles();
+  }, [readStyles]);
 
   useEffect(() => {
-    if (dragging) return;
+    resizeCanvas();
+    draw();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ro = new ResizeObserver(() => {
+      resizeCanvas();
+      draw();
+    });
+    ro.observe(canvas);
+    return () => ro.disconnect();
+  }, [resizeCanvas, draw]);
+
+  useEffect(() => {
     const tick = (ts: number) => {
       if (lastTsRef.current === undefined) lastTsRef.current = ts;
       const dt = (ts - lastTsRef.current) / 1000;
       lastTsRef.current = ts;
-      if (ts >= pausedUntilRef.current) {
-        setRotation(([lng, lat]) => [lng + AUTO_ROTATE_DEG_PER_SEC * dt, lat]);
+      if (!draggingRef.current && ts >= pausedUntilRef.current) {
+        const [lng, lat] = rotationRef.current;
+        rotationRef.current = [lng + AUTO_ROTATE_DEG_PER_SEC * dt, lat];
       }
+      draw();
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
@@ -119,52 +217,19 @@ const DigitGlobe = forwardRef<DigitGlobeHandle>(function DigitGlobe(_props, ref)
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       lastTsRef.current = undefined;
     };
-  }, [dragging]);
-
-  const projection = useMemo(
-    () =>
-      geoOrthographic()
-        .rotate(rotation)
-        .translate([GLOBE_WIDTH / 2, GLOBE_HEIGHT / 2])
-        .scale(GLOBE_HEIGHT / 2 - 3)
-        .clipAngle(90),
-    [rotation]
-  );
-
-  const visiblePoints = useMemo(() => {
-    const center: [number, number] = [-rotation[0], -rotation[1]];
-    return points
-      .filter((p) => !pickedIds.has(p.id))
-      .map((p) => ({ ...p, dist: geoDistance([p.lng, p.lat], center) }))
-      .filter((p) => p.dist < Math.PI / 2)
-      .map((p) => {
-        const [x, y] = projection([p.lng, p.lat]) ?? [0, 0];
-        // 1 at dead-center of the visible hemisphere, 0 at the silhouette
-        // edge — squared so the "large and bright" zone stays a tight,
-        // punchy core rather than a gradual fade across the whole face.
-        const t = 1 - p.dist / (Math.PI / 2);
-        const eased = t * t;
-        return {
-          ...p,
-          x,
-          y,
-          size: MIN_FONT + eased * (MAX_FONT - MIN_FONT),
-          opacity: MIN_OPACITY + eased * (MAX_OPACITY - MIN_OPACITY),
-        };
-      });
-  }, [points, rotation, pickedIds, projection]);
+  }, [draw]);
 
   useImperativeHandle(
     ref,
     () => ({
       pickDigit(digit: number) {
-        const svg = svgRef.current;
-        if (!svg) return null;
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
 
-        const rot = rotationRef.current;
-        const center: [number, number] = [-rot[0], -rot[1]];
+        const rotation = rotationRef.current;
+        const center: [number, number] = [-rotation[0], -rotation[1]];
         const proj = geoOrthographic()
-          .rotate(rot)
+          .rotate(rotation)
           .translate([GLOBE_WIDTH / 2, GLOBE_HEIGHT / 2])
           .scale(GLOBE_HEIGHT / 2 - 3)
           .clipAngle(90);
@@ -178,90 +243,58 @@ const DigitGlobe = forwardRef<DigitGlobeHandle>(function DigitGlobe(_props, ref)
           const dist = geoDistance([p.lng, p.lat], center);
           if (dist >= Math.PI / 2) continue;
           if (!best || dist < best.dist) {
-            const [x, y] = proj([p.lng, p.lat]) ?? [0, 0];
-            best = { point: p, dist, x, y };
+            const projected = proj([p.lng, p.lat]) ?? [0, 0];
+            best = { point: p, dist, x: projected[0], y: projected[1] };
           }
         }
         if (!best) return null;
 
-        setPickedIds((prev) => {
-          const next = new Set(prev);
-          next.add(best!.point.id);
-          return next;
-        });
+        pickedIdsRef.current = new Set(pickedIdsRef.current).add(best.point.id);
         pausedUntilRef.current = performance.now() + PICK_PAUSE_MS;
+        draw();
 
-        const rect = svg.getBoundingClientRect();
+        const rect = canvas.getBoundingClientRect();
         const scaleX = rect.width / GLOBE_WIDTH;
         const scaleY = rect.height / GLOBE_HEIGHT;
         return { x: rect.left + best.x * scaleX, y: rect.top + best.y * scaleY };
       },
     }),
-    [points]
+    [points, draw]
   );
 
-  const handlePointerDown = useCallback(
-    (e: ReactPointerEvent<SVGSVGElement>) => {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      setDragging(true);
-      dragState.current = { startX: e.clientX, startY: e.clientY, startRotation: rotation };
-    },
-    [rotation]
-  );
+  const handlePointerDown = useCallback((e: ReactPointerEvent<HTMLCanvasElement>) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    dragState.current = { startX: e.clientX, startY: e.clientY, startRotation: rotationRef.current };
+  }, []);
 
-  const handlePointerMove = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
+  const handlePointerMove = useCallback((e: ReactPointerEvent<HTMLCanvasElement>) => {
     if (!dragState.current) return;
     const dx = e.clientX - dragState.current.startX;
     const dy = e.clientY - dragState.current.startY;
     const [startLng, startLat] = dragState.current.startRotation;
     const nextLat = Math.max(-90, Math.min(90, startLat - dy * DRAG_SENSITIVITY));
-    setRotation([startLng + dx * DRAG_SENSITIVITY, nextLat]);
+    rotationRef.current = [startLng + dx * DRAG_SENSITIVITY, nextLat];
   }, []);
 
-  const handlePointerUp = useCallback((e: ReactPointerEvent<SVGSVGElement>) => {
+  const handlePointerUp = useCallback((e: ReactPointerEvent<HTMLCanvasElement>) => {
     dragState.current = null;
-    setDragging(false);
+    draggingRef.current = false;
     e.currentTarget.releasePointerCapture(e.pointerId);
   }, []);
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${GLOBE_WIDTH} ${GLOBE_HEIGHT}`}
-      className="mx-auto block w-full max-w-[220px] cursor-grab touch-none active:cursor-grabbing"
+    <canvas
+      ref={canvasRef}
       role="img"
       aria-label="Decorative rotating sphere of scattered digits"
+      className="mx-auto block w-full max-w-[220px] cursor-grab touch-none active:cursor-grabbing"
+      style={{ aspectRatio: `${GLOBE_WIDTH} / ${GLOBE_HEIGHT}` }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
-    >
-      {/* Same fill as the card it sits on ({colors.canvas}) so the sphere
-          reads only through the scattered digits, not a colored blob —
-          no border, the circular edge is left to read from the digit
-          density falling away near the silhouette instead. */}
-      <circle
-        cx={GLOBE_WIDTH / 2}
-        cy={GLOBE_HEIGHT / 2}
-        r={GLOBE_HEIGHT / 2 - 3}
-        fill="var(--color-canvas)"
-      />
-      {visiblePoints.map((p) => (
-        <text
-          key={p.id}
-          x={p.x}
-          y={p.y}
-          fontSize={p.size}
-          fill="var(--color-ink-mute)"
-          opacity={p.opacity}
-          textAnchor="middle"
-          dominantBaseline="central"
-          className="select-none tabular"
-        >
-          {p.digit}
-        </text>
-      ))}
-    </svg>
+    />
   );
 });
 
