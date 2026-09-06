@@ -1,7 +1,8 @@
-// One-time demo-data seed — inserts the same sample receipts used in local
-// development (spread across March-August) against the first user found.
-// Guarded to be a no-op if that user already has expenses, so re-running
-// this (e.g. after a redeploy) never duplicates rows.
+// One-time demo-data seed — inserts the same 10 real, photo-backed sample
+// receipts used in local development (see app/lib/demoExpenses.ts) against
+// the first user found. Guarded to be a no-op if that user already has
+// expenses, so re-running this (e.g. after a redeploy) never duplicates
+// rows.
 //
 // Run against the target database's DATABASE_URL, e.g. on the VPS:
 //   docker compose --profile tools run --rm --entrypoint \
