@@ -58,6 +58,15 @@ const sharedCookies = cookieDomain
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   cookies: sharedCookies,
+  // Without this, a failed OAuth callback renders Auth.js's own built-in
+  // error page at /api/auth/error — which, on this VPS's flaky home-
+  // network DNS, has itself crashed with an uncaught "fetch failed" (a
+  // 500, not even the intended error message) rather than the graceful
+  // CallbackRouteError handling the callback route itself gets. Pointing
+  // error at our own /login page sidesteps that entirely: it's a plain
+  // page with no fetch of its own, so it can't fail the same way — see
+  // the `error` search param handling there for the message shown.
+  pages: { error: "/login" },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,

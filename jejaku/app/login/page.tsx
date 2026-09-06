@@ -10,7 +10,20 @@ export const metadata: Metadata = {
   description: "Sign in or create your Jejaku account.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  // Auth.js redirects failed sign-ins here (see `pages.error` in
+  // lib/auth.ts) instead of its own built-in error page, which has
+  // crashed outright on this VPS's flaky network rather than showing its
+  // intended message. One generic message covers every error code here —
+  // the actual cause (an OAuth provider fetch failing) isn't something
+  // the user can act on beyond "try again," so a specific code wouldn't
+  // help them.
+  const { error } = await searchParams;
+
   return (
     <AuthCard
       eyebrow="One account, every project"
@@ -18,6 +31,11 @@ export default function LoginPage() {
       subtitle="No password — just a quick code by email."
       footer="New here? Same steps, we'll set you up."
     >
+      {error && (
+        <p className="mb-6 rounded-md border border-error/30 bg-error/10 px-4 py-3 text-[14px] leading-relaxed text-error">
+          Sign-in didn&apos;t go through — this can happen from a brief network hiccup. Please try again.
+        </p>
+      )}
       <div className="flex flex-col gap-2">
         <GoogleButton label="Continue with Google" />
         <GithubButton label="Continue with GitHub" />
