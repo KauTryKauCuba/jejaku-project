@@ -528,6 +528,20 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-05",
   },
+  {
+    status: "Jejaku Beta v0.0.1",
+    title: "Delete your account, for real this time",
+    body: "Account deletion used to mean asking manually — now it's self-serve from Settings. It removes your Jejaku profile and everything in Jejaku Receipt (expenses, receipt photos, the lot), behind an emailed verification code so it can't happen by an accidental click.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan's camera now shows you the whole frame",
+    body: "The live camera preview was cropped to fill the screen, which quietly hid real edges of the shot from view before you even tapped the shutter — what you saw wasn't actually the full frame that got captured. It now shows the entire frame, letterboxed instead of cropped. Also removed the automatic contrast/brightness boost applied to captured photos, so what you scan is exactly what the camera saw.",
+    dateLabel: "Shipped",
+    date: "2026-09-06",
+  },
 ];
 
 export default function ChangelogPage() {

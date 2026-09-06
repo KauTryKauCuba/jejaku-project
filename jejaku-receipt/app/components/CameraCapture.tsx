@@ -141,23 +141,14 @@ export default function CameraCapture({
       canvas.height = Math.round(sourceHeight * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
-      // Boost contrast before DeepSeek ever sees this — thermal-printed
-      // receipts are often faint gray, not true black, and crumpled/glared
-      // photos make it worse. Pushing contrast up (and brightness slightly)
-      // darkens real ink and lightens the background, which reads much
-      // closer to a clean scan. Applied only to the captured frame, not the
-      // live preview, so what the user sees while framing the shot stays
-      // natural.
-      ctx.filter = "contrast(150%) brightness(108%)";
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
-      ctx.filter = "none";
 
       canvas.toBlob(
         (blob) => {
           if (!blob) return;
           const previewFile = new File([blob], `receipt-${Date.now()}.jpg`, { type: "image/jpeg" });
-          // Sliced from the same contrast-boosted canvas the preview photo
-          // came from — a single tile (this same photo, as a data URL)
+          // Sliced from the same canvas the preview photo came from — a
+          // single tile (this same photo, as a data URL)
           // when longReceipt is off, matching today's behavior exactly.
           const extractImages = sliceCanvas(canvas, longReceipt);
           onCapture(previewFile, extractImages);
@@ -205,7 +196,14 @@ export default function CameraCapture({
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 h-full w-full object-cover"
+            // object-contain, not object-cover — object-cover crops the
+            // preview to fill the screen, which was hiding real edges of
+            // the frame that still ends up in the captured photo (capture
+            // always uses the video's/still-photo's full, uncropped
+            // frame). Letterboxed against the ink background instead, so
+            // what's visible while framing the shot is genuinely what
+            // gets captured.
+            className="absolute inset-0 h-full w-full object-contain"
           />
 
           <div
