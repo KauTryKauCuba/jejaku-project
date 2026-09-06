@@ -199,7 +199,19 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
 
   const handlePhotoImport = async (file: File) => {
     applyFile(file, "image");
-    runExtraction([await fileToDataUrl(file)]);
+    // Read outside runExtraction's own try/catch, so its failure needs
+    // handling here — fileToDataUrl rejects on FileReader error (an
+    // unreadable or corrupt file). Left unhandled this was the one failure
+    // path in this component with no message at all: no spinner, no error,
+    // no result, just the details form sitting there.
+    let dataUrl: string;
+    try {
+      dataUrl = await fileToDataUrl(file);
+    } catch {
+      setExtractError("Couldn't read that photo — enter this receipt manually.");
+      return;
+    }
+    runExtraction([dataUrl]);
   };
 
   const reset = () => {
