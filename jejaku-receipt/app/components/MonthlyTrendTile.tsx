@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChartBar, ChartDonut, ChartLineUp, GridFour, TrendDown, TrendUp } from "@phosphor-icons/react";
+import { ChartBar, ChartDonut, ChartLineUp, GridFour, TrendDown, TrendUp, Warning } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
-import { formatCurrency } from "../lib/expenses";
+import { conversionFailed, formatCurrency } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import Select from "./Select";
 import { RANGE_OPTIONS, monthsInRange, monthKey, recentMonths } from "../lib/dateRange";
@@ -76,6 +76,8 @@ export default function MonthlyTrendTile() {
     byCategory.set(e.category, (byCategory.get(e.category) ?? 0) + (e.homeCurrencyAmount ?? 0));
     byMonthCategory.set(key, byCategory);
   }
+
+  const failedCount = expenses.filter(conversionFailed).length;
 
   const thisMonthTotal = totalsByMonth.get(thisKey) ?? 0;
   const lastMonthTotal = totalsByMonth.get(lastKey) ?? 0;
@@ -197,6 +199,13 @@ export default function MonthlyTrendTile() {
       <p className="mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {detail}
       </p>
+      {failedCount > 0 && (
+        <p className="mt-[6px] flex items-start gap-[4px] text-[10px] leading-relaxed text-error">
+          <Warning size={12} weight="fill" className="mt-[1px] shrink-0" />
+          {failedCount} receipt{failedCount === 1 ? "" : "s"} couldn&apos;t be converted to {currency}, so{" "}
+          {failedCount === 1 ? "it isn't" : "they aren't"} counted in any total. Edit and save to retry.
+        </p>
+      )}
 
       <div className="mt-[11px] ml-auto flex w-fit items-center gap-[2px] rounded-pill border border-hairline-input p-[2px]">
         {VIEWS.map(({ id, label, icon: Icon }) => (

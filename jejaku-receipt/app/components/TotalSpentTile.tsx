@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CurrencyDollar, TrendUp, TrendDown } from "@phosphor-icons/react";
+import { CurrencyDollar, TrendUp, TrendDown, Warning } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
-import { formatCurrency } from "../lib/expenses";
+import { conversionFailed, formatCurrency } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
 import { CURRENCY_DOLLAR_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
@@ -54,6 +54,7 @@ export default function TotalSpentTile() {
   const isUp = delta > 0;
 
   const allTimeTotal = expenses.reduce((sum, e) => sum + (e.homeCurrencyAmount ?? 0), 0);
+  const failedCount = expenses.filter(conversionFailed).length;
   const rangeLabel = range === "This month" ? "this month" : `the last ${range}`;
   const detail = expenses.length === 0
     ? "Across every receipt you've scanned."
@@ -161,6 +162,14 @@ export default function TotalSpentTile() {
       <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {detail}
       </p>
+      {failedCount > 0 && (
+        <p className="relative mt-[6px] flex items-start gap-[4px] text-[10px] leading-relaxed text-error">
+          <Warning size={12} weight="fill" className="mt-[1px] shrink-0" />
+          {failedCount} receipt{failedCount === 1 ? "" : "s"} couldn&apos;t be converted to{" "}
+          {defaultCurrency}, so {failedCount === 1 ? "it isn't" : "they aren't"} counted in any total.
+          Edit and save to retry.
+        </p>
+      )}
 
       <div className="relative mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
         <span className="text-[11px] text-ink-mute">All-time</span>

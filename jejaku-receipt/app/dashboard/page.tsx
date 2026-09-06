@@ -7,6 +7,7 @@ import { db } from "../db";
 import { expenses } from "../db/schema";
 import { toExpense } from "../db/toExpense";
 import { ensureDemoSeed } from "../lib/demoData";
+import { MAX_INITIAL_EXPENSES_LOADED } from "../lib/expenses";
 import { ExpensesProvider } from "../components/ExpensesProvider";
 import DashboardGreeting from "../components/DashboardGreeting";
 import DashboardShell from "../components/DashboardShell";
@@ -38,6 +39,7 @@ export default async function DashboardPage() {
   const rows = await db.query.expenses.findMany({
     where: eq(expenses.userId, user.id),
     orderBy: desc(expenses.createdAt),
+    limit: MAX_INITIAL_EXPENSES_LOADED,
   });
   const initialExpenses = rows.map(toExpense);
 

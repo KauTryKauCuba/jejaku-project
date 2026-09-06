@@ -37,6 +37,29 @@ export type ExpenseCategory = string;
 export const MAX_CUSTOM_CATEGORIES = 20;
 export const MAX_CATEGORY_LENGTH = 24;
 
+// Unlike categories above, these were never enforced anywhere — the UI
+// naturally stays well under them, but the API accepted a request straight
+// from curl with a megabyte-long note or a five-figure items array just as
+// happily as a real one. Generous on purpose (a real long receipt easily
+// has 50-100 lines); this is a ceiling against abuse, not a UX constraint.
+export const MAX_MERCHANT_LENGTH = 200;
+export const MAX_NOTE_LENGTH = 2000;
+export const MAX_LOCATION_FIELD_LENGTH = 100;
+export const MAX_ITEMS = 300;
+export const MAX_ITEM_NAME_LENGTH = 200;
+
+// Dashboard and Receipts both currently load a user's *entire* expense
+// history in one query and hand it to ExpensesProvider — every total,
+// filter, search, and export is computed client-side against that full
+// list. Fine at real accounts' current size, but nothing bounds it: a
+// account with tens of thousands of receipts would ship a multi-MB page
+// on every load. This is a ceiling against that pathological case, not a
+// UX limit — real server-side pagination (paging the query itself, moving
+// dashboard aggregates server-side) is the actual fix if an account ever
+// gets close to this, tracked separately as a bigger, riskier change than
+// a safety cap.
+export const MAX_INITIAL_EXPENSES_LOADED = 5000;
+
 export type ExpenseItem = {
   // Stable across edits (assigned once, on creation) so a warranty tag
   // stays pinned to the right line even if other items are later added,
@@ -115,11 +138,15 @@ export function normalizeItems(raw: unknown): ExpenseItem[] {
         typeof (item as ExpenseItem).price === "number" &&
         Number.isFinite((item as ExpenseItem).price)
     )
+    // Capped, not rejected outright — a request with too many lines just
+    // loses the excess rather than failing the whole save, same spirit as
+    // dropping a single nonsensical quantity below instead of the item.
+    .slice(0, MAX_ITEMS)
     .map((item) => {
       const isWarrantyClaim = item.isWarrantyClaim === true;
       return {
         id: typeof item.id === "string" && item.id ? item.id : generateItemId(),
-        name: item.name,
+        name: item.name.slice(0, MAX_ITEM_NAME_LENGTH),
         price: item.price,
         quantity:
           typeof item.quantity === "number" && Number.isFinite(item.quantity) && item.quantity > 0
@@ -274,3 +301,16 @@ export type Expense = {
   items?: ExpenseItem[];
   createdAt: string;
 };
+
+// True when this expense's amount was never converted into the account's
+// home currency — an FX-rate lookup failure at save time (convertCurrency
+// never throws, it returns null; see exchangeRates.ts), not a normal or
+// intentional state. Every dashboard total sums homeCurrencyAmount, so an
+// expense stuck here silently contributes nothing to any of them — `?? 0`
+// at each call site can't tell "genuinely free" apart from "never
+// converted" without this check. Re-saving the expense (POST/PATCH both
+// re-attempt the conversion) is the only way it clears, so callers should
+// point the user at editing it, not just flag it as broken.
+export function conversionFailed(e: Pick<Expense, "homeCurrencyAmount">): boolean {
+  return e.homeCurrencyAmount === undefined;
+}

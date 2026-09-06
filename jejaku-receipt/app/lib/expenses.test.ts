@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_ITEM_NAME_LENGTH,
+  MAX_ITEMS,
   computeSplitTotals,
   formatCurrency,
   formatItemsList,
@@ -200,5 +202,21 @@ describe("normalizeItems", () => {
     expect(normalizeItems(null)).toEqual([]);
     expect(normalizeItems(undefined)).toEqual([]);
     expect(normalizeItems("nope")).toEqual([]);
+  });
+
+  it("caps the number of items rather than rejecting the whole array", () => {
+    const oversized = Array.from({ length: MAX_ITEMS + 50 }, (_, i) => ({ name: `Item ${i}`, price: 1 }));
+    const result = normalizeItems(oversized);
+    expect(result).toHaveLength(MAX_ITEMS);
+    // Keeps the first MAX_ITEMS, not an arbitrary subset.
+    expect(result[0].name).toBe("Item 0");
+    expect(result[MAX_ITEMS - 1].name).toBe(`Item ${MAX_ITEMS - 1}`);
+  });
+
+  it("truncates an over-long item name rather than rejecting the item", () => {
+    const longName = "x".repeat(MAX_ITEM_NAME_LENGTH + 100);
+    const result = normalizeItems([{ name: longName, price: 5 }]);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toHaveLength(MAX_ITEM_NAME_LENGTH);
   });
 });

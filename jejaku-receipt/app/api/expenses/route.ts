@@ -9,14 +9,23 @@ import { lookupCoordinates } from "../../lib/cityCoordinates";
 import { db } from "../../db";
 import { expenses } from "../../db/schema";
 import { toExpense } from "../../db/toExpense";
-import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseItems, parseSplit } from "../../lib/expenses";
+import {
+  DEFAULT_CURRENCY,
+  EXPENSE_CATEGORIES,
+  MAX_LOCATION_FIELD_LENGTH,
+  MAX_MERCHANT_LENGTH,
+  MAX_NOTE_LENGTH,
+  formatCurrency,
+  parseItems,
+  parseSplit,
+} from "../../lib/expenses";
 import { AUDIT_ACTIONS, logAudit } from "../../lib/auditLog";
 import { withApiErrorHandling } from "../../lib/apiError";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CURRENCY_CODE_PATTERN = /^[A-Z]{3}$/;
 
-export const GET = withApiErrorHandling(async () => {
+export const GET = withApiErrorHandling("GET /api/expenses", async () => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -30,7 +39,7 @@ export const GET = withApiErrorHandling(async () => {
   return NextResponse.json(rows.map(toExpense));
 });
 
-export const POST = withApiErrorHandling(async (request: Request) => {
+export const POST = withApiErrorHandling("POST /api/expenses", async (request: Request) => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,12 +82,17 @@ export const POST = withApiErrorHandling(async (request: Request) => {
 
   if (
     !merchant ||
+    merchant.length > MAX_MERCHANT_LENGTH ||
     !Number.isFinite(amount) ||
     amount < 0 ||
     !DATE_PATTERN.test(date) ||
     !((EXPENSE_CATEGORIES as readonly string[]).includes(category) || user.customCategories.includes(category)) ||
     (tax !== null && (!Number.isFinite(tax) || tax < 0)) ||
-    (warrantyMonths !== null && (!Number.isInteger(warrantyMonths) || warrantyMonths <= 0))
+    (warrantyMonths !== null && (!Number.isInteger(warrantyMonths) || warrantyMonths <= 0)) ||
+    note.length > MAX_NOTE_LENGTH ||
+    city.length > MAX_LOCATION_FIELD_LENGTH ||
+    state.length > MAX_LOCATION_FIELD_LENGTH ||
+    country.length > MAX_LOCATION_FIELD_LENGTH
   ) {
     return NextResponse.json({ error: "Invalid expense data." }, { status: 400 });
   }
@@ -142,7 +156,7 @@ export const POST = withApiErrorHandling(async (request: Request) => {
   return NextResponse.json(toExpense(row));
 });
 
-export const DELETE = withApiErrorHandling(async () => {
+export const DELETE = withApiErrorHandling("DELETE /api/expenses", async () => {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

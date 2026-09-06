@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf, CheckSquare, Square } from "@phosphor-icons/react";
-import { formatCurrency, type Expense } from "../lib/expenses";
+import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf, CheckSquare, Square, Warning } from "@phosphor-icons/react";
+import { conversionFailed, formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
 import { formatWarrantyStatus, warrantyClaimsFor, warrantyClaimStatuses, type WarrantyStatus } from "../lib/warranty";
 import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
@@ -492,6 +492,14 @@ export default function ReceiptsList({
                         weight="fill"
                         className="shrink-0 text-primary"
                         aria-label={`Split ${e.split.people.length} ways`}
+                      />
+                    )}
+                    {conversionFailed(e) && (
+                      <Warning
+                        size={12}
+                        weight="fill"
+                        className="shrink-0 text-error"
+                        aria-label="Currency conversion failed — not counted in your totals. Edit and save to retry."
                       />
                     )}
                   </p>

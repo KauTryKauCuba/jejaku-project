@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChartBar, ChartDonut, ListBullets, Tag } from "@phosphor-icons/react";
+import { ChartBar, ChartDonut, ListBullets, Tag, Warning } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
-import { formatCurrency } from "../lib/expenses";
+import { conversionFailed, formatCurrency } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
 import { colorForCategory } from "../lib/categoryColors";
@@ -35,6 +35,12 @@ export default function CategoriesTrackedTile() {
     entry.spent += e.homeCurrencyAmount ?? 0;
     totalsByCategory.set(e.category, entry);
   }
+
+  // Counted across every expense, not just `inRange` — same as the other
+  // tiles. A range-scoped count would silently hide the problem whenever
+  // the affected receipt happens to fall outside the selected range, and
+  // the wording below is true in every range either way.
+  const failedCount = expenses.filter(conversionFailed).length;
 
   const ranked = [...totalsByCategory.entries()].sort((a, b) => b[1].spent - a[1].spent);
   const maxSpent = Math.max(1, ...ranked.map(([, v]) => v.spent));
@@ -67,6 +73,13 @@ export default function CategoriesTrackedTile() {
           ? "Distinct categories you've used."
           : "Categories build up as you add expenses."}
       </p>
+      {failedCount > 0 && (
+        <p className="mt-[6px] flex items-start gap-[4px] text-[10px] leading-relaxed text-error">
+          <Warning size={12} weight="fill" className="mt-[1px] shrink-0" />
+          {failedCount} receipt{failedCount === 1 ? "" : "s"} couldn&apos;t be converted to {currency}, so{" "}
+          {failedCount === 1 ? "it isn't" : "they aren't"} counted in any total. Edit and save to retry.
+        </p>
+      )}
 
       {ranked.length > 0 && (
         <>

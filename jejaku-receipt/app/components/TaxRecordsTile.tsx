@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Percent, TrendUp, TrendDown } from "@phosphor-icons/react";
+import { Percent, TrendUp, TrendDown, Warning } from "@phosphor-icons/react";
 import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
-import { formatCurrency, type Expense } from "../lib/expenses";
+import { conversionFailed, formatCurrency, type Expense } from "../lib/expenses";
 import { useDefaultCurrency, useExpenses } from "./ExpensesProvider";
 import { RANGE_OPTIONS, monthsInRange, recentMonths } from "../lib/dateRange";
 import { PERCENT_LIGHT_PATH, iconFillMaskDataUri, iconStrokeMaskDataUri } from "../lib/iconMaskPaths";
@@ -60,6 +60,7 @@ export default function TaxRecordsTile() {
   const isUp = delta > 0;
 
   const allTimeTotal = expenses.reduce((sum, e) => sum + homeCurrencyTax(e), 0);
+  const failedCount = expenses.filter((e) => e.tax !== undefined && conversionFailed(e)).length;
   const rangeLabel = range === "This month" ? "this month" : `the last ${range}`;
   const detail =
     currentCount === 0
@@ -158,6 +159,14 @@ export default function TaxRecordsTile() {
       <p className="relative mt-[3px] text-[11px] leading-relaxed text-ink-mute">
         {detail}
       </p>
+      {failedCount > 0 && (
+        <p className="relative mt-[6px] flex items-start gap-[4px] text-[10px] leading-relaxed text-error">
+          <Warning size={12} weight="fill" className="mt-[1px] shrink-0" />
+          {failedCount} receipt{failedCount === 1 ? "" : "s"} with tax couldn&apos;t be converted to{" "}
+          {defaultCurrency}, so {failedCount === 1 ? "its tax isn't" : "their tax isn't"} counted in any
+          total. Edit and save to retry.
+        </p>
+      )}
 
       <div className="relative mt-auto flex items-center justify-between gap-[8px] border-t border-hairline pt-[11px]">
         <span className="text-[11px] text-ink-mute">All-time</span>
