@@ -9,7 +9,7 @@ import CameraCapture from "./CameraCapture";
 import SplitBillModal from "./SplitBillModal";
 import ScannerTutorialModal, { type TutorialKind } from "./ScannerTutorialModal";
 import { formatCurrency, type Expense, type ExpenseCategory, type ExpenseItem, type SplitData } from "../lib/expenses";
-import { withWeekday } from "../lib/formatIso";
+import { formatIsoMinute, withWeekday } from "../lib/formatIso";
 import { describeScanStatus, scanStatusIsError, scanStatusText } from "../lib/receiptScanStatus";
 import { useAddExpense, useExpenses } from "./ExpensesProvider";
 
@@ -402,29 +402,40 @@ export default function ReceiptScannerCard({ onSaved }: { onSaved?: () => void }
       {mode === "details" && (
         <div className="mt-[19px]">
           {previewKind === "image" && previewUrl && (
-            <div className="w-full overflow-hidden rounded-lg border border-hairline">
-              {/* object-contain, not object-cover — a long receipt is much
-                  taller than it is wide, and cropping to fill a fixed box
-                  would only ever show a middle slice of it. Letterboxed
-                  against the canvas-soft background instead, so the whole
-                  captured photo is actually visible regardless of its
-                  aspect ratio. */}
+            <div className="flex items-center gap-[11px] rounded-lg border border-hairline bg-canvas-soft p-[11px]">
+              {/* A small thumbnail, not the full letterboxed photo — this
+                  screen is for reviewing the extracted fields, not the
+                  photo itself, so it only needs to confirm a photo is
+                  attached. object-cover here (cropping is fine/expected at
+                  thumbnail size) matches the PDF preview's icon-box below. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt="Captured receipt"
-                className="max-h-[320px] w-full bg-canvas-soft object-contain"
+                className="h-[64px] w-[64px] shrink-0 rounded-md object-cover"
               />
-              <div className="flex items-center justify-end border-t border-hairline p-[11px]">
-                <button
-                  type="button"
-                  onClick={reset}
-                  aria-label="Discard photo"
-                  className="flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
-                >
-                  <X size={14} weight="light" />
-                </button>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] text-ink">Receipt photo</p>
+                {/* File.lastModified defaults to the moment it was
+                    constructed for a camera capture (see CameraCapture's
+                    `new File([blob], ...)`, no lastModified override), and
+                    for an imported photo it's the file's own modified time
+                    from the device — "when this photo was taken" either
+                    way, no separate capture-time state needed. */}
+                {photo && (
+                  <p className="truncate text-[11px] text-ink-mute">
+                    Taken {formatIsoMinute(new Date(photo.lastModified))}
+                  </p>
+                )}
               </div>
+              <button
+                type="button"
+                onClick={reset}
+                aria-label="Discard photo"
+                className="flex h-[28px] w-[28px] shrink-0 items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft"
+              >
+                <X size={13} weight="light" />
+              </button>
             </div>
           )}
 
