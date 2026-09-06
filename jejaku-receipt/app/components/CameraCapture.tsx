@@ -107,6 +107,13 @@ export default function CameraCapture({
   const capture = async () => {
     const video = videoRef.current;
     if (!video || capturing) return;
+    // `ready` flips as soon as getUserMedia resolves, but the video's own
+    // videoWidth/videoHeight stay 0 until its metadata loads a beat later —
+    // so the shutter is tappable in between. Capturing then would size
+    // every canvas below to 0x0 and hand onCapture a blank photo: a wasted
+    // DeepSeek call (the one real per-call cost in this app) and an
+    // empty-looking scan result, with nothing on screen explaining why.
+    if (!video.videoWidth || !video.videoHeight) return;
     setCapturing(true);
 
     // Freeze the current frame instantly — a cheap snapshot with no camera
@@ -138,12 +145,15 @@ export default function CameraCapture({
       let source: CanvasImageSource = video;
       let sourceWidth = video.videoWidth;
       let sourceHeight = video.videoHeight;
+      // Tracked separately from `source` so it can be released once drawn —
+      // `source` may just be the <video>, which must not be closed.
+      let bitmap: ImageBitmap | null = null;
 
       const track = streamRef.current?.getVideoTracks()[0];
       if (track && typeof ImageCapture !== "undefined") {
         try {
           const photoBlob = await new ImageCapture(track).takePhoto();
-          const bitmap = await createImageBitmap(photoBlob);
+          bitmap = await createImageBitmap(photoBlob);
           source = bitmap;
           sourceWidth = bitmap.width;
           sourceHeight = bitmap.height;
@@ -160,11 +170,17 @@ export default function CameraCapture({
       canvas.height = Math.round(sourceHeight * scale);
       const ctx = canvas.getContext("2d");
       if (!ctx) {
+        bitmap?.close();
         setCapturing(false);
         setFrozenFrameUrl(null);
         return;
       }
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      // A full-resolution still off a modern phone camera can be 12+
+      // megapixels; ImageBitmap holds that decoded, outside the JS heap,
+      // until explicitly released. Nothing needs it after the drawImage
+      // above, and a scanning session takes many photos in a row.
+      bitmap?.close();
 
       canvas.toBlob(
         (blob) => {
