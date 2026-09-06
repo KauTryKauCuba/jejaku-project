@@ -10,6 +10,7 @@ type ExpensesContextValue = {
   addExpense: (input: NewExpense, photo?: File | null) => Promise<void>;
   updateExpense: (id: string, input: NewExpense) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
+  deleteExpenses: (ids: string[]) => Promise<{ succeededIds: string[]; failedCount: number }>;
   defaultCurrency: string;
   categories: readonly string[];
   addCategory: (name: string) => Promise<void>;
@@ -88,11 +89,35 @@ export function ExpensesProvider({
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // No bulk DELETE route exists server-side — each id still gets its own
+  // request (and its own audit log entry, same as a single delete), just
+  // fired concurrently rather than making the caller loop one at a time.
+  // allSettled rather than all: one bad id (already deleted by a concurrent
+  // request elsewhere, say) shouldn't stop the rest of the batch from going
+  // through — the caller gets back exactly which ids actually succeeded.
+  const deleteExpenses = useCallback(async (ids: string[]) => {
+    const results = await Promise.allSettled(
+      ids.map(async (id) => {
+        const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error("Couldn't delete expense.");
+        return id;
+      })
+    );
+    const succeededIds = results
+      .filter((r): r is PromiseFulfilledResult<string> => r.status === "fulfilled")
+      .map((r) => r.value);
+    if (succeededIds.length > 0) {
+      const succeeded = new Set(succeededIds);
+      setExpenses((prev) => prev.filter((e) => !succeeded.has(e.id)));
+    }
+    return { succeededIds, failedCount: ids.length - succeededIds.length };
+  }, []);
+
   const categories = [...EXPENSE_CATEGORIES, ...customCategories];
 
   return (
     <ExpensesContext.Provider
-      value={{ expenses, addExpense, updateExpense, deleteExpense, defaultCurrency, categories, addCategory }}
+      value={{ expenses, addExpense, updateExpense, deleteExpense, deleteExpenses, defaultCurrency, categories, addCategory }}
     >
       {children}
     </ExpensesContext.Provider>
@@ -127,6 +152,10 @@ export function useUpdateExpense() {
 
 export function useDeleteExpense() {
   return useExpensesContext().deleteExpense;
+}
+
+export function useDeleteExpenses() {
+  return useExpensesContext().deleteExpenses;
 }
 
 export function useDefaultCurrency(): string {

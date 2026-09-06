@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf } from "@phosphor-icons/react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf, CheckSquare, Square } from "@phosphor-icons/react";
 import { formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
 import { formatWarrantyStatus, warrantyClaimsFor, warrantyClaimStatuses, type WarrantyStatus } from "../lib/warranty";
 import { expensesToCsv, downloadCsv } from "../lib/exportCsv";
 import { downloadPdf } from "../lib/exportPdf";
-import { useCategories, useDeleteExpense, useExpenses, useUpdateExpense } from "./ExpensesProvider";
+import { useCategories, useDeleteExpense, useDeleteExpenses, useExpenses, useUpdateExpense } from "./ExpensesProvider";
 import { useDismissable } from "../lib/useDismissable";
 import IconFlowBadge from "./IconFlowBadge";
 import Select from "./Select";
@@ -45,6 +45,7 @@ export default function ReceiptsList({
   const categories = useCategories();
   const updateExpense = useUpdateExpense();
   const deleteExpense = useDeleteExpense();
+  const deleteExpenses = useDeleteExpenses();
   const [page, setPage] = useState(0);
   const [pageSizeText, setPageSizeText] = useState(defaultPageSize);
   const pageSize = Number(pageSizeText);
@@ -55,6 +56,15 @@ export default function ReceiptsList({
   const [editError, setEditError] = useState<string | undefined>(undefined);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Selection persists across pages/filter changes (not reset per page) so
+  // a user can page or search their way through several batches before
+  // deleting everything they've picked in one go, rather than being forced
+  // to delete page by page.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmingBulkDelete, setConfirmingBulkDelete] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteError, setBulkDeleteError] = useState<string | undefined>(undefined);
   const [warrantyOnly, setWarrantyOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES);
@@ -118,7 +128,7 @@ export default function ReceiptsList({
 
   const handleExportPdf = () => {
     setExportMenuOpen(false);
-    downloadPdf(`${exportBaseName}.pdf`, visibleExpenses);
+    void downloadPdf(`${exportBaseName}.pdf`, visibleExpenses);
   };
 
   const handleDelete = async (id: string) => {
@@ -131,6 +141,52 @@ export default function ReceiptsList({
     } finally {
       setDeletingId(null);
       setConfirmingDeleteId(null);
+    }
+  };
+
+  // Selection is deliberately kept across pagination (paging through and
+  // picking several batches before deleting is the whole point), but a
+  // filter/search change swaps out which rows "selected" even refers to —
+  // without this, selecting everything unfiltered then narrowing the view
+  // with a search would still delete the full original selection, not just
+  // what's visible. Clearing on any filter change keeps "N selected" and
+  // "Delete selected" honest about what's actually about to be deleted.
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setConfirmingBulkDelete(false);
+  }, [search, categoryFilter, dateFrom, dateTo, warrantyOnly]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Selects/deselects everything the current filters/search show, not just
+  // the current page — a bulk-delete feature earns its keep most on "clear
+  // out everything matching X", not "clear these 5 in front of me".
+  const allFilteredSelected = visibleExpenses.length > 0 && visibleExpenses.every((e) => selectedIds.has(e.id));
+  const toggleSelectAll = () => {
+    setSelectedIds(allFilteredSelected ? new Set() : new Set(visibleExpenses.map((e) => e.id)));
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true);
+    setBulkDeleteError(undefined);
+    try {
+      const { failedCount } = await deleteExpenses([...selectedIds]);
+      setSelectedIds(new Set());
+      setConfirmingBulkDelete(false);
+      if (failedCount > 0) {
+        setBulkDeleteError(
+          `Couldn't delete ${failedCount} of the selected receipt${failedCount === 1 ? "" : "s"}. Try again.`
+        );
+      }
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -169,6 +225,26 @@ export default function ReceiptsList({
             >
               <Shield size={13} weight={warrantyOnly ? "fill" : "light"} />
               Warranty claims
+            </button>
+          )}
+          {editable && visibleExpenses.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectMode((v) => !v);
+                setSelectedIds(new Set());
+                setConfirmingBulkDelete(false);
+                setBulkDeleteError(undefined);
+              }}
+              aria-pressed={selectMode}
+              className={
+                selectMode
+                  ? "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill bg-primary px-[13px] text-[13px] font-medium text-on-primary transition-colors"
+                  : "flex h-[33px] shrink-0 items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[13px] text-[13px] font-medium text-ink transition-colors hover:bg-canvas-soft"
+              }
+            >
+              <CheckSquare size={13} weight={selectMode ? "fill" : "light"} />
+              {selectMode ? "Cancel" : "Select"}
             </button>
           )}
           {filterable && visibleExpenses.length > 0 && (
@@ -263,6 +339,60 @@ export default function ReceiptsList({
         </div>
       )}
 
+      {selectMode && visibleExpenses.length > 0 && (
+        <div className="mt-[15px] flex flex-wrap items-center justify-between gap-[8px] rounded-md bg-canvas-soft px-[11px] py-[8px]">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            className="flex items-center gap-[6px] text-[12px] font-medium text-ink"
+          >
+            {allFilteredSelected ? (
+              <CheckSquare size={15} weight="fill" className="text-primary" />
+            ) : (
+              <Square size={15} weight="light" className="text-ink-mute" />
+            )}
+            {allFilteredSelected ? "Deselect all" : `Select all ${visibleExpenses.length}`}
+          </button>
+          <div className="flex items-center gap-[8px]">
+            <span className="text-[12px] text-ink-mute">{selectedIds.size} selected</span>
+            {confirmingBulkDelete ? (
+              <div className="flex items-center gap-[6px]">
+                <span className="text-[12px] text-ink-mute">Delete {selectedIds.size}?</span>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={bulkDeleting}
+                  aria-label="Confirm bulk delete"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-pill border border-hairline-input bg-canvas text-error transition-colors hover:bg-canvas-soft disabled:opacity-50"
+                >
+                  <Check size={13} weight="bold" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingBulkDelete(false)}
+                  disabled={bulkDeleting}
+                  aria-label="Cancel bulk delete"
+                  className="flex h-[26px] w-[26px] items-center justify-center rounded-pill border border-hairline-input bg-canvas text-ink-mute transition-colors hover:bg-canvas-soft disabled:opacity-50"
+                >
+                  <X size={13} weight="light" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingBulkDelete(true)}
+                disabled={selectedIds.size === 0}
+                className="flex h-[28px] items-center gap-[6px] rounded-pill border border-hairline-input bg-canvas px-[11px] text-[12px] font-medium text-error transition-colors hover:bg-canvas-soft disabled:opacity-40"
+              >
+                <Trash size={13} weight="light" />
+                Delete selected
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      {bulkDeleteError && <p className="mt-[8px] text-[12px] text-error">{bulkDeleteError}</p>}
+
       {visibleExpenses.length === 0 ? (
         <div className="mt-[19px] flex flex-col items-center rounded-md bg-canvas-soft px-[15px] py-[38px] text-center">
           <Tray size={22} weight="light" className="text-ink-mute" />
@@ -319,9 +449,23 @@ export default function ReceiptsList({
                   so the rounded corners look the same on every row instead
                   of getting clipped flush against the card edge on the ends. */}
               <div
-                onClick={() => setPreviewing(e)}
+                onClick={() => (selectMode ? toggleSelected(e.id) : setPreviewing(e))}
                 className="flex cursor-pointer items-center gap-[11px] rounded-md px-[11px] py-[11px] transition-colors hover:bg-canvas-soft"
               >
+              {selectMode && (
+                <span
+                  role="checkbox"
+                  aria-checked={selectedIds.has(e.id)}
+                  aria-label={`Select ${e.merchant}`}
+                  className="flex h-[18px] w-[18px] shrink-0 items-center justify-center"
+                >
+                  {selectedIds.has(e.id) ? (
+                    <CheckSquare size={18} weight="fill" className="text-primary" />
+                  ) : (
+                    <Square size={18} weight="light" className="text-ink-mute" />
+                  )}
+                </span>
+              )}
               <div className="flex min-w-0 flex-1 items-center gap-[11px]">
                 <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center overflow-hidden rounded-md bg-canvas-soft text-ink-mute">
                   {e.photoUrl ? (
@@ -367,7 +511,7 @@ export default function ReceiptsList({
                 {formatCurrency(e.amount, e.currency)}
               </p>
 
-              {editable && (confirmingDeleteId === e.id ? (
+              {editable && !selectMode && (confirmingDeleteId === e.id ? (
                 <div className="flex shrink-0 items-center gap-[6px]" onClick={(evt) => evt.stopPropagation()}>
                   <span className="text-[11px] text-ink-mute">Delete?</span>
                   <button
