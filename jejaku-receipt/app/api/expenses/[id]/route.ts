@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { unlink } from "fs/promises";
+import path from "path";
 import { and, eq } from "drizzle-orm";
 import { getCurrentUser } from "../../../lib/currentUser";
 import { convertCurrency } from "../../../lib/exchangeRates";
@@ -7,6 +9,7 @@ import { db } from "../../../db";
 import { expenses } from "../../../db/schema";
 import { toExpense } from "../../../db/toExpense";
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, formatCurrency, parseItems, parseSplit } from "../../../lib/expenses";
+import { UPLOADS_DIR } from "../../../lib/uploads";
 import { AUDIT_ACTIONS, logAudit } from "../../../lib/auditLog";
 import { withApiErrorHandling } from "../../../lib/apiError";
 
@@ -137,13 +140,27 @@ export const DELETE = withApiErrorHandling(async (_request: Request, { params }:
   const deleted = await db
     .delete(expenses)
     .where(and(eq(expenses.id, id), eq(expenses.userId, user.id)))
-    .returning({ id: expenses.id, merchant: expenses.merchant, amount: expenses.amount, currency: expenses.currency });
+    .returning({
+      id: expenses.id,
+      merchant: expenses.merchant,
+      amount: expenses.amount,
+      currency: expenses.currency,
+      photoUrl: expenses.photoUrl,
+    });
 
   if (deleted.length === 0) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
 
   const [row] = deleted;
+
+  // Same cleanup DELETE /api/expenses (the full wipe) and account deletion
+  // already do — a failed unlink (already missing, permissions) shouldn't
+  // surface as an error, since the DB row is already gone either way.
+  if (row.photoUrl) {
+    await unlink(path.join(UPLOADS_DIR, path.basename(row.photoUrl))).catch(() => {});
+  }
+
   await logAudit(
     user.id,
     AUDIT_ACTIONS.EXPENSE_DELETED,
