@@ -7,6 +7,14 @@ services:
     ports:
       - "4000:4000"
     environment:
+      # This VPS has no working outbound IPv6 route (confirmed 2026-09-06 —
+      # ping to a resolved IPv6 address gets 100% packet loss), but DNS
+      # answers for external hosts like accounts.google.com sometimes come
+      # back as AAAA (IPv6) records anyway. Without this, Node's fetch
+      # occasionally tries to dial that unreachable IPv6 address and the
+      # OAuth callback fails with EAI_AGAIN/fetch failed. Forces Node to
+      # always prefer an A (IPv4) record when both are available.
+      NODE_OPTIONS: --dns-result-order=ipv4first
       DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
       RESEND_API_KEY: ${RESEND_API_KEY}
       OTP_FROM_EMAIL: ${OTP_FROM_EMAIL}
@@ -41,6 +49,11 @@ services:
     ports:
       - "4001:4001"
     environment:
+      # See the same setting on the jejaku service above — this VPS has no
+      # working outbound IPv6 route, so Node must be forced to prefer IPv4
+      # DNS answers or an occasional AAAA record (e.g. for DeepSeek's API)
+      # causes a hang/timeout instead of a clean fetch.
+      NODE_OPTIONS: --dns-result-order=ipv4first
       DATABASE_URL: postgres://${RECEIPT_DB_USER}:${RECEIPT_DB_PASSWORD}@jejaku-receipt-db:5432/${RECEIPT_DB_NAME}
       AUTH_URL: ${NEXT_PUBLIC_RECEIPT_URL}
       AUTH_SECRET: ${AUTH_SECRET}
