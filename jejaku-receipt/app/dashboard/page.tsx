@@ -48,6 +48,7 @@ export default async function DashboardPage() {
       initialExpenses={initialExpenses}
       defaultCurrency={user.defaultCurrency}
       initialCustomCategories={user.customCategories}
+      initialPaymentQrCodes={user.paymentQrCodes}
     >
       <DashboardShell>
         <DashboardGreeting />

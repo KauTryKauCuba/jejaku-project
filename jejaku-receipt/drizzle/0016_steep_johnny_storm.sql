@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "payment_qr_codes" jsonb DEFAULT '[]'::jsonb NOT NULL;

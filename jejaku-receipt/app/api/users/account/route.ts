@@ -4,7 +4,7 @@ import path from "path";
 import { eq } from "drizzle-orm";
 import { auth } from "../../../lib/auth";
 import { verifyDeleteToken } from "../../../lib/deleteToken";
-import { UPLOADS_DIR } from "../../../lib/uploads";
+import { QR_UPLOADS_DIR, UPLOADS_DIR } from "../../../lib/uploads";
 import { db } from "../../../db";
 import { expenses, users } from "../../../db/schema";
 
@@ -74,11 +74,12 @@ export async function DELETE(request: NextRequest) {
 
     // Best-effort — the DB rows are already gone either way, so a failed
     // unlink (already missing, permissions) shouldn't surface as an error.
-    await Promise.all(
-      userExpenses
+    await Promise.all([
+      ...userExpenses
         .filter((row): row is { photoUrl: string } => typeof row.photoUrl === "string")
-        .map((row) => unlink(path.join(UPLOADS_DIR, path.basename(row.photoUrl))).catch(() => {}))
-    );
+        .map((row) => unlink(path.join(UPLOADS_DIR, path.basename(row.photoUrl))).catch(() => {})),
+      ...user.paymentQrCodes.map((qr) => unlink(path.join(QR_UPLOADS_DIR, path.basename(qr.url))).catch(() => {})),
+    ]);
 
     return NextResponse.json({ ok: true }, { headers: corsHeaders() });
   } catch (err) {

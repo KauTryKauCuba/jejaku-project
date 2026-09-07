@@ -10,6 +10,7 @@ import MemberCard from "../components/MemberCard";
 import DemoDataCard from "../components/DemoDataCard";
 import DangerZoneCard from "../components/DangerZoneCard";
 import AuditTrailCard from "../components/AuditTrailCard";
+import PaymentQrCard from "../components/PaymentQrCard";
 
 export const metadata: Metadata = {
   title: "Settings — Jejaku Receipt",
@@ -80,6 +81,7 @@ export default async function SettingsPage() {
       </div>
 
       <div className="mt-[19px] grid gap-[19px] md:grid-cols-2">
+        <PaymentQrCard initialQrCodes={user?.paymentQrCodes ?? []} />
         <DemoDataCard demoCount={demoCount} />
         <DangerZoneCard expenseCount={expenseCount} />
       </div>

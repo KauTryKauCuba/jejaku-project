@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { DEFAULT_CURRENCY, EXPENSE_CATEGORIES, type Expense } from "../lib/expenses";
+import type { PaymentQrCode } from "../lib/paymentQr";
+import { savePaymentQrCode } from "../lib/paymentQrClient";
 
 type NewExpense = Omit<Expense, "id" | "createdAt" | "photoUrl">;
 
@@ -14,6 +16,8 @@ type ExpensesContextValue = {
   defaultCurrency: string;
   categories: readonly string[];
   addCategory: (name: string) => Promise<void>;
+  paymentQrCodes: PaymentQrCode[];
+  addPaymentQrCode: (croppedDataUrl: string, label?: string) => Promise<PaymentQrCode>;
 };
 
 function buildExpenseForm(input: NewExpense) {
@@ -41,15 +45,29 @@ export function ExpensesProvider({
   initialExpenses,
   defaultCurrency = DEFAULT_CURRENCY,
   initialCustomCategories = [],
+  initialPaymentQrCodes = [],
   children,
 }: {
   initialExpenses: Expense[];
   defaultCurrency?: string;
   initialCustomCategories?: string[];
+  initialPaymentQrCodes?: PaymentQrCode[];
   children: ReactNode;
 }) {
   const [expenses, setExpenses] = useState(initialExpenses);
   const [customCategories, setCustomCategories] = useState(initialCustomCategories);
+  const [paymentQrCodes, setPaymentQrCodes] = useState(initialPaymentQrCodes);
+
+  // Shared with PaymentQrCard (Settings) via lib/paymentQrClient.ts — a QR
+  // uploaded from ShareSplitModal is saved to the account the same way, so
+  // it's there next time regardless of which surface it was added from.
+  // Returns the newly-added entry so the caller can select it immediately
+  // without waiting on a page reload.
+  const addPaymentQrCode = useCallback(async (croppedDataUrl: string, label?: string) => {
+    const updated = await savePaymentQrCode(croppedDataUrl, label);
+    setPaymentQrCodes(updated);
+    return updated[updated.length - 1];
+  }, []);
 
   const addCategory = useCallback(async (name: string) => {
     const res = await fetch("/api/categories", {
@@ -117,7 +135,18 @@ export function ExpensesProvider({
 
   return (
     <ExpensesContext.Provider
-      value={{ expenses, addExpense, updateExpense, deleteExpense, deleteExpenses, defaultCurrency, categories, addCategory }}
+      value={{
+        expenses,
+        addExpense,
+        updateExpense,
+        deleteExpense,
+        deleteExpenses,
+        defaultCurrency,
+        categories,
+        addCategory,
+        paymentQrCodes,
+        addPaymentQrCode,
+      }}
     >
       {children}
     </ExpensesContext.Provider>
@@ -168,4 +197,12 @@ export function useCategories(): readonly string[] {
 
 export function useAddCategory() {
   return useExpensesContext().addCategory;
+}
+
+export function usePaymentQrCodes(): PaymentQrCode[] {
+  return useExpensesContext().paymentQrCodes;
+}
+
+export function useAddPaymentQrCode() {
+  return useExpensesContext().addPaymentQrCode;
 }

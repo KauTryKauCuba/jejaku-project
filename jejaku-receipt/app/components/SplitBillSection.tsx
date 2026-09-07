@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Plus, Users, X } from "@phosphor-icons/react";
+import { Plus, ShareNetwork, Users, X } from "@phosphor-icons/react";
 import { computeSplitTotals, formatCurrency, lineTotal, type ExpenseItem, type SplitData } from "../lib/expenses";
 
 export default function SplitBillSection({
@@ -11,6 +11,7 @@ export default function SplitBillSection({
   value,
   onChange,
   alwaysOpen = false,
+  onShare,
 }: {
   items: ExpenseItem[];
   tax?: number;
@@ -21,6 +22,11 @@ export default function SplitBillSection({
    * close control — for a host (like SplitBillModal) that's already a
    * dedicated split screen, so there's no need to open/collapse in place. */
   alwaysOpen?: boolean;
+  /** Shows a per-person share button next to each total, wired to open
+   * ShareSplitModal — only passed by SplitBillModal, since sharing a
+   * bill someone hasn't saved yet (the inline split in ExpenseForm)
+   * doesn't make sense the same way. */
+  onShare?: (person: string) => void;
 }) {
   const [personDraft, setPersonDraft] = useState("");
   const [open, setOpen] = useState(alwaysOpen || value.people.length > 0);
@@ -169,9 +175,22 @@ export default function SplitBillSection({
             {value.people.map((person) => (
               <div key={person} className="flex items-center justify-between text-[12px]">
                 <span className="text-ink">{person}</span>
-                <span className="tabular font-medium text-ink">
-                  {formatCurrency(totals.get(person) ?? 0, currency)}
-                </span>
+                <div className="flex items-center gap-[8px]">
+                  <span className="tabular font-medium text-ink">
+                    {formatCurrency(totals.get(person) ?? 0, currency)}
+                  </span>
+                  {onShare && (
+                    <button
+                      type="button"
+                      onClick={() => onShare(person)}
+                      aria-label={`Share ${person}'s share`}
+                      className="flex h-[22px] items-center gap-[4px] rounded-pill px-[7px] text-[11px] font-medium text-ink-mute transition-colors hover:bg-canvas-soft"
+                    >
+                      <ShareNetwork size={13} weight="light" />
+                      Share
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { DEFAULT_CURRENCY, formatCurrency, type Expense, type SplitData } from "../lib/expenses";
 import { useUpdateExpense } from "./ExpensesProvider";
 import Modal from "./Modal";
+import ShareSplitModal from "./ShareSplitModal";
 import SplitBillSection from "./SplitBillSection";
 
 const EMPTY_SPLIT: SplitData = { people: [], assignments: [] };
@@ -13,6 +14,7 @@ export default function SplitBillModal({ expense, onClose }: { expense: Expense;
   const [split, setSplit] = useState<SplitData>(expense.split ?? EMPTY_SPLIT);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>(undefined);
+  const [sharingPerson, setSharingPerson] = useState<string | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
@@ -60,6 +62,7 @@ export default function SplitBillModal({ expense, onClose }: { expense: Expense;
           value={split}
           onChange={setSplit}
           alwaysOpen
+          onShare={setSharingPerson}
         />
       )}
       <div className="mt-[15px] flex items-center gap-[8px]">
@@ -79,6 +82,9 @@ export default function SplitBillModal({ expense, onClose }: { expense: Expense;
           Cancel
         </button>
       </div>
+      {sharingPerson && (
+        <ShareSplitModal expense={expense} split={split} person={sharingPerson} onClose={() => setSharingPerson(null)} />
+      )}
     </Modal>
   );
 }

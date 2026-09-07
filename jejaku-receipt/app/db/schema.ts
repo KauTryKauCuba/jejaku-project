@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp, doublePrecision, jsonb, boolean, integer, index } from "drizzle-orm/pg-core";
 import type { ExpenseItem } from "../lib/expenses";
+import type { PaymentQrCode } from "../lib/paymentQr";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -7,6 +8,13 @@ export const users = pgTable("users", {
   fullName: text("full_name").notNull(),
   defaultCurrency: text("default_currency").notNull().default("USD"),
   customCategories: jsonb("custom_categories").$type<string[]>().notNull().default([]),
+  // Up to MAX_PAYMENT_QR_CODES (lib/paymentQr.ts) of the user's own
+  // payment QRs (e.g. bank transfer, Touch 'n Go, DuitNow), uploaded once
+  // from Settings and picked from on every split-bill share card — see
+  // ShareSplitModal. Not shared with jejaku (unlike avatar/currency):
+  // scoped to this app's own users row since it's only ever relevant to
+  // sharing a split receipt.
+  paymentQrCodes: jsonb("payment_qr_codes").$type<PaymentQrCode[]>().notNull().default([]),
   // Set the first (and only the first) time this account's demo data is
   // seeded — see app/lib/demoData.ts. Gates the one-time auto-seed on
   // account creation so it never re-fires after the user deletes their

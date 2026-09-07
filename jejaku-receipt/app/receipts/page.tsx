@@ -34,6 +34,7 @@ export default async function ReceiptsPage() {
       initialExpenses={initialExpenses}
       defaultCurrency={user.defaultCurrency}
       initialCustomCategories={user.customCategories}
+      initialPaymentQrCodes={user.paymentQrCodes}
     >
       <DashboardShell>
         <h2 className="text-[20px] font-light leading-[1.1] tracking-[-0.25px] text-ink">
