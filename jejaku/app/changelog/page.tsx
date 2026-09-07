@@ -598,6 +598,41 @@ const TIMELINE = [
     dateLabel: "Shipped",
     date: "2026-09-06",
   },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Recent Receipts shows what you just scanned, not just what's newest",
+    body: "The dashboard's Recent Receipts card sorted by the receipt's own date, same as the full Receipts list — so a backfilled old purchase, scanned today, wouldn't show up at the top even though it was the most recent thing you actually did. It now sorts by when it was added instead, specifically on that card.",
+    dateLabel: "Shipped",
+    date: "2026-09-07",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Quick Scan holds up under an intermittent server DNS issue",
+    body: "Scanning a receipt would occasionally fail outright and then work fine on an immediate retry — traced to this VPS's Docker networking occasionally failing to resolve DeepSeek's address. Both apps' containers now query a reliable DNS resolver directly instead of going through Docker's own, fixing it at the source.",
+    dateLabel: "Shipped",
+    date: "2026-09-07",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Share a split, as an actual image",
+    body: "Splitting a bill used to end at a number on screen — there was no way to actually hand someone their share. A Share button next to each person now generates a branded card (their items, tax share, total) you can share straight to another app, copy to your clipboard to paste anywhere, or download.",
+    dateLabel: "Shipped",
+    date: "2026-09-07",
+  },
+  {
+    status: "Jejaku Receipt Beta v0.0.1",
+    title: "Save your payment QR codes, pick one when you share",
+    body: "Sharing a split used to mean uploading a payment QR code from scratch every time. Settings now has a place to save up to 3 (bank transfer, Touch 'n Go, DuitNow, ...) — pick whichever fits right on the share card, or add a new one on the spot, which saves itself for next time too.",
+    dateLabel: "Shipped",
+    date: "2026-09-07",
+  },
+  {
+    status: "Jejaku Tree Beta v0.0.1",
+    title: "Jejaku Tree is live — sign-in works, the tree doesn't exist yet",
+    body: "What used to be a concept card is now a real, running app: sign in with the same jejaku account, land on a dashboard, manage your profile in Settings — the whole account layer, working end to end. The actual family tree hasn't been built yet; this is the foundation it'll be built on.",
+    dateLabel: "Shipped",
+    date: "2026-09-08",
+  },
 ];
 
 export default function ChangelogPage() {
