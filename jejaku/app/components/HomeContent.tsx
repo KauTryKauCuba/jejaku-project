@@ -29,6 +29,7 @@ import ValuesSpecsTabs from "./ValuesSpecsTabs";
 import { useProfile } from "../lib/useProfile";
 import { formatIsoMinute } from "../lib/formatIso";
 import { receiptUrl } from "../lib/receiptUrl";
+import { treeUrl } from "../lib/treeUrl";
 
 const VALUES = [
   {
@@ -115,12 +116,31 @@ const PROJECTS = [
     },
   },
   {
-    tag: "concept",
+    tag: "beta",
     title: "Jejaku Tree",
     shortBody:
       "A family tree you actually add people to — parents, siblings, kids, grandparents — one relative at a time.",
-    body: "A family tree you actually add people to: parents, siblings, kids, grandparents — build out generations and the relationships between them, one relative at a time. Still just an idea taking shape, no build yet.",
+    body: "A family tree you actually add people to: parents, siblings, kids, grandparents — build out generations and the relationships between them, one relative at a time. Account and sign-in are live; the tree itself is still being built.",
+    url: `${process.env.NEXT_PUBLIC_TREE_URL}/dashboard`,
+    // Same split as Jejaku Receipt's url/learnMoreUrl above — url is the
+    // logged-in "use it" CTA, learnMoreUrl is open to anyone and lands on
+    // Jejaku Tree's own public page instead.
+    learnMoreUrl: treeUrl("/"),
     illustration: TreeIllustration,
+    // Jejaku Tree's own orange theme (its app/globals.css), not jejaku's
+    // teal — same reasoning as Jejaku Receipt's accent above.
+    accent: {
+      primary: "#ea580c",
+      primaryDeep: "#9a3412",
+      primaryPress: "#7c2d12",
+      primarySoft: "#f97316",
+      primarySubdued: "#fed7aa",
+      hairline: "#f0dfd0",
+      hairlineInput: "#eab98a",
+      ink: "#1a120a",
+      inkMute: "#7a6a5c",
+      canvasSoft: "#fef8f4",
+    },
   },
 ];
 

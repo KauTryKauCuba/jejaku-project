@@ -32,7 +32,8 @@ export default function ProjectCard({
     url?: string;
     /** Where "Learn more" goes — separate from `url` (which is gated on
      * being logged in) since this is meant to be readable by anyone. No
-     * link at all (Jejaku Tree, for now) just renders an inert button. */
+     * link at all renders an inert button (no project currently omits
+     * this, but a future concept-stage one might). */
     learnMoreUrl?: string;
     illustration?: ComponentType;
     accent?: Accent;
@@ -128,15 +129,14 @@ export default function ProjectCard({
       )}
 
       {/* Shows for every project regardless of login/url state (including
-          "Coming soon" ones like Jejaku Tree), since it's meant to link to
+          "Coming soon" ones with no url set), since it's meant to link to
           a project's own info rather than gate on using it — except on
           the dashboard (showLearnMore=false), where it'd just duplicate
           "Use this system". Solid-filled with bg-primary/text-on-primary,
           same as the CTA above — reads the same accent-scoped tokens, so
-          it's Jejaku Receipt's blue on that card and jejaku's teal on
-          Jejaku Tree's, automatically. Renders as an inert button (no
-          destination yet) when a project has no learnMoreUrl set —
-          Jejaku Tree, for now. */}
+          it's Jejaku Receipt's blue on that card and Jejaku Tree's orange
+          on its card, automatically. Renders as an inert button (no
+          destination yet) when a project has no learnMoreUrl set. */}
       {showLearnMore &&
         (project.learnMoreUrl ? (
           <Link

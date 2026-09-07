@@ -5,10 +5,8 @@ RUN npm ci
 
 FROM node:20-alpine AS builder
 WORKDIR /app
-ARG NEXT_PUBLIC_RECEIPT_URL
-ENV NEXT_PUBLIC_RECEIPT_URL=$NEXT_PUBLIC_RECEIPT_URL
-ARG NEXT_PUBLIC_TREE_URL
-ENV NEXT_PUBLIC_TREE_URL=$NEXT_PUBLIC_TREE_URL
+ARG NEXT_PUBLIC_JEJAKU_URL
+ENV NEXT_PUBLIC_JEJAKU_URL=$NEXT_PUBLIC_JEJAKU_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
@@ -16,10 +14,10 @@ RUN npm run build
 FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV PORT=4000
+ENV PORT=4002
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-EXPOSE 4000
+EXPOSE 4002
 CMD ["node", "server.js"]

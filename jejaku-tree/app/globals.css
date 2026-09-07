@@ -1,0 +1,256 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand & accent — orange, mirrors jejaku-receipt's blue token set 1:1
+     (same variable names, same structure) so every shared component here
+     picks up the right theme with zero component-level changes. */
+  --color-primary: #ea580c;
+  --color-primary-deep: #9a3412;
+  --color-primary-press: #7c2d12;
+  --color-primary-soft: #f97316;
+  --color-primary-subdued: #fed7aa;
+  --color-brand-dark-900: #431407;
+  --color-amber: #e8a33d;
+  --color-seafoam: #7fc0e0;
+  --color-citrine: #c9a227;
+  --color-orange: #ea580c;
+  --color-purple: #9333ea;
+  --color-pink: #db2777;
+  --color-green: #16a34a;
+
+  /* Surface */
+  --color-canvas: #ffffff;
+  --color-canvas-soft: #fef8f4;
+  --color-canvas-cream: #f5efd4;
+  --color-hairline: #f0dfd0;
+  --color-hairline-input: #eab98a;
+
+  /* Text */
+  --color-ink: #1a120a;
+  --color-ink-secondary: #2c1e10;
+  --color-ink-mute: #7a6a5c;
+  --color-ink-mute-2: #766a5c;
+  --color-on-primary: #ffffff;
+
+  /* Semantic */
+  --color-error: #c4362b;
+}
+
+@theme inline {
+  --color-primary: var(--color-primary);
+  --color-primary-deep: var(--color-primary-deep);
+  --color-primary-press: var(--color-primary-press);
+  --color-primary-soft: var(--color-primary-soft);
+  --color-primary-subdued: var(--color-primary-subdued);
+  --color-brand-dark-900: var(--color-brand-dark-900);
+  --color-amber: var(--color-amber);
+  --color-seafoam: var(--color-seafoam);
+  --color-citrine: var(--color-citrine);
+  --color-orange: var(--color-orange);
+  --color-purple: var(--color-purple);
+  --color-pink: var(--color-pink);
+  --color-green: var(--color-green);
+
+  --color-canvas: var(--color-canvas);
+  --color-canvas-soft: var(--color-canvas-soft);
+  --color-canvas-cream: var(--color-canvas-cream);
+  --color-hairline: var(--color-hairline);
+  --color-hairline-input: var(--color-hairline-input);
+
+  --color-ink: var(--color-ink);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-ink-mute: var(--color-ink-mute);
+  --color-ink-mute-2: var(--color-ink-mute-2);
+  --color-on-primary: var(--color-on-primary);
+  --color-error: var(--color-error);
+
+  --font-sans: var(--font-inter);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-pill: 9999px;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+.ss01 {
+  font-feature-settings: "ss01" 1;
+}
+
+.tabular {
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  letter-spacing: -0.42px;
+}
+
+@keyframes tab-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[tab-fade-in_0\.25s_ease-out\] {
+    animation: none;
+  }
+}
+
+/* Gradient mesh backdrop — cream / amber / warm orange */
+.gradient-mesh {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: linear-gradient(180deg, #fef8f4 0%, #ffffff 100%);
+}
+
+.gradient-mesh::before,
+.gradient-mesh::after,
+.gradient-mesh .mesh-blob {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  will-change: transform;
+  z-index: -1;
+}
+
+.gradient-mesh::before {
+  top: -10%;
+  left: -5%;
+  width: 45%;
+  height: 90%;
+  background: radial-gradient(ellipse, rgba(245, 239, 212, 0.9), transparent 70%);
+  animation: mesh-drift-a 22s ease-in-out infinite;
+}
+
+.gradient-mesh::after {
+  top: -15%;
+  left: 15%;
+  width: 40%;
+  height: 85%;
+  background: radial-gradient(ellipse, rgba(232, 163, 61, 0.5), transparent 70%);
+  animation: mesh-drift-b 26s ease-in-out infinite;
+}
+
+.gradient-mesh .mesh-blob {
+  top: -10%;
+  right: -10%;
+  width: 65%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse 70% 90% at 30% 30%, rgba(250, 138, 71, 0.75), transparent 60%),
+    radial-gradient(ellipse 65% 90% at 60% 20%, rgba(249, 115, 22, 0.75), transparent 60%),
+    radial-gradient(ellipse 70% 90% at 90% 40%, rgba(234, 88, 12, 0.85), transparent 65%);
+  animation: mesh-drift-c 30s ease-in-out infinite;
+}
+
+/* A 40px blur recomputed every animation frame is the single heaviest
+   thing on these pages for a mobile GPU — halving it on small screens
+   cuts that raster cost roughly 4x (blur cost scales with radius²)
+   while the mesh is still plenty soft-looking at this size. */
+@media (max-width: 640px) {
+  .gradient-mesh::before,
+  .gradient-mesh::after,
+  .gradient-mesh .mesh-blob {
+    filter: blur(20px);
+  }
+}
+
+/* translate-only — no scale() here. Scaling a blurred layer forces the
+   browser to re-rasterize the blur at its new size every frame; a pure
+   translate lets the compositor just reposition the already-rasterized
+   bitmap, which is dramatically cheaper on mobile GPUs. */
+@keyframes mesh-drift-a {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(4%, 6%); }
+}
+
+@keyframes mesh-drift-b {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-5%, 4%); }
+}
+
+@keyframes mesh-drift-c {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-3%, -5%); }
+}
+
+.card-reveal {
+  animation: card-reveal 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes card-reveal {
+  0% { opacity: 0; transform: rotateY(-260deg) scale(0.7); }
+  60% { opacity: 1; }
+  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
+
+.card-tilt {
+  transform-style: preserve-3d;
+  animation: card-tilt-sway 5s ease-in-out infinite;
+}
+
+@keyframes card-tilt-sway {
+  0%, 100% { transform: rotateY(-14deg); }
+  50% { transform: rotateY(14deg); }
+}
+
+.card-holo {
+  background-size: 220% 220%;
+  mix-blend-mode: overlay;
+  animation: card-holo-sweep 5s ease-in-out infinite;
+}
+
+@keyframes card-holo-sweep {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.flow-line-enter {
+  opacity: 0;
+  animation-name: flow-line-fade-in;
+  animation-duration: 1.6s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes flow-line-fade-in {
+  from { opacity: 0; }
+  to { opacity: var(--flow-target-opacity, 1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradient-mesh::before,
+  .gradient-mesh::after,
+  .gradient-mesh .mesh-blob {
+    animation: none;
+  }
+
+  .flow-line-enter {
+    opacity: var(--flow-target-opacity, 1);
+    animation: none;
+  }
+
+  .card-holo {
+    animation: none;
+  }
+
+  .card-tilt {
+    animation: none;
+  }
+
+  .card-reveal {
+    animation: none;
+  }
+}
