@@ -27,6 +27,7 @@ export default function ReceiptsList({
   defaultPageSize = "5",
   editable = false,
   filterable = false,
+  sortBy = "date",
 }: {
   title: string;
   description: string;
@@ -40,6 +41,11 @@ export default function ReceiptsList({
    * dashboard's compact card has too few rows for filtering to earn its
    * space, only the full /receipts page opts in. */
   filterable?: boolean;
+  /** "date" sorts by the receipt's own date (default, used by /receipts).
+   * "createdAt" sorts by when the row was scanned/entered, used by the
+   * dashboard's Recent Receipts card so it reflects what was just added
+   * rather than what the receipt says its date is. */
+  sortBy?: "date" | "createdAt";
 }) {
   const expenses = useExpenses();
   const categories = useCategories();
@@ -87,18 +93,22 @@ export default function ReceiptsList({
   }, [expenses]);
   const receiptNumber = (id: string) => `#${String(receiptNumbers.get(id) ?? 0).padStart(4, "0")}`;
 
-  // Newest receipt date first, not insertion order — `expenses` arrives
-  // sorted by createdAt (when it was scanned/entered), which drifts from
-  // the receipt's own date the moment someone backfills an older purchase
-  // or seeds demo data out of date order. Ties (rare: same day) fall back
-  // to createdAt so same-day receipts still land most-recently-added-first.
+  // Newest first. Default ("date") ranks by the receipt's own date, not
+  // insertion order — `expenses` arrives sorted by createdAt (when it was
+  // scanned/entered), which drifts from the receipt's own date the moment
+  // someone backfills an older purchase or seeds demo data out of date
+  // order. Ties (rare: same day) fall back to createdAt so same-day
+  // receipts still land most-recently-added-first. "createdAt" mode (used
+  // by the dashboard's Recent Receipts card) ranks by createdAt alone, so
+  // a just-scanned receipt for an old purchase still shows up on top.
   const sortedExpenses = useMemo(
     () =>
       [...expenses].sort((a, b) => {
+        if (sortBy === "createdAt") return a.createdAt < b.createdAt ? 1 : -1;
         if (a.date !== b.date) return a.date < b.date ? 1 : -1;
         return a.createdAt < b.createdAt ? 1 : -1;
       }),
-    [expenses]
+    [expenses, sortBy]
   );
 
   const hasWarrantyClaims = expenses.some((e) => warrantyClaimsFor(e).length > 0);

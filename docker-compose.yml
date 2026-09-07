@@ -28,6 +28,18 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
       DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+    # Bypass Docker's embedded DNS proxy (127.0.0.11), which fails outbound
+    # lookups (EAI_AGAIN) from inside this container ~30% of the time —
+    # confirmed against 1.1.1.1 direct queries from the host being 100%
+    # reliable. Querying it directly fixes OAuth callback and outbound-
+    # fetch DNS failures at the source, instead of only masking them via
+    # fetchRetry.ts's application-level retry. Only 1.1.1.1, not also
+    # 8.8.8.8 — a prior incident on this same VPS (2026-09-06, Docker
+    # build stage) found 8.8.8.8 itself timing out over plain UDP:53 from
+    # this host, so listing it as a fallback here would reintroduce a
+    # resolver already known to be unreliable on this box.
+    dns:
+      - 1.1.1.1
     volumes:
       - jejaku-avatars:/app/public/uploads/avatars
     depends_on:
@@ -59,6 +71,12 @@ services:
       AUTH_SECRET: ${AUTH_SECRET}
       COOKIE_DOMAIN: ${COOKIE_DOMAIN}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+    # See the same setting on the jejaku service above — bypasses Docker's
+    # flaky embedded DNS proxy for outbound calls (DeepSeek API included).
+    # Only 1.1.1.1 — see that comment for why 8.8.8.8 is deliberately not
+    # listed as a fallback on this VPS.
+    dns:
+      - 1.1.1.1
     volumes:
       - jejaku-receipt-uploads:/app/public/uploads
     depends_on:

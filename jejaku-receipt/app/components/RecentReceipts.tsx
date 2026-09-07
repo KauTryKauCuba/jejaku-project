@@ -7,6 +7,7 @@ export default function RecentReceipts() {
     <ReceiptsList
       title="Recent Receipts"
       description="The latest expenses you've logged show up here."
+      sortBy="createdAt"
     />
   );
 }
