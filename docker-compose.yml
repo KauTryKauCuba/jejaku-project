@@ -225,7 +225,6 @@ services:
     depends_on:
       - jejaku
       - jejaku-receipt
-      - jejaku-tree
     restart: unless-stopped
 
   certbot:

@@ -9,7 +9,7 @@ if [ -f .env ]; then
   set +a
 fi
 
-domains=(jejaku.my jejaku-receipt.jejaku.my jejaku-tree.jejaku.my)
+domains=(jejaku.my jejaku-receipt.jejaku.my)
 rsa_key_size=4096
 data_path="./certbot"
 email="${LETSENCRYPT_EMAIL:?Set LETSENCRYPT_EMAIL in .env}"
