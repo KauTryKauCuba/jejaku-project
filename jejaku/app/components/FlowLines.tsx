@@ -101,22 +101,25 @@ export default function FlowLines() {
       viewBox="0 0 1600 900"
       preserveAspectRatio="xMidYMid slice"
       aria-hidden="true"
+      // The elliptical edge-fade used to be an SVG <mask> wrapping the
+      // animated paths below. An SVG <mask> over content that repaints
+      // every frame (5 continuously looping SMIL animateTransforms, one
+      // per path's gradient) can't be cached the way a CSS mask can — the
+      // browser has to re-composite the masked region in software on
+      // every single frame, indefinitely, for as long as the page is
+      // open. That's a well-known mobile-Safari jank source, and a
+      // separate one from the gradient-mesh blob layer fixed earlier
+      // (globals.css's translate-only drift + halved mobile blur) — this
+      // is a different animated layer entirely. A CSS mask-image here
+      // instead lets the browser composite the animated SVG as its own
+      // GPU layer and apply the fade to the finished frame, rather than
+      // re-running the mask on every repaint underneath it.
+      style={{
+        maskImage: "radial-gradient(ellipse 65% 44% at 50% 38%, #fff 0%, #fff 50%, transparent 100%)",
+        WebkitMaskImage: "radial-gradient(ellipse 65% 44% at 50% 38%, #fff 0%, #fff 50%, transparent 100%)",
+      }}
     >
       <defs>
-        <radialGradient
-          id="flow-mask-gradient"
-          cx="50%"
-          cy="38%"
-          r="65%"
-          gradientTransform="translate(0.5 0.38) scale(1 0.68) translate(-0.5 -0.38)"
-        >
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="50%" stopColor="#ffffff" stopOpacity="1" />
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
-        </radialGradient>
-        <mask id="flow-edge-mask">
-          <rect x="0" y="0" width="1600" height="900" fill="url(#flow-mask-gradient)" />
-        </mask>
         {PATHS.map((p, i) => (
           <linearGradient
             key={i}
@@ -149,28 +152,26 @@ export default function FlowLines() {
           </linearGradient>
         ))}
       </defs>
-      <g mask="url(#flow-edge-mask)">
-        {PATHS.map((p, i) => (
-          <g
-            key={i}
-            className="flow-line-enter"
-            style={
-              {
-                "--flow-target-opacity": p.opacity,
-                animationDelay: `${i * 0.35}s`,
-              } as React.CSSProperties
-            }
-          >
-            <path
-              d={p.d}
-              fill="none"
-              stroke={`url(#flow-dash-gradient-${i})`}
-              strokeWidth={p.w}
-              strokeLinecap="round"
-            />
-          </g>
-        ))}
-      </g>
+      {PATHS.map((p, i) => (
+        <g
+          key={i}
+          className="flow-line-enter"
+          style={
+            {
+              "--flow-target-opacity": p.opacity,
+              animationDelay: `${i * 0.35}s`,
+            } as React.CSSProperties
+          }
+        >
+          <path
+            d={p.d}
+            fill="none"
+            stroke={`url(#flow-dash-gradient-${i})`}
+            strokeWidth={p.w}
+            strokeLinecap="round"
+          />
+        </g>
+      ))}
     </svg>
   );
 }
