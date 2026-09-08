@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Tray, Camera, CaretLeft, CaretRight, CaretDown, PencilSimple, Trash, Check, Receipt, X, Shield, Users, MagnifyingGlass, FileCsv, FilePdf, CheckSquare, Square, Warning } from "@phosphor-icons/react";
 import { conversionFailed, formatCurrency, type Expense } from "../lib/expenses";
 import { withWeekday } from "../lib/formatIso";
@@ -161,10 +161,22 @@ export default function ReceiptsList({
   // with a search would still delete the full original selection, not just
   // what's visible. Clearing on any filter change keeps "N selected" and
   // "Delete selected" honest about what's actually about to be deleted.
-  useEffect(() => {
+  //
+  // Adjusted during render (React's documented pattern for "reset state
+  // when some other value changes"), not in a useEffect — an effect would
+  // commit one frame with the *old* selection still showing against the
+  // *new* filtered rows before firing on the next tick, and calling
+  // setState synchronously inside an effect body is flagged as a
+  // cascading-render anti-pattern besides. Comparing against a tracked
+  // previous key here lets React bail out and re-render with the reset
+  // already applied, before anything paints.
+  const filterKey = JSON.stringify([search, categoryFilter, dateFrom, dateTo, warrantyOnly]);
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
     setSelectedIds(new Set());
     setConfirmingBulkDelete(false);
-  }, [search, categoryFilter, dateFrom, dateTo, warrantyOnly]);
+  }
 
   const toggleSelected = (id: string) => {
     setSelectedIds((prev) => {

@@ -16,6 +16,14 @@ services:
       # OAuth callback fails with EAI_AGAIN/fetch failed. Forces Node to
       # always prefer an A (IPv4) record when both are available.
       NODE_OPTIONS: --dns-result-order=ipv4first
+      # These images default to UTC, but every visitor so far is UTC+8, so a
+      # client component computing "today" from local date parts (see
+      # jejaku-receipt's DashboardCalendar/DatePicker) disagreed with the
+      # server it was hydrating against for the 8 hours a day when UTC is
+      # still on the previous date — React discards and re-renders the
+      # mismatched subtree, so the calendar's selected day visibly jumped.
+      # Matching the server clock to the audience removes the disagreement.
+      TZ: Asia/Kuala_Lumpur
       DATABASE_URL: postgres://${JEJAKU_DB_USER}:${JEJAKU_DB_PASSWORD}@jejaku-db:5432/${JEJAKU_DB_NAME}
       RESEND_API_KEY: ${RESEND_API_KEY}
       OTP_FROM_EMAIL: ${OTP_FROM_EMAIL}
@@ -67,6 +75,10 @@ services:
       # DNS answers or an occasional AAAA record (e.g. for DeepSeek's API)
       # causes a hang/timeout instead of a clean fetch.
       NODE_OPTIONS: --dns-result-order=ipv4first
+      # See the same setting on the jejaku service above — this is the app
+      # the date-mismatch actually showed up in (DashboardCalendar,
+      # DatePicker, and ExpenseForm's default date).
+      TZ: Asia/Kuala_Lumpur
       DATABASE_URL: postgres://${RECEIPT_DB_USER}:${RECEIPT_DB_PASSWORD}@jejaku-receipt-db:5432/${RECEIPT_DB_NAME}
       AUTH_URL: ${NEXT_PUBLIC_RECEIPT_URL}
       AUTH_SECRET: ${AUTH_SECRET}
@@ -102,6 +114,9 @@ services:
       # See the same setting on the jejaku service above — this VPS has no
       # working outbound IPv6 route.
       NODE_OPTIONS: --dns-result-order=ipv4first
+      # See the same setting on the jejaku service above — set here too so
+      # all three apps agree on what day it is.
+      TZ: Asia/Kuala_Lumpur
       DATABASE_URL: postgres://${TREE_DB_USER}:${TREE_DB_PASSWORD}@jejaku-tree-db:5432/${TREE_DB_NAME}
       AUTH_URL: ${NEXT_PUBLIC_TREE_URL}
       AUTH_SECRET: ${AUTH_SECRET}

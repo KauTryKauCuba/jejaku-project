@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type FlowPath = {
   d: string;
@@ -66,19 +66,34 @@ function buildPaths(): FlowPath[] {
 const PATHS = buildPaths();
 const DASH_PERIOD = 880;
 
-export default function FlowLines() {
-  const [reducedMotion, setReducedMotion] = useState(
-    () =>
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-  );
+// Module-scope (not defined inside the component) so these stay
+// referentially stable across renders — useSyncExternalStore resubscribes
+// whenever `subscribe` changes identity, which a fresh closure on every
+// render would defeat.
+function subscribeToReducedMotion(onChange: () => void) {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
 
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const onChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
-    query.addEventListener("change", onChange);
-    return () => query.removeEventListener("change", onChange);
-  }, []);
+function getReducedMotionSnapshot() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+// No `window` on the server, so this always renders false there — matches
+// getServerSnapshot below. useSyncExternalStore (rather than a
+// useState+useEffect pair reading the query on mount) is the React-
+// documented tool for exactly this: reading a live browser value without
+// a setState-during-effect that can trigger a cascading re-render, while
+// still starting from a value that matches the server-rendered HTML so
+// hydration doesn't discard and rebuild this whole background layer (a
+// visible flash on load for anyone with Reduce Motion on).
+function getServerSnapshot() {
+  return false;
+}
+
+export default function FlowLines() {
+  const reducedMotion = useSyncExternalStore(subscribeToReducedMotion, getReducedMotionSnapshot, getServerSnapshot);
 
   return (
     <svg

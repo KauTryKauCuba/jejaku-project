@@ -11,7 +11,7 @@ const SPARKLES = [
 ];
 
 const NODES = [
-  { cx: 75, cy: 16, r: 7, fill: "#00594c" }, // root
+  { cx: 75, cy: 16, r: 7, fill: "var(--color-primary)" }, // root
   { cx: 45, cy: 52, r: 6, fill: "#ffffff" }, // child 1
   { cx: 105, cy: 52, r: 6, fill: "#ffffff" }, // child 2
   { cx: 25, cy: 92, r: 5.5, fill: "#ffffff" }, // grandchild 1
@@ -47,7 +47,7 @@ export default function TreeIllustration() {
             y1={l.y1}
             x2={l.x2}
             y2={l.y2}
-            stroke="#07211c"
+            stroke="var(--color-ink)"
             strokeWidth="1.5"
             strokeLinecap="round"
           />
@@ -59,7 +59,7 @@ export default function TreeIllustration() {
           y1="58"
           x2={NEW_NODE.cx}
           y2={NEW_NODE.cy - 6}
-          stroke="#00a19a"
+          stroke="var(--color-primary-soft)"
           strokeWidth="1.5"
           strokeLinecap="round"
           strokeDasharray="46"
@@ -81,13 +81,13 @@ export default function TreeIllustration() {
             cy={n.cy}
             r={n.r}
             fill={n.fill}
-            stroke="#00a19a"
+            stroke="var(--color-primary-soft)"
             strokeWidth="2"
           />
         ))}
 
         {/* Newly joining member, fading in with the branch */}
-        <circle cx={NEW_NODE.cx} cy={NEW_NODE.cy} r={NEW_NODE.r} fill="#ffffff" stroke="#00a19a" strokeWidth="2">
+        <circle cx={NEW_NODE.cx} cy={NEW_NODE.cy} r={NEW_NODE.r} fill="#ffffff" stroke="var(--color-primary-soft)" strokeWidth="2">
           <animate
             attributeName="opacity"
             values="0;0;1;1;0"
@@ -98,7 +98,7 @@ export default function TreeIllustration() {
         </circle>
 
         {/* Focus ring pulsing around the newly joining member */}
-        <circle cx={NEW_NODE.cx} cy={NEW_NODE.cy} r={NEW_NODE.r} fill="none" stroke="#00594c" strokeWidth="1.5">
+        <circle cx={NEW_NODE.cx} cy={NEW_NODE.cy} r={NEW_NODE.r} fill="none" stroke="var(--color-primary)" strokeWidth="1.5">
           <animate
             attributeName="r"
             values={`${NEW_NODE.r};${NEW_NODE.r + 6};${NEW_NODE.r + 6}`}
@@ -117,7 +117,7 @@ export default function TreeIllustration() {
 
         {/* Sparkle accents */}
         {SPARKLES.map((s, i) => (
-          <path key={i} d={sparklePath(s.cx, s.cy, s.r)} fill="#e8a33d">
+          <path key={i} d={sparklePath(s.cx, s.cy, s.r)} fill="var(--color-amber)">
             <animate
               attributeName="opacity"
               values={`${s.opacity};${s.opacity * 0.15};${s.opacity}`}

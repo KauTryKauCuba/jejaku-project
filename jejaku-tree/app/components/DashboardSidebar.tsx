@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SquaresFour, Gear } from "@phosphor-icons/react/dist/ssr";
+import { SquaresFour, Tree, Gear } from "@phosphor-icons/react/dist/ssr";
 import type { Icon } from "@phosphor-icons/react";
 
 const NAV_ITEMS: {
@@ -11,6 +11,7 @@ const NAV_ITEMS: {
   href: string;
 }[] = [
   { label: "Dashboard", icon: SquaresFour, href: "/dashboard" },
+  { label: "Family Tree", icon: Tree, href: "/tree" },
   { label: "Settings", icon: Gear, href: "/settings" },
 ];
 

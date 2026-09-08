@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Providers from "./components/Providers";
+import { auth } from "./lib/auth";
 import "./globals.css";
 
 // Self-hosted (fonts/inter-*.woff2, latin subset, static weights 300-600
@@ -26,11 +27,13 @@ export const metadata: Metadata = {
     "Personal projects, shared for free. No product, no pricing, just what I've built.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const session = await auth();
+
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-canvas text-ink font-sans ss01">
-        <Providers>{children}</Providers>
+        <Providers session={session}>{children}</Providers>
       </body>
     </html>
   );
